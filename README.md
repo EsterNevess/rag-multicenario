@@ -62,7 +62,7 @@ data/inventory/        inventário de cada coleta (os dados em si não vão para
 
 ## Como este projeto se relaciona com o repositório em equipe
 
-Este projeto nasceu de um trabalho em grupo feito na residência TIC em Trilhas (PUC-Rio e Instituto ECOA): [rag-contratacoes](https://github.com/EsterNevess/rag-contratacoes), uma cópia do projeto do Time 03, com um cenário só e créditos aos colegas.
+Este projeto parte de uma ideia desenvolvida em grupo na residência TIC em Trilhas (PUC-Rio e Instituto ECOA). A versão em equipe, com um cenário, está em [rag-contratacoes](https://github.com/EsterNevess/rag-contratacoes). Aqui o código é novo e individual.
 
 | | rag-contratacoes | rag-multicenario |
 |---|---|---|
