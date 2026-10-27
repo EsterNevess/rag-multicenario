@@ -5,12 +5,19 @@
 Plano de passos, cada um com testes e um commit:
 
 - [x] **1.1 Base do motor:** `config.py`, `src/schema.py` (trecho, plano da pergunta, resposta), `src/obs.py` (logs JSONL por estágio, com tokens), `src/pii.py` (mascaramento de CPF, e-mail e telefone) e testes unitários e de contrato (51 passam).
-- [ ] 1.2 `fetch_corpus`: `fetch`, `update` e `inventory` para o RJ, com versões imutáveis, inventário e diff.
+- [x] **1.2 `fetch_corpus`:** `fetch`, `update` e `inventory`, com versões imutáveis, inventário (JSON e Markdown) e diff entre versões. Coletada a base normativa do RJ (v1: 13 arquivos, 8,5 MB, 0 falhas). 79 testes passam.
 - [ ] 1.3 `ingest`: chunking por artigo, metadados, sensibilidade e mascaramento.
 - [ ] 1.4 `index`: embeddings com cache, FAISS e FTS5 por base.
 - [ ] 1.5 `retrieve`: BM25, FAISS e RRF, por base.
 - [ ] 1.6 `router`: plano validado contra a tabela de capacidades, guardrails e consulta SQL controlada.
 - [ ] 1.7 `generate`, demonstração por linha de comando e README do cenário.
+
+Observações do passo 1.2:
+
+- O servidor de arquivos do PNCP responde HTTP 422 ("erro ao carregar arquivo") de forma **intermitente**: o mesmo link falhou e funcionou em tentativas seguidas. O `fetch` repete falhas passageiras (422 desse tipo, 429, 5xx, queda de conexão) com espera crescente e **não** repete 404 nem 403.
+- O site dos decretos do RJ bloqueia download automático (403) e o do Planalto não respondeu a requisições automáticas. Nenhum dos dois foi contornado: os 8 documentos entram como arquivos locais, **conferidos pelo SHA-256** do manifesto.
+- O PNCP entrega PDF com `Content-Type: application/octet-stream`. A extensão é decidida pelo conteúdo do arquivo (um PDF começa com `%PDF-`). Esse defeito só apareceu na coleta real, porque o servidor dos testes informava o tipo certo, e foi corrigido com um teste novo.
+- O tipo de acesso `rest_api` (páginas JSON, retomável) está implementado e testado contra um servidor local, mas **ainda não foi exercitado contra a API do PNCP**. As bases estruturada e agregada do RJ não foram coletadas.
 
 Observação do passo 1.1: o mascaramento de telefone só age com um sinal claro (DDD entre parênteses, celular com 9 na frente ou uma palavra como "tel" antes). Um número "NNNN-NNNN" sozinho é ambíguo em contratações ("2025-2026", "Edital 1234-5678"), e mascará-lo estragaria os textos.
 

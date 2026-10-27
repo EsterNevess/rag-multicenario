@@ -43,3 +43,6 @@ logs/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Documentos oficiais baixados manualmente (referenciados por hash no manifesto)
+data/manual/

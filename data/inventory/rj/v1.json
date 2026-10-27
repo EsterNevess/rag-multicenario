@@ -1,0 +1,206 @@
+{
+  "scenario_id": "rj",
+  "version": "v1",
+  "coletado_em": "2026-10-27T15:33:12-03:00",
+  "manifest_hash": "sha256:6b40611ae9a729c4fcae3857ee0378d7c19c1aa359c57c049054569419cb245b",
+  "totais": {
+    "arquivos": 13,
+    "bytes": 8916113,
+    "falhas": 0
+  },
+  "por_base": [
+    {
+      "base_id": "editais_normativo",
+      "natureza": "normativa",
+      "estado": "coletada",
+      "arquivos": 13,
+      "formatos": {
+        "pdf": 12,
+        "html": 1
+      },
+      "bytes": 8916113,
+      "falhas": 0,
+      "volume_alvo": 13,
+      "divergencia_alvo": 0
+    },
+    {
+      "base_id": "contratos_estruturado",
+      "natureza": "estruturada",
+      "estado": "nao_coletada",
+      "arquivos": 0,
+      "formatos": {},
+      "bytes": 0,
+      "falhas": 0,
+      "volume_alvo": "cerca de 80 mil registros no snapshot de referência; declarar o volume real no inventário",
+      "divergencia_alvo": null
+    },
+    {
+      "base_id": "pca_agregada",
+      "natureza": "agregada",
+      "estado": "nao_coletada",
+      "arquivos": 0,
+      "formatos": {},
+      "bytes": 0,
+      "falhas": 0,
+      "volume_alvo": "a definir após a primeira coleta",
+      "divergencia_alvo": null
+    },
+    {
+      "base_id": "atas_conversacional",
+      "natureza": "conversacional",
+      "estado": "nao_coletada",
+      "arquivos": 0,
+      "formatos": {},
+      "bytes": 0,
+      "falhas": 0,
+      "volume_alvo": 20,
+      "divergencia_alvo": null
+    }
+  ],
+  "arquivos": [
+    {
+      "path": "data/raw/rj/v1/editais_normativo/decreto-48760-2023-pca.pdf",
+      "base_id": "editais_normativo",
+      "tipo": "pdf",
+      "bytes": 290216,
+      "sha256": "66802a832cac73037c3859a9976ea738a36e88d67c7afae6d94511f9bdddd99d",
+      "origem": "https://leisestaduais.com.br/rj/decreto-n-48760-2023-rio-de-janeiro-implementa-o-plano-de-contratacoes-anual-pca-e-institui-o-sistema-pca-rj-no-ambito-da-administracao-publica-estadual-direta-autarquica-e-fundacional",
+      "chave": "local:decreto-48760-2023-pca.pdf",
+      "coletado_em": "2026-10-27T15:33:12-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/rj/v1/editais_normativo/decreto-48778-2023-menor-preco.pdf",
+      "base_id": "editais_normativo",
+      "tipo": "pdf",
+      "bytes": 282257,
+      "sha256": "1dd02eac1ed65f243c7551bd501b955b541dfc8aca474fca07dfc96e7257f332",
+      "origem": "https://leisestaduais.com.br/rj/decreto-n-48778-2023-rio-de-janeiro-regulamenta-as-licitacoes-pelos-criterios-de-julgamento-por-menor-preco-ou-por-maior-desconto-no-ambito-da-administracao-publica-estadual-direta-autarquica-e-fundacional",
+      "chave": "local:decreto-48778-2023-menor-preco.pdf",
+      "coletado_em": "2026-10-27T15:33:12-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/rj/v1/editais_normativo/decreto-48816-2023-fase-preparatoria.pdf",
+      "base_id": "editais_normativo",
+      "tipo": "pdf",
+      "bytes": 394175,
+      "sha256": "0aafdd4c0f0de58cdc0ac234336caf7331c053c09a242b31ceb86aab359bc02c",
+      "origem": "https://leisestaduais.com.br/rj/decreto-n-48816-2023-rio-de-janeiro-regulamenta-a-fase-preparatoria-das-contratacoes-de-que-trata-a-lei-no-14-133-de-1o-de-abril-de-2021-no-ambito-da-administracao-publica-estadual-direta-autarquica-e-fundacional",
+      "chave": "local:decreto-48816-2023-fase-preparatoria.pdf",
+      "coletado_em": "2026-10-27T15:33:12-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/rj/v1/editais_normativo/decreto-48817-2023-gestao-fiscalizacao.pdf",
+      "base_id": "editais_normativo",
+      "tipo": "pdf",
+      "bytes": 301772,
+      "sha256": "afceff2fac64fa9a419faf5ace87580470203621b5ecf766618112143b38854f",
+      "origem": "https://leisestaduais.com.br/rj/decreto-n-48817-2023-rio-de-janeiro-regulamenta-a-gestao-e-a-fiscalizacao-das-contratacoes-no-ambito-da-administracao-publica-estadual-direta-autarquica-e-fundacional-e-da-outras-providencias",
+      "chave": "local:decreto-48817-2023-gestao-fiscalizacao.pdf",
+      "coletado_em": "2026-10-27T15:33:12-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/rj/v1/editais_normativo/decreto-48820-2023-contratacao-direta.pdf",
+      "base_id": "editais_normativo",
+      "tipo": "pdf",
+      "bytes": 236120,
+      "sha256": "b8fe3f78d3490bacc5b2ce273a44a1da0da784a3b93e8b3a726f86d8febc40d4",
+      "origem": "https://leisestaduais.com.br/rj/decreto-n-48820-2023-rio-de-janeiro-regulamenta-a-contratacao-direta-de-que-trata-a-lei-no-14-133-de-1o-de-abril-de-2021-no-ambito-da-administracao-publica-estadual-direta-autarquica-e-fundacional",
+      "chave": "local:decreto-48820-2023-contratacao-direta.pdf",
+      "coletado_em": "2026-10-27T15:33:12-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/rj/v1/editais_normativo/decreto-48843-2023-registro-de-precos.pdf",
+      "base_id": "editais_normativo",
+      "tipo": "pdf",
+      "bytes": 285974,
+      "sha256": "668ba5f4f42dc12fb2fca0959156b73fef495728e814456c56b451e34aaf0a44",
+      "origem": "https://leisestaduais.com.br/rj/decreto-n-48843-2023-rio-de-janeiro-regulamenta-o-sistema-de-registro-de-precos-srp-no-ambito-da-administracao-publica-estadual-direta-autarquica-e-fundacional-e-da-outras-providencias",
+      "chave": "local:decreto-48843-2023-registro-de-precos.pdf",
+      "coletado_em": "2026-10-27T15:33:12-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/rj/v1/editais_normativo/decreto-49129-2024-altera-pca.pdf",
+      "base_id": "editais_normativo",
+      "tipo": "pdf",
+      "bytes": 168712,
+      "sha256": "4f40867f0c0333496b5cd9288c7ba61603c08174654853ecafc82057f26a26fe",
+      "origem": "https://leisestaduais.com.br/rj/decreto-n-49129-2024-rio-de-janeiro-altera-o-decreto-no-48-760-de-23-de-outubro-de-2023-e-revoga-os-dispositivos-que-menciona",
+      "chave": "local:decreto-49129-2024-altera-pca.pdf",
+      "coletado_em": "2026-10-27T15:33:12-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/rj/v1/editais_normativo/planalto_l14133.html",
+      "base_id": "editais_normativo",
+      "tipo": "html",
+      "bytes": 649705,
+      "sha256": "1cbcced00ae81479131f92f76b3488f52e0ce2e2215dc8a1b836e4c8aad59b1c",
+      "origem": "https://www.planalto.gov.br/ccivil_03/_ato2019-2022/2021/lei/l14133.htm",
+      "chave": "local:planalto_l14133.html",
+      "coletado_em": "2026-10-27T15:33:12-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/rj/v1/editais_normativo/pncp.gov.br_pncp-api_v1_orgaos_11867889000125_compras_2025_48_arquivos_1.pdf",
+      "base_id": "editais_normativo",
+      "tipo": "pdf",
+      "bytes": 2289291,
+      "sha256": "531d0ca7d804051af6918d530988cf9d14e958cca588a86e446e7f95edbcf013",
+      "origem": "https://pncp.gov.br/pncp-api/v1/orgaos/11867889000125/compras/2025/48/arquivos/1",
+      "chave": "https://pncp.gov.br/pncp-api/v1/orgaos/11867889000125/compras/2025/48/arquivos/1",
+      "coletado_em": "2026-10-27T15:32:58-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/rj/v1/editais_normativo/pncp.gov.br_pncp-api_v1_orgaos_42498600000171_compras_2025_4831_arquivos_9.pdf",
+      "base_id": "editais_normativo",
+      "tipo": "pdf",
+      "bytes": 498281,
+      "sha256": "0ab17df0e23b39d7e587f143477207b1a7d12282787889e00c2a8c6e25eca90f",
+      "origem": "https://pncp.gov.br/pncp-api/v1/orgaos/42498600000171/compras/2025/4831/arquivos/9",
+      "chave": "https://pncp.gov.br/pncp-api/v1/orgaos/42498600000171/compras/2025/4831/arquivos/9",
+      "coletado_em": "2026-10-27T15:33:00-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/rj/v1/editais_normativo/pncp.gov.br_pncp-api_v1_orgaos_42498600000171_compras_2025_6553_arquivos_1.pdf",
+      "base_id": "editais_normativo",
+      "tipo": "pdf",
+      "bytes": 1023700,
+      "sha256": "0edc5df50abd42dbf044b03516e05c489ce0741f84601225b168092479ba86da",
+      "origem": "https://pncp.gov.br/pncp-api/v1/orgaos/42498600000171/compras/2025/6553/arquivos/1",
+      "chave": "https://pncp.gov.br/pncp-api/v1/orgaos/42498600000171/compras/2025/6553/arquivos/1",
+      "coletado_em": "2026-10-27T15:33:06-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/rj/v1/editais_normativo/pncp.gov.br_pncp-api_v1_orgaos_42498600000171_compras_2025_921_arquivos_1.pdf",
+      "base_id": "editais_normativo",
+      "tipo": "pdf",
+      "bytes": 1934918,
+      "sha256": "47f75b8172679768d1e5d5d3ad0b87b8306edea202a4fb6a115f1b64b8cc3e5a",
+      "origem": "https://pncp.gov.br/pncp-api/v1/orgaos/42498600000171/compras/2025/921/arquivos/1",
+      "chave": "https://pncp.gov.br/pncp-api/v1/orgaos/42498600000171/compras/2025/921/arquivos/1",
+      "coletado_em": "2026-10-27T15:33:10-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/rj/v1/editais_normativo/pncp.gov.br_pncp-api_v1_orgaos_42498600000171_compras_2025_926_arquivos_1.pdf",
+      "base_id": "editais_normativo",
+      "tipo": "pdf",
+      "bytes": 560992,
+      "sha256": "1062573c7c4eaf40b6538329d7dad767f1e38b34f409d766dfc6aafdb7ece62e",
+      "origem": "https://pncp.gov.br/pncp-api/v1/orgaos/42498600000171/compras/2025/926/arquivos/1",
+      "chave": "https://pncp.gov.br/pncp-api/v1/orgaos/42498600000171/compras/2025/926/arquivos/1",
+      "coletado_em": "2026-10-27T15:32:52-03:00",
+      "status": "ok"
+    }
+  ],
+  "falhas": []
+}
