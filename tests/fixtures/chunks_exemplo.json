@@ -1,0 +1,50 @@
+[
+  {
+    "texto": "Art. 28. São modalidades de licitação: I - pregão; II - concorrência; III - concurso; IV - leilão; V - diálogo competitivo.",
+    "metadata": {
+      "source_file": "lei_exemplo.html",
+      "doc_type": "lei",
+      "chunk_id": "editais_normativo:lei_exemplo:28:p1",
+      "sensitivity": "publico",
+      "base_id": "editais_normativo",
+      "natureza": "normativa",
+      "data_publicacao": "2021-04-01"
+    }
+  },
+  {
+    "texto": "Contrato 000841/2026, objeto: aquisição de material de escritório, valor global R$ 12.500,00, órgão: Secretaria Exemplo.",
+    "metadata": {
+      "source_file": "contratos_exemplo.json",
+      "doc_type": "contrato",
+      "chunk_id": "contratos_estruturado:000841-2026",
+      "sensitivity": "publico",
+      "base_id": "contratos_estruturado",
+      "natureza": "estruturada",
+      "data_publicacao": "2026-03-10"
+    }
+  },
+  {
+    "texto": "Em 2026, o valor total de contratações do órgão Exemplo foi de R$ 3,2 milhões (recorte: ano de 2026, órgão Exemplo).",
+    "metadata": {
+      "source_file": "indicadores_exemplo.csv",
+      "doc_type": "indicador",
+      "chunk_id": "pca_agregada:exemplo-2026",
+      "sensitivity": "publico",
+      "base_id": "pca_agregada",
+      "natureza": "agregada"
+    }
+  },
+  {
+    "texto": "E-mail sintético: o servidor [EMAIL] pediu a confirmação da ata de registro de preços. Telefone: [TELEFONE].",
+    "metadata": {
+      "source_file": "email_sintetico_01.txt",
+      "doc_type": "email",
+      "chunk_id": "atas_conversacional:email-01",
+      "sensitivity": "interno",
+      "base_id": "atas_conversacional",
+      "natureza": "conversacional",
+      "contem_dado_pessoal": true,
+      "sintetico": true
+    }
+  }
+]

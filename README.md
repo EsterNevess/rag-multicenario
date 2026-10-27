@@ -4,17 +4,17 @@ Plataforma de **Adaptive RAG** com um motor único e três cenários configuráv
 
 O ponto central do projeto: o sistema decide **que tipo de evidência** responde à pergunta antes de buscar. Não roteia por palavra-chave. Três perguntas com quase o mesmo vocabulário podem ir para três bases diferentes.
 
-> **Estado atual: fase 0 (desenho).** Os três cenários estão desenhados (manifestos, personas e perguntas de avaliação), mas ainda não há motor funcionando. A tabela abaixo mostra o estado real de cada cenário e é atualizada no fim de cada fase.
+> **Estado atual: fase 1 em andamento (base do motor).** Os três cenários estão desenhados (manifestos, personas e perguntas de avaliação). Do motor, já existem a configuração, os esquemas de dados, o mascaramento de dados pessoais e os logs estruturados, com testes. A coleta, a ingestão, a busca e o roteador ainda não. A tabela abaixo mostra o estado real de cada cenário e é atualizada no fim de cada fase.
 
 ## Estado dos cenários
 
 | Cenário | Normativa | Estruturada | Agregada | Conversacional | Estado |
 |---|---|---|---|---|---|
-| [Contratações públicas do RJ](scenarios/rj/README.md) | desenhada | desenhada | desenhada | desenhada (sintética) | **planejado, é a próxima fase** |
+| [Contratações públicas do RJ](scenarios/rj/README.md) | desenhada | desenhada | desenhada | desenhada (sintética) | **em andamento (fase 1)** |
 | [Saúde pública](scenarios/saude/README.md) | desenhada | desenhada | desenhada | desenhada (sintética) | planejado |
 | [Pesquisa acadêmica](scenarios/pesquisa/README.md) | desenhada | desenhada | desenhada | desenhada (sintética) | planejado |
 
-"Desenhada" quer dizer: fonte, forma de acesso e regras de sensibilidade estão no manifesto, e há perguntas de avaliação. **Nenhum dado foi coletado ainda e nenhum código do motor foi escrito.**
+"Desenhada" quer dizer: fonte, forma de acesso e regras de sensibilidade estão no manifesto, e há perguntas de avaliação. **Nenhum dado foi coletado ainda.** Do código, só a base do motor existe (configuração, esquemas, logs e mascaramento).
 
 ## Como o sistema pensa
 

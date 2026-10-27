@@ -1,0 +1,14 @@
+[project]
+name = "rag-multicenario"
+version = "0.1.0"
+description = "Plataforma de Adaptive RAG com motor único e três cenários"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+# Testes que chamam um modelo de linguagem de verdade só rodam quando pedidos: pytest -m llm
+addopts = "-m 'not llm'"
+markers = [
+    "llm: teste de integração que chama um modelo de linguagem (precisa de rede e pode ter custo)",
+]

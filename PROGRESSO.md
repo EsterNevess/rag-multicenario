@@ -1,6 +1,20 @@
 # Progresso
 
-## Fase 0: desenho (em andamento)
+## Fase 1: motor + cenário do RJ (em andamento)
+
+Plano de passos, cada um com testes e um commit:
+
+- [x] **1.1 Base do motor:** `config.py`, `src/schema.py` (trecho, plano da pergunta, resposta), `src/obs.py` (logs JSONL por estágio, com tokens), `src/pii.py` (mascaramento de CPF, e-mail e telefone) e testes unitários e de contrato (51 passam).
+- [ ] 1.2 `fetch_corpus`: `fetch`, `update` e `inventory` para o RJ, com versões imutáveis, inventário e diff.
+- [ ] 1.3 `ingest`: chunking por artigo, metadados, sensibilidade e mascaramento.
+- [ ] 1.4 `index`: embeddings com cache, FAISS e FTS5 por base.
+- [ ] 1.5 `retrieve`: BM25, FAISS e RRF, por base.
+- [ ] 1.6 `router`: plano validado contra a tabela de capacidades, guardrails e consulta SQL controlada.
+- [ ] 1.7 `generate`, demonstração por linha de comando e README do cenário.
+
+Observação do passo 1.1: o mascaramento de telefone só age com um sinal claro (DDD entre parênteses, celular com 9 na frente ou uma palavra como "tel" antes). Um número "NNNN-NNNN" sozinho é ambíguo em contratações ("2025-2026", "Edital 1234-5678"), e mascará-lo estragaria os textos.
+
+## Fase 0: desenho (concluída)
 
 Pronto:
 
