@@ -1,0 +1,87 @@
+scenario_id: pesquisa
+version: "rascunho-0"
+status: planejado
+description: "Pesquisa acadêmica: editais de fomento, normas de ética, metadados bibliográficos e indicadores"
+
+# Os portais abaixo são pontos de partida. Os editais e normas exatos serão escolhidos e
+# conferidos na fase 2. Nada foi coletado ainda.
+
+bases:
+  - base_id: editais_normas_normativo
+    natureza: normativa
+    fonte: "Editais de fomento (FAPERJ, CNPq) e normas de ética em pesquisa (Conselho Nacional de Saúde / CONEP)"
+    acesso:
+      tipo: http_pdf
+      portais:
+        faperj: "https://www.faperj.br"
+        cnpq: "https://www.gov.br/cnpq"
+        cns: "https://conselho.saude.gov.br"
+      normas_alvo:
+        - "Resolução CNS 466/2012 (a confirmar na fase 2)"
+        - "Resolução CNS 510/2016 (a confirmar na fase 2)"
+      urls: []                       # a definir na fase 2: poucos editais de anos diferentes + as normas de ética
+    selecao_deterministica: true     # lista fixa de URLs com SHA-256
+    volume_alvo: "cerca de 15 documentos"
+    formato: pdf
+    licenca: "Documentos públicos de órgãos oficiais"
+    sensitivity_default: publico
+    campo_vigencia: data_publicacao
+    chunking_sugerido: "Um chunk por item ou cláusula do edital, guardando número da chamada, ano e objetivo"
+    metadados_extras: [instituicao, numero_chamada, ano, objetivo, data_publicacao]
+
+  - base_id: openalex_estruturado
+    natureza: estruturada
+    fonte: "OpenAlex: trabalhos, autores, instituições, financiamento e citações"
+    acesso:
+      tipo: rest_api
+      endpoint: "https://api.openalex.org/works"
+      documentacao: "https://docs.openalex.org"
+      params:
+        filtro_pais: "BR"
+        filtro_uf_ou_instituicoes: "instituições do RJ (lista fixa de identificadores)"
+        periodo: "2020 a 2024"
+      paginacao: "cursor (próprio da API)"
+      rate_limit_seg: 1.0
+      observacoes:
+        - "Fixar a lista de instituições e o período, para a seleção ser determinística."
+    selecao_deterministica: true
+    volume_alvo: "alguns milhares de trabalhos, a declarar no inventário"
+    formato: json
+    licenca: "OpenAlex: CC0"
+    sensitivity_default: publico
+    campo_vigencia: ano_publicacao
+    chunking_sugerido: "1 trabalho = 1 registro estruturado; abstract tratado como texto para a busca semântica"
+    metadados_extras: [titulo, ano, instituicoes, financiadores, citacoes, conceitos]
+
+  - base_id: indicadores_agregado
+    natureza: agregada
+    fonte: "Indicadores bibliométricos derivados do OpenAlex; abstracts e textos de arXiv e SciELO"
+    acesso:
+      tipo: rest_api
+      fontes:
+        openalex: "https://api.openalex.org"
+        arxiv: "http://export.arxiv.org/api/query"
+        scielo: "https://www.scielo.br"
+    selecao_deterministica: true
+    volume_alvo: "a definir"
+    formato: [json, texto]
+    licenca: "Conforme a fonte; abstracts e metadados abertos"
+    sensitivity_default: publico
+    campo_vigencia: ano
+    chunking_sugerido: "Indicadores calculados em SQL (contagens, médias, citações por ano), cada um com o recorte; abstracts em chunks de texto"
+    metadados_extras: [indicador, periodo, instituicao, recorte]
+
+  - base_id: pareceres_conversacional
+    natureza: conversacional
+    fonte: "Pareceres de revisão por pares e correspondência editorial sintéticos"
+    acesso:
+      tipo: sintetico
+      geracao: "gerados por script com semente fixa; marcados como sintéticos em todo lugar"
+    selecao_deterministica: true
+    volume_alvo: 20
+    formato: texto
+    licenca: "Conteúdo sintético"
+    sensitivity_default: restrito
+    campo_vigencia: data
+    chunking_sugerido: "1 parecer = 1 chunk; pistas de identidade do revisor plantadas de propósito para testar a recusa"
+    metadados_extras: [manuscrito_id, revisor_codigo, data, sintetico]

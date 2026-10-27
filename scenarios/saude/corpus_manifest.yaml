@@ -1,0 +1,77 @@
+scenario_id: saude
+version: "rascunho-0"
+status: planejado
+description: "Saúde pública: protocolos clínicos do SUS, medicamentos essenciais e indicadores"
+
+# Os portais abaixo são pontos de partida. As URLs exatas de cada PDF serão listadas e
+# conferidas na fase 3, uma a uma. Nada foi coletado ainda.
+
+bases:
+  - base_id: pcdt_normativo
+    natureza: normativa
+    fonte: "Protocolos Clínicos e Diretrizes Terapêuticas (PCDT), Conitec / Ministério da Saúde"
+    acesso:
+      tipo: http_pdf
+      portal: "https://www.gov.br/conitec"
+      urls: []                       # a definir na fase 3: 15 a 20 PCDT, incluindo pares versão antiga + vigente
+      observacoes:
+        - "Não há download em lote; os PDFs são coletados um a um."
+        - "Vários PDFs são escaneados ou mal estruturados: prever extração com OCR."
+    selecao_deterministica: true     # lista fixa de URLs com SHA-256
+    volume_alvo: "15 a 20 documentos, com ao menos 3 doenças em duas versões"
+    formato: pdf
+    licenca: "Documentos oficiais do Ministério da Saúde"
+    sensitivity_default: publico
+    campo_vigencia: data_publicacao  # obrigatório: sem ele as versões se misturam
+    chunking_sugerido: "Um chunk por seção do protocolo (critérios de inclusão, tratamento, monitoramento), guardando doença, versão e data de vigência"
+    metadados_extras: [doenca, versao, data_publicacao, data_vigencia_fim, secao, portaria]
+
+  - base_id: rename_estruturado
+    natureza: estruturada
+    fonte: "RENAME (Relação Nacional de Medicamentos Essenciais) e bulário"
+    acesso:
+      tipo: arquivo_local
+      portal: "https://www.gov.br/saude/pt-br"
+      bulario: "https://consultas.anvisa.gov.br/#/bulario/"
+      observacoes:
+        - "Formato (tabela ou PDF) a confirmar na fase 3."
+    selecao_deterministica: true
+    volume_alvo: "a definir após a primeira coleta"
+    formato: [csv, pdf]
+    licenca: "Dados abertos do Ministério da Saúde e da ANVISA"
+    sensitivity_default: publico
+    campo_vigencia: ano_edicao
+    chunking_sugerido: "1 medicamento + apresentação = 1 registro"
+    metadados_extras: [medicamento, apresentacao, componente, indicacao, ano_edicao]
+
+  - base_id: indicadores_agregado
+    natureza: agregada
+    fonte: "DATASUS e dados abertos do SUS: dispensação, cobertura, internações"
+    acesso:
+      tipo: arquivo_local
+      portal: "https://opendatasus.saude.gov.br"
+      observacoes:
+        - "Séries em CSV; escolher poucas séries ligadas às doenças dos protocolos coletados."
+    selecao_deterministica: true
+    volume_alvo: "a definir"
+    formato: csv
+    licenca: "Dados abertos, com atribuição"
+    sensitivity_default: publico
+    campo_vigencia: ano
+    chunking_sugerido: "Séries em tabela SQL; cada número carrega período, unidade e recorte geográfico"
+    metadados_extras: [indicador, periodo, unidade, uf, fonte]
+
+  - base_id: ouvidoria_conversacional
+    natureza: conversacional
+    fonte: "Registros de atendimento e ouvidoria sintéticos"
+    acesso:
+      tipo: sintetico
+      geracao: "gerados por script com semente fixa; marcados como sintéticos em todo lugar; nenhum dado pessoal real"
+    selecao_deterministica: true
+    volume_alvo: 30
+    formato: texto
+    licenca: "Conteúdo sintético"
+    sensitivity_default: restrito
+    campo_vigencia: data
+    chunking_sugerido: "1 registro = 1 chunk; mascarar telefone e e-mail antes de indexar"
+    metadados_extras: [data, unidade_saude_fake, tema, sintetico]

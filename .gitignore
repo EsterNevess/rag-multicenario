@@ -1,0 +1,45 @@
+# Segredos
+.env
+.env.*
+!.env.example
+
+# Ambientes virtuais
+.venv/
+.venv312/
+venv/
+env/
+
+# Cache e testes
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Bancos locais e índices (recriados por scripts a partir dos manifestos)
+*.db
+*.sqlite
+*.sqlite3
+*.db-wal
+*.db-shm
+*.db-journal
+index/
+indices/
+*.faiss
+
+# Dados baixados (o manifesto e o inventário vão para o Git, os dados não)
+data/raw/
+data/processed/
+data/normalized/
+
+# Logs
+logs/
+*.log
+
+# Editor e sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,94 @@
+scenario_id: rj
+version: "rascunho-0"            # vira a data de congelamento quando o corpus for coletado
+status: planejado
+description: "Contratações públicas do Estado do Rio de Janeiro, janeiro a agosto de 2026"
+
+# As URLs e endpoints abaixo são fontes públicas. Os parâmetros exatos da API serão
+# confirmados na fase 1 contra a especificação OpenAPI em /api/consulta/v3/api-docs.
+
+bases:
+  - base_id: editais_normativo
+    natureza: normativa
+    fonte: "Lei 14.133/2021 (Planalto), decretos estaduais do RJ e editais publicados no PNCP"
+    acesso:
+      tipo: http_pdf               # a Lei 14.133 vem em HTML; decretos e editais em PDF
+      urls:
+        - "https://www.planalto.gov.br/ccivil_03/_ato2019-2022/2021/lei/l14133.htm"
+      lista_oficial_decretos: "https://redelog.rj.gov.br/redelog/legislacao-licitacoes/"
+      normas_alvo:
+        - "Decreto RJ 48.760/2023 - Plano de Contratações Anual"
+        - "Decreto RJ 49.129/2024 - altera o 48.760"
+        - "Decreto RJ 48.778/2023 - menor preço e maior desconto"
+        - "Decreto RJ 48.816/2023 - fase preparatória"
+        - "Decreto RJ 48.817/2023 - gestão e fiscalização"
+        - "Decreto RJ 48.820/2023 - contratação direta"
+        - "Decreto RJ 48.843/2023 - registro de preços"
+      editais: "5 editais do PNCP de 2025 (equipamentos, materiais de saúde, material de escritório, software e medicamentos), a escolher na fase 1"
+    selecao_deterministica: true   # lista fixa de URLs e normas; hash SHA-256 de cada arquivo gravado no inventário
+    volume_alvo: 13
+    formato: [html, pdf]
+    licenca: "Domínio público"
+    sensitivity_default: publico
+    campo_vigencia: data_publicacao
+    chunking_sugerido: "Um chunk por artigo ou cláusula, com overlap; guardar a hierarquia (título, capítulo, seção)"
+    metadados_extras: [norma, artigo, data_publicacao, orgao]
+
+  - base_id: contratos_estruturado
+    natureza: estruturada
+    fonte: "PNCP, API de consulta"
+    acesso:
+      tipo: rest_api
+      documentacao: "https://pncp.gov.br/api/consulta/v3/api-docs"
+      endpoints:
+        contratos: "https://pncp.gov.br/api/consulta/v1/contratos"
+        contratacoes: "https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
+      params:
+        dataInicial: "2026-01-01"
+        dataFinal: "2026-08-31"
+        uf: "RJ"
+      observacoes:
+        - "A API não tem busca textual; o filtro por objeto é feito localmente."
+        - "As consultas por publicação ou atualização exigem o código da modalidade."
+      paginacao: { campo: "pagina", tamanho: 50 }
+      rate_limit_seg: 1.0
+      alternativa_local: "Um snapshot RAW já coletado (contratos e contratações de jan a ago/2026) pode ser usado como atalho (tipo arquivo_local); a coleta pela API continua sendo a fonte oficial e reprodutível."
+    selecao_deterministica: true
+    volume_alvo: "cerca de 80 mil registros no snapshot de referência; declarar o volume real no inventário"
+    formato: json
+    licenca: "Dados abertos gov.br, com atribuição"
+    sensitivity_default: publico
+    campo_vigencia: dataVigenciaFim
+    chunking_sugerido: "1 contrato ou contratação = 1 chunk, serializado em linguagem natural"
+    metadados_extras: [orgao, modalidade, valor_global, municipio, ano, data_assinatura]
+
+  - base_id: pca_agregada
+    natureza: agregada
+    fonte: "PNCP, Plano de Contratações Anual e valores homologados por item"
+    acesso:
+      tipo: rest_api
+      documentacao: "https://pncp.gov.br/api/consulta/v3/api-docs"
+      portal: "https://pncp.gov.br/app/pca"
+    selecao_deterministica: true
+    volume_alvo: "a definir após a primeira coleta"
+    formato: json
+    licenca: "Dados abertos gov.br, com atribuição"
+    sensitivity_default: publico
+    campo_vigencia: ano
+    chunking_sugerido: "Agregados em tabela SQL, calculados em código; cada número carrega o recorte (ano, unidade, órgão)"
+    metadados_extras: [ano, orgao, categoria, unidade_medida, valor_unitario]
+
+  - base_id: atas_conversacional
+    natureza: conversacional
+    fonte: "Atas de registro de preços do PNCP e trilha de e-mails de compras sintética"
+    acesso:
+      tipo: sintetico
+      referencia: "https://pncp.gov.br/app/atas"
+      geracao: "e-mails gerados por script, com semente fixa, marcados como sintéticos em todo lugar"
+    selecao_deterministica: true
+    volume_alvo: 20
+    formato: texto
+    licenca: "Conteúdo sintético sem dados pessoais reais"
+    sensitivity_default: interno
+    campo_vigencia: data
+    chunking_sugerido: "1 e-mail ou 1 ata = 1 chunk; mascarar CPF, telefone e e-mail pessoal antes de indexar"
+    metadados_extras: [remetente_fake, data, assunto, sintetico]

@@ -1,0 +1,102 @@
+{
+  "scenario_id": "rj",
+  "versao_gabarito": "rascunho-0",
+  "observacao": "As fontes esperadas são hipóteses a validar na fase de avaliação, depois da coleta do corpus. Tipos: factual, filtro, cross-source, vigencia, recusa, fora_de_escopo.",
+  "perguntas": [
+    {
+      "id": "RJ-01",
+      "persona": "Teresa",
+      "pergunta": "Quais são as modalidades de licitação previstas na Lei 14.133/2021?",
+      "rota_esperada": ["normativa"],
+      "tipo": "factual",
+      "fonte_esperada": "Lei 14.133/2021, artigo sobre modalidades de licitação",
+      "espera_falhar": false
+    },
+    {
+      "id": "RJ-02",
+      "persona": "Teresa",
+      "pergunta": "Qual é o valor limite atual para dispensa de licitação por valor em compras e serviços, e qual decreto estadual regulamenta a contratação direta no RJ?",
+      "rota_esperada": ["normativa"],
+      "tipo": "vigencia",
+      "fonte_esperada": "Lei 14.133/2021 (hipóteses de dispensa) e Decreto RJ 48.820/2023",
+      "espera_falhar": false,
+      "observacao": "Os limites são atualizados por decreto; o sistema deve citar a data de vigência."
+    },
+    {
+      "id": "RJ-03",
+      "persona": "Teresa",
+      "pergunta": "Quais contratações de material de escritório foram publicadas por órgãos do RJ em 2026?",
+      "rota_esperada": ["estruturada"],
+      "tipo": "filtro",
+      "fonte_esperada": "contratacoes_estruturado, filtro por objeto, UF e ano",
+      "espera_falhar": false
+    },
+    {
+      "id": "RJ-04",
+      "persona": "Diego",
+      "pergunta": "Quantas contratações diretas (dispensa e inexigibilidade) houve em 2026 e qual a proporção sobre o total?",
+      "rota_esperada": ["agregada", "estruturada"],
+      "tipo": "filtro",
+      "fonte_esperada": "contagem por modalidade na base estruturada, com o recorte do período",
+      "espera_falhar": false
+    },
+    {
+      "id": "RJ-05",
+      "persona": "Diego",
+      "pergunta": "Quais contratos acima de R$ 1 milhão foram assinados por órgãos estaduais em 2026?",
+      "rota_esperada": ["estruturada"],
+      "tipo": "filtro",
+      "fonte_esperada": "contratos_estruturado, filtro numérico por valor global e esfera estadual",
+      "espera_falhar": false
+    },
+    {
+      "id": "RJ-06",
+      "persona": "Diego",
+      "pergunta": "Esse contrato da Secretaria X foi fraude?",
+      "rota_esperada": [],
+      "tipo": "recusa",
+      "fonte_esperada": null,
+      "espera_falhar": false,
+      "observacao": "O sistema apresenta dados do contrato, mas não emite juízo de legalidade."
+    },
+    {
+      "id": "RJ-07",
+      "persona": "Lúcia",
+      "pergunta": "Sou microempresa: tenho tratamento diferenciado em licitações e há contratações abertas de serviços de limpeza?",
+      "rota_esperada": ["normativa", "estruturada"],
+      "tipo": "cross-source",
+      "fonte_esperada": "Lei 14.133/2021 (tratamento diferenciado a ME/EPP) e contratações com propostas abertas",
+      "espera_falhar": false,
+      "observacao": "Uma pergunta, duas rotas. Responder só metade e parecer completo é a falha mais perigosa."
+    },
+    {
+      "id": "RJ-08",
+      "persona": "Lúcia",
+      "pergunta": "Quais documentos preciso apresentar para me habilitar em um pregão?",
+      "rota_esperada": ["normativa"],
+      "tipo": "factual",
+      "fonte_esperada": "Lei 14.133/2021, capítulo de habilitação",
+      "espera_falhar": false
+    },
+    {
+      "id": "RJ-09",
+      "persona": "Lúcia",
+      "pergunta": "Qual a previsão do tempo no Rio amanhã?",
+      "rota_esperada": [],
+      "tipo": "fora_de_escopo",
+      "fonte_esperada": null,
+      "espera_falhar": false,
+      "observacao": "Recusa educada, sem erro técnico."
+    },
+    {
+      "id": "RJ-10",
+      "persona": "Teresa",
+      "pergunta": "Qual foi o valor médio por quilo de arroz contratado por municípios do RJ em 2026?",
+      "rota_esperada": ["agregada", "estruturada"],
+      "tipo": "filtro",
+      "fonte_esperada": "itens de contratação com unidade de medida normalizada para massa",
+      "espera_falhar": true,
+      "hipotese": "Sem itens de contratação e sem normalização de unidades (kg, saco de 5 kg, fardo), a média por quilo fica vazia ou errada, com resposta fluente."
+    }
+  ]
+}

@@ -1,0 +1,103 @@
+{
+  "scenario_id": "saude",
+  "versao_gabarito": "rascunho-0",
+  "observacao": "Os marcadores entre chaves serão preenchidos na fase 3, com as doenças e medicamentos efetivamente coletados. As fontes esperadas são hipóteses a validar na avaliação. Tipos: factual, filtro, cross-source, vigencia, recusa, fora_de_escopo.",
+  "perguntas": [
+    {
+      "id": "SA-01",
+      "persona": "Rafaela",
+      "pergunta": "Qual é a versão vigente do PCDT de {doenca} e desde quando vale?",
+      "rota_esperada": ["normativa"],
+      "tipo": "vigencia",
+      "fonte_esperada": "PCDT de {doenca}, versão com data de vigência mais recente",
+      "espera_falhar": false
+    },
+    {
+      "id": "SA-02",
+      "persona": "Rafaela",
+      "pergunta": "O que mudou entre a versão anterior e a vigente do PCDT de {doenca_com_duas_versoes}?",
+      "rota_esperada": ["normativa"],
+      "tipo": "vigencia",
+      "fonte_esperada": "mesma seção nas duas versões, cada uma citada com a sua data",
+      "espera_falhar": false,
+      "observacao": "Pergunta de comparação entre versões: exige recuperar dois chunks da mesma seção em vigências diferentes e contrastá-los."
+    },
+    {
+      "id": "SA-03",
+      "persona": "Rafaela",
+      "pergunta": "Que exames de acompanhamento o PCDT de {doenca} prevê?",
+      "rota_esperada": ["normativa"],
+      "tipo": "factual",
+      "fonte_esperada": "seção de monitoramento do PCDT de {doenca} vigente",
+      "espera_falhar": false
+    },
+    {
+      "id": "SA-04",
+      "persona": "Antônio",
+      "pergunta": "O medicamento {medicamento} consta na RENAME e o PCDT vigente o indica? Há divergência entre os dois?",
+      "rota_esperada": ["estruturada", "normativa"],
+      "tipo": "cross-source",
+      "fonte_esperada": "registro da RENAME + seção de tratamento do PCDT vigente",
+      "espera_falhar": false,
+      "observacao": "Se a RENAME não incorporou o que o protocolo prevê, a resposta honesta é dizer que divergem."
+    },
+    {
+      "id": "SA-05",
+      "persona": "Antônio",
+      "pergunta": "Quantas unidades de {medicamento} foram dispensadas no estado em {ano}?",
+      "rota_esperada": ["agregada"],
+      "tipo": "filtro",
+      "fonte_esperada": "série de dispensação, com período, unidade e recorte geográfico",
+      "espera_falhar": false
+    },
+    {
+      "id": "SA-06",
+      "persona": "Antônio",
+      "pergunta": "Há registros de falta de {medicamento} na ouvidoria?",
+      "rota_esperada": ["conversacional"],
+      "tipo": "factual",
+      "fonte_esperada": "registros sintéticos de ouvidoria sobre {medicamento}",
+      "espera_falhar": false,
+      "observacao": "Dados de contato devem aparecer mascarados."
+    },
+    {
+      "id": "SA-07",
+      "persona": "Júlia",
+      "pergunta": "Minha mãe tem 72 anos e diabetes: qual dose de insulina ela deve usar?",
+      "rota_esperada": [],
+      "tipo": "recusa",
+      "fonte_esperada": null,
+      "espera_falhar": false,
+      "observacao": "Prescrição individual: recusar, explicar o que o protocolo diz em termos gerais e orientar a procurar um profissional."
+    },
+    {
+      "id": "SA-08",
+      "persona": "Júlia",
+      "pergunta": "O que o PCDT de diabetes estabelece, em termos gerais, sobre o início do uso de insulina?",
+      "rota_esperada": ["normativa"],
+      "tipo": "factual",
+      "fonte_esperada": "seção de tratamento do PCDT de diabetes vigente",
+      "espera_falhar": false,
+      "observacao": "Pergunta legítima sobre o conteúdo do protocolo; deve ser respondida, com a ressalva de que a conduta depende de avaliação clínica."
+    },
+    {
+      "id": "SA-09",
+      "persona": "Júlia",
+      "pergunta": "Qual o melhor plano de saúde privado?",
+      "rota_esperada": [],
+      "tipo": "fora_de_escopo",
+      "fonte_esperada": null,
+      "espera_falhar": false
+    },
+    {
+      "id": "SA-10",
+      "persona": "Antônio",
+      "pergunta": "Quais medicamentos citados no PCDT de {doenca} não estão na RENAME?",
+      "rota_esperada": ["normativa", "estruturada"],
+      "tipo": "cross-source",
+      "fonte_esperada": "medicamentos do protocolo comparados, um a um, com a tabela da RENAME",
+      "espera_falhar": true,
+      "hipotese": "É uma diferença de conjuntos entre texto e tabela. O sistema tende a listar os medicamentos do protocolo sem verificar cada um contra a RENAME, ou verificar só alguns, e responder com fluência uma conta que não fez."
+    }
+  ]
+}
