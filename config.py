@@ -28,11 +28,14 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr | None = None
     ollama_url: str = "http://localhost:11434/v1"
 
-    embedding_provider: str = "openai"
-    embedding_model: str = "text-embedding-3-small"
+    # Embeddings: Ollama local por padrão (gratuito, sem chave, reproduzível). Um servidor
+    # compartilhado pede lotes pequenos e pausa entre eles (por exemplo 50 e 10 s).
+    embedding_provider: str = "ollama"
+    embedding_model: str = "qwen3-embedding:0.6b"
     embedding_dimensions: int = 1024
-    embedding_batch_size: int = 50
-    embedding_pause_seconds: float = 10.0
+    # Lote pequeno: em CPU (sem GPU), medimos ~0,4 trecho/s e o melhor rendimento com lotes de 4.
+    embedding_batch_size: int = 4
+    embedding_pause_seconds: float = 0.0
 
     log_dir: Path = Path("logs")
 

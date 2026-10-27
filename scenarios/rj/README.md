@@ -46,6 +46,17 @@ python -m src.ingest --scenario rj
 
 Na versão atual: 1.458 trechos (298 da Lei 14.133, 343 dos decretos, 817 dos editais). Cada trecho traz o documento, o artigo ou a seção, a hierarquia (título, capítulo, seção), a data de publicação, a sensibilidade e a marca de dado pessoal mascarado. Os arquivos gerados não vão para o Git.
 
+## Como indexar
+
+A indexação transforma cada trecho em um vetor (com o Ollama, que roda no seu computador, sem conta e sem custo) e monta, para a base, o índice vetorial e o de palavras:
+
+```bash
+ollama pull qwen3-embedding:0.6b
+python -m src.index build --scenario rj
+```
+
+Em um notebook sem placa de vídeo, são cerca de 0,2 a 0,4 trecho por segundo, então a primeira indexação dos 1.458 trechos leva de 1 a 2 horas. Ela pode ser interrompida e retomada: cada lote fica em um cache em disco. Para usar a OpenAI no lugar do Ollama, configure `EMBEDDING_PROVIDER=openai` no `.env` (ver `.env.example`).
+
 ## Arquivos do cenário
 
 | Arquivo | Para quê |

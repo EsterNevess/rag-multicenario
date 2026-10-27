@@ -4,7 +4,7 @@ Plataforma de **Adaptive RAG** com um motor único e três cenários configuráv
 
 O ponto central do projeto: o sistema decide **que tipo de evidência** responde à pergunta antes de buscar. Não roteia por palavra-chave. Três perguntas com quase o mesmo vocabulário podem ir para três bases diferentes.
 
-> **Estado atual: fase 1 em andamento (base do motor).** Os três cenários estão desenhados (manifestos, personas e perguntas de avaliação). Do motor, já existem a configuração, os esquemas de dados, o mascaramento de dados pessoais, os logs estruturados, a coleta versionada do corpus e a ingestão em trechos, com testes. A busca e o roteador ainda não. A tabela abaixo mostra o estado real de cada cenário e é atualizada no fim de cada fase.
+> **Estado atual: fase 1 em andamento (base do motor).** Os três cenários estão desenhados (manifestos, personas e perguntas de avaliação). Do motor, já existem a configuração, os esquemas de dados, o mascaramento de dados pessoais, os logs estruturados, a coleta versionada do corpus e a ingestão em trechos, com testes. O roteador e a geração de respostas ainda não. A busca (BM25, vetores e fusão RRF) está escrita e testada, e o índice real da normativa está sendo gerado. A tabela abaixo mostra o estado real de cada cenário e é atualizada no fim de cada fase.
 
 ## Estado dos cenários
 
