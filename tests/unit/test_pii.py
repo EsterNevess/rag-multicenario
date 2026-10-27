@@ -5,6 +5,7 @@ from src.pii import (
     MARCA_EMAIL,
     MARCA_TELEFONE,
     contem_dado_pessoal,
+    cpf_valido,
     mascarar_dados_pessoais,
 )
 
@@ -50,6 +51,33 @@ def test_numeros_com_hifen_do_dominio_nao_viram_telefone(texto):
 )
 def test_telefones_com_sinal_claro_sao_mascarados(texto):
     assert MARCA_TELEFONE in mascarar_dados_pessoais(texto)
+
+
+def test_cpf_formatado_e_sempre_mascarado_mesmo_sem_digito_verificador_valido():
+    assert mascarar_dados_pessoais("CPF 123.456.789-00") == f"CPF {MARCA_CPF}"
+
+
+def test_codigo_de_produto_com_11_digitos_nao_e_cpf():
+    # Códigos reais de uma tabela de edital de equipamentos: os dígitos verificadores não fecham.
+    for codigo in ("66410570001", "41100060020", "66500110081"):
+        assert mascarar_dados_pessoais(f"item {codigo} fornecedor") == f"item {codigo} fornecedor"
+
+
+def test_cpf_sem_pontuacao_so_com_digito_verificador_valido():
+    assert cpf_valido("12345678909")
+    assert not cpf_valido("12345678900")
+    assert not cpf_valido("11111111111")  # sequência repetida passa na conta, mas não existe
+    assert mascarar_dados_pessoais("11111111111") == "11111111111"
+
+
+def test_email_funcional_de_orgao_publico_e_mantido():
+    texto = "impugnações para licitacao@saude.rj.gov.br até 3 dias úteis"
+    assert mascarar_dados_pessoais(texto) == texto
+
+
+def test_email_de_provedor_comum_e_mascarado():
+    assert mascarar_dados_pessoais("fale com joao@gmail.com") == f"fale com {MARCA_EMAIL}"
+    assert mascarar_dados_pessoais("empresa@fornecedor.com.br") == MARCA_EMAIL
 
 
 def test_cnpj_nao_e_alterado():

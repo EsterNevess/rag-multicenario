@@ -1,0 +1,368 @@
+"""Testes da ingestão: extração de texto, corte em trechos, metadados e determinismo."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+from pathlib import Path
+
+import pymupdf
+import pytest
+import yaml
+
+from src.fetch_corpus import Pastas, fetch
+from src.ingest import (
+    MAX_CHARS,
+    Documento,
+    cortar_por_artigos,
+    cortar_por_secoes,
+    data_do_cabecalho,
+    dividir_texto,
+    ingerir,
+    juntar_linhas,
+    montar_chunks,
+    texto_de_html,
+    texto_de_pdf,
+)
+from src.schema import Chunk, Sensibilidade
+
+# ----------------------------------------------------------------- HTML
+
+
+def test_html_cp1252_e_nbsp():
+    html = "<p>Art.&nbsp;1º Esta lei não revoga nada.</p>".encode("cp1252")
+    texto, _ = texto_de_html(html)
+    assert texto == "Art. 1º Esta lei não revoga nada."
+
+
+def test_quebra_de_linha_no_codigo_fonte_nao_separa_o_artigo_do_numero():
+    # Caso real do Planalto: "Art." e "75." separados por uma quebra no código-fonte da página.
+    html = b"<p><span>Art. \n\t75. \xc9 dispens\xe1vel a licita\xe7\xe3o:</span></p>"
+    texto, _ = texto_de_html(html)
+    assert texto == "Art. 75. É dispensável a licitação:"
+
+
+def test_html_ignora_script_estilo_e_texto_riscado():
+    html = (
+        b"<html><head><title>x</title><style>p{}</style></head><body>"
+        b"<script>var a=1;</script><p>Vale <strike>revogado</strike> isto.</p></body></html>"
+    )
+    texto, riscados = texto_de_html(html)
+    assert "revogado" not in texto and "var a" not in texto and "p{}" not in texto
+    assert "Vale" in texto and "isto." in texto
+    assert riscados == 1
+
+
+def test_strike_sem_fechar_nao_engole_o_resto_do_documento():
+    texto, _ = texto_de_html(b"<p>antes <strike>riscado</p><p>depois continua</p>")
+    assert "depois continua" in texto and "riscado" not in texto
+
+
+def test_blocos_viram_linhas():
+    texto, _ = texto_de_html(b"<p>um</p><p>dois</p><div>tres</div>")
+    assert texto.splitlines() == ["um", "dois", "tres"]
+
+
+# ----------------------------------------------------------------- PDF
+
+
+def _pdf(tmp_path: Path, paginas: list[list[str]]) -> Path:
+    caminho = tmp_path / "doc.pdf"
+    doc = pymupdf.open()
+    for linhas in paginas:
+        pagina = doc.new_page()
+        y = 60
+        for linha in linhas:
+            pagina.insert_text((50, y), linha, fontsize=11)
+            y += 18
+    doc.save(caminho)
+    doc.close()
+    return caminho
+
+
+def test_pdf_remove_cabecalho_e_rodape_de_navegador(tmp_path):
+    paginas = [
+        [
+            "Leis Estaduais",
+            "Rio de Janeiro",
+            "18/09/26, 17:44",
+            f"Decreto 48820 2023 de Rio de Janeiro RJ",
+            "https://leisestaduais.com.br/rj/decreto-n-48820",
+            f"Art. {n} O conteudo do artigo numero {n}.",
+            f"{n}/3",
+        ]
+        for n in (1, 2, 3)
+    ]
+    texto = texto_de_pdf(_pdf(tmp_path, paginas))
+    assert "Leis Estaduais" not in texto and "leisestaduais.com.br" not in texto
+    assert "17:44" not in texto and "1/3" not in texto
+    assert all(f"Art. {n} O conteudo" in texto for n in (1, 2, 3))
+
+
+def test_pdf_nao_remove_linha_unica_que_nao_se_repete(tmp_path):
+    texto = texto_de_pdf(_pdf(tmp_path, [["Art. 1 Um.", "Texto normal"], ["Art. 2 Dois.", "Outro texto"], ["Art. 3 Tres."]]))
+    assert "Texto normal" in texto and "Outro texto" in texto
+
+
+# ----------------------------------------------------------------- estrutura
+
+
+def test_juntar_linhas_une_o_paragrafo_e_preserva_a_estrutura():
+    bruto = "Art. 1º Fica instituído o\nplano anual.\n§ 1º O plano\né público.\nI - primeiro;\nII - segundo."
+    assert juntar_linhas(bruto).splitlines() == [
+        "Art. 1º Fica instituído o plano anual.",
+        "§ 1º O plano é público.",
+        "I - primeiro;",
+        "II - segundo.",
+    ]
+
+
+def test_juntar_linhas_nao_trata_data_como_inicio_de_secao():
+    assert juntar_linhas("publicado em\n12 de março de 2023").splitlines() == ["publicado em 12 de março de 2023"]
+
+
+def test_juntar_linhas_une_palavra_hifenizada():
+    assert juntar_linhas("o regulamen-\ntar do plano") == "o regulamentar do plano"
+
+
+TEXTO_LEI = """DECRETO Nº 1 DE 2 DE JANEIRO DE 2023
+O GOVERNADOR decreta:
+CAPÍTULO I
+DAS DISPOSIÇÕES GERAIS
+Art. 1º Fica instituído o plano.
+Parágrafo único. Vale para todos.
+Art. 2º Os órgãos aderem.
+CAPÍTULO II
+DA EXECUÇÃO
+Seção I
+Do Processo
+Art. 3º Executa-se.
+Art. 3º-A Acrescenta-se.
+Art. 4. Fim."""
+
+
+def test_corta_por_artigo_com_preambulo_e_hierarquia():
+    secoes = cortar_por_artigos(TEXTO_LEI)
+    assert [s.rotulo for s in secoes] == ["Preâmbulo", "Art. 1", "Art. 2", "Art. 3", "Art. 3-A", "Art. 4"]
+    assert "GOVERNADOR" in secoes[0].texto
+    assert secoes[1].hierarquia == ["CAPÍTULO I DAS DISPOSIÇÕES GERAIS"]
+    assert "Parágrafo único" in secoes[1].texto  # o parágrafo fica dentro do artigo
+    assert secoes[3].hierarquia == ["CAPÍTULO II DA EXECUÇÃO", "Seção I Do Processo"]
+    assert secoes[3].artigo == "3" and secoes[4].artigo == "3-A"
+
+
+def test_artigo_no_fim_da_linha_e_reconhecido():
+    # Em PDFs de decretos, "Art. 1º" pode ficar sozinho na linha.
+    assert [s.rotulo for s in cortar_por_artigos("Art. 1º\nTexto do artigo.\nArt. 2º\nOutro.")] == ["Art. 1", "Art. 2"]
+
+
+def test_artigo_citado_no_meio_da_frase_nao_abre_artigo():
+    secoes = cortar_por_artigos("Art. 1º Aplica-se o disposto no art. 75 da Lei.\nArt. 2º Fim.")
+    assert [s.rotulo for s in secoes] == ["Art. 1", "Art. 2"]
+
+
+def test_artigo_repetido_ganha_sufixo_para_nao_repetir_o_id():
+    # Um decreto que altera outro cita, entre aspas, artigos do decreto alterado.
+    secoes = cortar_por_artigos('Art. 1º Altera.\nArt. 2º Passa a vigorar:\n“Art. 1º Novo texto."\n')
+    chaves = [s.chave for s in secoes]
+    assert chaves == ["art1", "art2", "art1-r2"]
+    assert len(set(chaves)) == len(chaves)
+
+
+def test_corta_edital_por_secoes_numeradas():
+    texto = (
+        "EDITAL Nº 1\nO município faz saber.\n"
+        "1. DO OBJETO\nAquisição de coisas.\n"
+        "2. DA PARTICIPAÇÃO\nPodem participar todos.\n"
+        "Em 12 de março de 2023 foi publicado.\n"
+        "2.1 Não podem as inidôneas.\n"
+    )
+    secoes = cortar_por_secoes(texto)
+    assert [s.rotulo for s in secoes] == ["Abertura", "1. DO OBJETO", "2. DA PARTICIPAÇÃO"]
+    assert "12 de março de 2023" in secoes[2].texto  # data no meio do texto não abre seção
+    assert [s.chave for s in secoes] == ["s000", "s001", "s002"]
+
+
+# ----------------------------------------------------------------- divisão em partes
+
+
+def test_texto_curto_nao_e_dividido():
+    assert dividir_texto("curto") == ["curto"]
+
+
+def test_texto_longo_respeita_o_limite_e_tem_sobreposicao():
+    paragrafos = [f"Inciso {i}: " + ("palavra " * 30).strip() + "." for i in range(40)]
+    partes = dividir_texto("\n".join(paragrafos), max_chars=800, overlap=100)
+    assert len(partes) > 3
+    assert all(len(p) <= 800 + 100 for p in partes)
+    for anterior, seguinte in zip(partes, partes[1:]):
+        cauda = anterior[-40:]
+        assert cauda in seguinte, "cada parte deve começar repetindo o final da anterior"
+
+
+def test_paragrafo_gigante_e_cortado_em_frases():
+    gigante = " ".join(f"Frase numero {i} termina aqui." for i in range(200))
+    partes = dividir_texto(gigante, max_chars=500, overlap=50)
+    assert len(partes) > 5
+    assert all(len(p) <= 600 for p in partes)
+
+
+def test_divisao_e_deterministica():
+    texto = "\n".join(f"Linha {i} com algum texto de preenchimento." for i in range(400))
+    assert dividir_texto(texto) == dividir_texto(texto)
+
+
+# ----------------------------------------------------------------- datas
+
+
+@pytest.mark.parametrize(
+    "cabecalho,esperado",
+    [
+        ("DECRETO Nº 48.820 DE 27 DE NOVEMBRO DE 2023", "2023-11-27"),
+        ("DECRETO Nº 48.843 DE 13 DEZEMBRO DE 2023", "2023-12-13"),  # sem o "DE" antes do mês, como no texto real
+        ("Decreto nº 49.129 de 05 de junho de 2024", "2024-06-05"),
+    ],
+)
+def test_data_do_cabecalho_do_decreto(cabecalho, esperado):
+    assert data_do_cabecalho(cabecalho) == esperado
+
+
+def test_data_do_cabecalho_ausente():
+    assert data_do_cabecalho("sem cabeçalho de decreto") is None
+
+
+# ----------------------------------------------------------------- chunks
+
+
+def _doc(**extra) -> Documento:
+    base = dict(
+        base_id="editais_normativo",
+        caminho=Path("data/raw/rj/v1/editais_normativo/decreto-1.pdf"),
+        stem="decreto-1",
+        norma="Decreto RJ 1/2023",
+        doc_type="decreto",
+        data_publicacao="2023-01-02",
+        origem="https://exemplo.gov.br/decreto-1",
+    )
+    base.update(extra)
+    return Documento(**base)
+
+
+def test_chunks_seguem_o_contrato_de_metadados():
+    chunks, _ = montar_chunks(_doc(altera="Decreto RJ 0/2022"), cortar_por_artigos(TEXTO_LEI), Sensibilidade.PUBLICO)
+    for chunk in chunks:
+        Chunk.model_validate(chunk.model_dump())  # o contrato do schema
+        m = chunk.metadata
+        assert m.base_id == "editais_normativo" and m.sensitivity is Sensibilidade.PUBLICO
+        assert m.data_publicacao == "2023-01-02" and m.altera == "Decreto RJ 0/2022"
+    assert chunks[1].metadata.chunk_id == "editais_normativo:decreto-1:art1:p1"
+    assert chunks[1].texto.startswith("Decreto RJ 1/2023 - Art. 1\n")
+
+
+def test_chunk_ids_sao_unicos_e_longos_viram_partes():
+    longo = "Art. 1º Início.\n" + "\n".join(f"I{i} - " + "texto " * 60 for i in range(30))
+    chunks, _ = montar_chunks(_doc(), cortar_por_artigos(longo), Sensibilidade.PUBLICO)
+    ids = [c.metadata.chunk_id for c in chunks]
+    assert len(ids) == len(set(ids)) and len(chunks) > 3
+    assert ids[0].endswith(":p1") and ids[1].endswith(":p2")
+    assert chunks[0].metadata.partes == len(chunks)
+    assert all(len(c.texto) <= MAX_CHARS + 400 for c in chunks)
+
+
+def test_dado_pessoal_e_mascarado_e_marcado():
+    texto = "Art. 1º Contato do servidor: CPF 123.456.789-09, e-mail joao@gmail.com."
+    chunks, com_dado = montar_chunks(_doc(), cortar_por_artigos(texto), Sensibilidade.PUBLICO)
+    assert com_dado == 1
+    assert "123.456.789-09" not in chunks[0].texto and "joao@gmail.com" not in chunks[0].texto
+    assert chunks[0].metadata.contem_dado_pessoal is True
+
+
+def test_chunk_sem_dado_pessoal_nao_e_marcado():
+    chunks, com_dado = montar_chunks(_doc(), cortar_por_artigos("Art. 1º Texto limpo."), Sensibilidade.PUBLICO)
+    assert com_dado == 0 and chunks[0].metadata.contem_dado_pessoal is False
+
+
+# ----------------------------------------------------------------- ponta a ponta
+
+
+@pytest.fixture()
+def corpus(tmp_path):
+    """Um mini-corpus coletado de verdade pelo fetch (arquivos locais, conferidos por hash)."""
+    manual = tmp_path / "manual"
+    manual.mkdir()
+    html = "<p>Art. 1º Fica criado o plano.</p><p>Art. 2º Vale para todos.</p>".encode("cp1252")
+    (manual / "lei.html").write_bytes(html)
+    pdf = manual / "decreto.pdf"
+    doc = pymupdf.open()
+    pagina = doc.new_page()
+    pagina.insert_text((50, 80), "DECRETO Nº 7 DE 5 DE MAIO DE 2023", fontsize=11)
+    pagina.insert_text((50, 100), "Art. 1º Regulamenta a lei.", fontsize=11)
+    doc.save(pdf)
+    doc.close()
+    manifesto = tmp_path / "corpus_manifest.yaml"
+    manifesto.write_text(
+        yaml.safe_dump({
+            "scenario_id": "teste",
+            "bases": [{
+                "base_id": "editais_normativo",
+                "natureza": "normativa",
+                "sensitivity_default": "publico",
+                "acesso": {
+                    "tipo": "arquivo_local",
+                    "arquivos_locais": {"pasta": str(manual), "arquivos": [
+                        {"arquivo": "lei.html", "norma": "Lei 1/2020", "doc_type": "lei",
+                         "data_publicacao": "2020-01-01", "sha256": hashlib.sha256(html).hexdigest(),
+                         "origem": "https://exemplo.gov.br/lei"},
+                        {"arquivo": "decreto.pdf", "norma": "Decreto 7/2023", "doc_type": "decreto",
+                         "origem": "https://exemplo.gov.br/decreto"},
+                    ]},
+                },
+            }],
+        }),
+        encoding="utf-8",
+    )
+    pastas = Pastas(dados=tmp_path / "data", cenario=tmp_path / "scenarios" / "teste", cenario_id="teste")
+    fetch(manifesto, "v1", pastas, dormir=lambda _: None, escrever=lambda _: None)
+    return manifesto, pastas
+
+
+def test_ingestao_ponta_a_ponta(corpus):
+    manifesto, pastas = corpus
+    relatorio = ingerir(manifesto, "v1", "editais_normativo", pastas)
+
+    saida = pastas.dados / "processed" / "teste" / "v1_editais_normativo.jsonl"
+    linhas = [json.loads(l) for l in saida.read_text(encoding="utf-8").splitlines()]
+    assert relatorio["total_chunks"] == len(linhas) == 4  # 2 artigos da lei + preâmbulo e artigo do decreto
+    assert {l["metadata"]["doc_type"] for l in linhas} == {"lei", "decreto"}
+    for l in linhas:
+        Chunk.model_validate(l)
+    # a data do decreto veio do próprio texto, porque o manifesto não a trazia
+    decreto = [l for l in linhas if l["metadata"]["doc_type"] == "decreto"]
+    assert {l["metadata"]["data_publicacao"] for l in decreto} == {"2023-05-05"}
+    assert relatorio["avisos"] == []
+
+
+def test_ingestao_e_deterministica(corpus):
+    manifesto, pastas = corpus
+    r1 = ingerir(manifesto, "v1", "editais_normativo", pastas)
+    r2 = ingerir(manifesto, "v1", "editais_normativo", pastas)
+    assert r1["sha256_do_jsonl"] == r2["sha256_do_jsonl"]
+
+
+def test_aviso_quando_a_data_do_manifesto_difere_da_do_texto(corpus, tmp_path):
+    manifesto, pastas = corpus
+    dados = yaml.safe_load(manifesto.read_text(encoding="utf-8"))
+    dados["bases"][0]["acesso"]["arquivos_locais"]["arquivos"][1]["data_publicacao"] = "2023-05-06"
+    novo = tmp_path / "outro.yaml"
+    novo.write_text(yaml.safe_dump(dados), encoding="utf-8")
+    pastas2 = Pastas(dados=tmp_path / "data2", cenario=tmp_path / "sc2", cenario_id="teste")
+    fetch(novo, "v1", pastas2, dormir=lambda _: None, escrever=lambda _: None)
+
+    relatorio = ingerir(novo, "v1", "editais_normativo", pastas2)
+    assert any("difere" in aviso for aviso in relatorio["avisos"])
+
+
+def test_base_sem_documentos_coletados_da_erro(corpus):
+    manifesto, pastas = corpus
+    with pytest.raises(FileNotFoundError):
+        ingerir(manifesto, "v9", "editais_normativo", pastas)

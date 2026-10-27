@@ -4,7 +4,7 @@ Plataforma de **Adaptive RAG** com um motor único e três cenários configuráv
 
 O ponto central do projeto: o sistema decide **que tipo de evidência** responde à pergunta antes de buscar. Não roteia por palavra-chave. Três perguntas com quase o mesmo vocabulário podem ir para três bases diferentes.
 
-> **Estado atual: fase 1 em andamento (base do motor).** Os três cenários estão desenhados (manifestos, personas e perguntas de avaliação). Do motor, já existem a configuração, os esquemas de dados, o mascaramento de dados pessoais, os logs estruturados e a coleta versionada do corpus, com testes. A ingestão, a busca e o roteador ainda não. A tabela abaixo mostra o estado real de cada cenário e é atualizada no fim de cada fase.
+> **Estado atual: fase 1 em andamento (base do motor).** Os três cenários estão desenhados (manifestos, personas e perguntas de avaliação). Do motor, já existem a configuração, os esquemas de dados, o mascaramento de dados pessoais, os logs estruturados, a coleta versionada do corpus e a ingestão em trechos, com testes. A busca e o roteador ainda não. A tabela abaixo mostra o estado real de cada cenário e é atualizada no fim de cada fase.
 
 ## Estado dos cenários
 
@@ -14,7 +14,7 @@ O ponto central do projeto: o sistema decide **que tipo de evidência** responde
 | [Saúde pública](scenarios/saude/README.md) | desenhada | desenhada | desenhada | desenhada (sintética) | planejado |
 | [Pesquisa acadêmica](scenarios/pesquisa/README.md) | desenhada | desenhada | desenhada | desenhada (sintética) | planejado |
 
-"Desenhada" quer dizer: fonte, forma de acesso e regras de sensibilidade estão no manifesto, e há perguntas de avaliação. **Dados coletados até agora:** a base normativa do RJ (v1: 13 documentos, 8,5 MB, com SHA-256 de cada um no inventário). Do código, existem a base do motor (configuração, esquemas, logs e mascaramento) e o `fetch_corpus`.
+"Desenhada" quer dizer: fonte, forma de acesso e regras de sensibilidade estão no manifesto, e há perguntas de avaliação. **Dados até agora:** a base normativa do RJ (13 documentos, 8,5 MB, com SHA-256 de cada um no inventário), cortada em 1.458 trechos. Do código, existem a base do motor (configuração, esquemas, logs e mascaramento) e o `fetch_corpus`.
 
 ## Como o sistema pensa
 

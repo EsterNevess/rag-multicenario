@@ -36,6 +36,16 @@ Baixe-os no navegador, a partir das origens listadas no manifesto, e coloque em 
 
 Os 5 editais vêm do PNCP e são baixados por script. O servidor de arquivos do PNCP responde HTTP 422 de forma intermitente, e por isso o `fetch` repete com espera crescente.
 
+## Como gerar os trechos
+
+Com o corpus coletado, a ingestão corta cada documento em trechos (um por artigo ou por seção) e grava `data/processed/rj/<versão>_editais_normativo.jsonl`, mais um relatório com a contagem por documento:
+
+```bash
+python -m src.ingest --scenario rj
+```
+
+Na versão atual: 1.458 trechos (298 da Lei 14.133, 343 dos decretos, 817 dos editais). Cada trecho traz o documento, o artigo ou a seção, a hierarquia (título, capítulo, seção), a data de publicação, a sensibilidade e a marca de dado pessoal mascarado. Os arquivos gerados não vão para o Git.
+
 ## Arquivos do cenário
 
 | Arquivo | Para quê |
