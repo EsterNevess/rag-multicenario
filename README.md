@@ -68,10 +68,10 @@ Este projeto parte de uma ideia desenvolvida em grupo na residência TIC em Tril
 |---|---|---|
 | Natureza | trabalho em equipe | trabalho individual |
 | Escopo | contratações do RJ | três cenários |
-| Código | do grupo, com ajustes meus | escrito do zero |
-| O que mostra | trabalhar em equipe num projeto real | desenhar e construir um sistema sozinha |
+| Código | do grupo, com ajustes meus | a escrever do zero (fase 1) |
+| O que mostra | trabalhar em equipe num projeto real | desenhar e construir um sistema sozinha (em andamento) |
 
-O que veio da ideia do grupo: a arquitetura de Adaptive RAG e o cenário de contratações. O que é novo aqui: o motor reescrito, os outros dois cenários, o roteamento por tipo de evidência, a avaliação por persona e a ablação das buscas.
+O que veio da ideia do grupo: a arquitetura de Adaptive RAG e o cenário de contratações. O que será novo aqui: o motor reescrito, os outros dois cenários, o roteamento por tipo de evidência, a avaliação por persona e a ablação das buscas.
 
 ## Créditos
 
