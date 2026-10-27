@@ -175,6 +175,18 @@ def test_extensao_vem_do_content_type_quando_a_url_nao_tem(tmp_path, pastas, ser
     assert inv["arquivos"][0]["path"].endswith(".pdf")
 
 
+def test_url_pode_ser_um_objeto_com_metadados(tmp_path, pastas, servidor):
+    base = _base_pdf(servidor, [])
+    base["acesso"]["urls"] = [
+        {"url": servidor.base + "/ok.pdf", "rotulo": "Edital de teste", "doc_type": "edital", "data_publicacao": "2026-01-01"},
+        servidor.base + "/muda.pdf",
+    ]
+    inv, _ = _rodar(_manifesto(tmp_path, [base]), pastas)
+
+    assert inv["totais"]["arquivos"] == 2
+    assert {a["origem"].rsplit("/", 1)[-1] for a in inv["arquivos"]} == {"ok.pdf", "muda.pdf"}
+
+
 def test_extensao_vem_do_conteudo_quando_o_servidor_diz_octet_stream(tmp_path, pastas, servidor):
     manifesto = _manifesto(tmp_path, [_base_pdf(servidor, ["/arquivos/2", "/arquivos/3", "/arquivos/4"])])
     inv, _ = _rodar(manifesto, pastas)
@@ -371,6 +383,21 @@ def test_inventario_tem_os_campos_e_marca_bases_nao_coletadas(tmp_path, pastas, 
     nao = next(b for b in inv["por_base"] if b["base_id"] == "outra")
     assert nao["estado"] == "nao_coletada"
     assert nao["divergencia_alvo"] is None
+
+
+def test_base_com_coletar_false_nao_faz_requisicao_e_registra_o_motivo(tmp_path, pastas, servidor):
+    adiada = _base_rest(servidor)
+    adiada["coletar"] = False
+    adiada["motivo_nao_coletada"] = "parâmetros da API ainda não validados"
+    manifesto = _manifesto(tmp_path, [_base_pdf(servidor, ["/ok.pdf"]), adiada])
+    inv, esperas = _rodar(manifesto, pastas)
+
+    assert "/api/contratos" not in servidor.chamadas
+    contratos = next(b for b in inv["por_base"] if b["base_id"] == "contratos")
+    assert contratos["estado"] == "nao_coletada"
+    assert contratos["motivo_nao_coletada"] == "parâmetros da API ainda não validados"
+    assert "Bases ainda não coletadas" in (pastas.cenario / "CORPUS_INVENTORY.md").read_text(encoding="utf-8")
+    assert inv["totais"]["falhas"] == 0
 
 
 def test_inventario_e_gravado_em_json_e_markdown(tmp_path, pastas, servidor):

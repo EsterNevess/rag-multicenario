@@ -464,7 +464,9 @@ class Coleta:
         tipo = acesso["tipo"]
         self.escrever(f"[{base_id}] ({tipo})")
         if tipo == "http_pdf":
-            for url in acesso.get("urls") or []:
+            for item in acesso.get("urls") or []:
+                # Uma URL pode ser só o texto ou um objeto com metadados (rotulo, doc_type, data_publicacao...).
+                url = item["url"] if isinstance(item, dict) else item
                 self._coletar_url(base_id, url, float(acesso.get("rate_limit_seg") or 0))
             self._coletar_locais(base_id, acesso)
         elif tipo == "arquivo_local":
@@ -496,6 +498,7 @@ def montar_inventario(manifesto: dict[str, Any], hash_manifesto: str, pastas: Pa
                 "base_id": base_id,
                 "natureza": base["natureza"],
                 "estado": "coletada" if meus else "nao_coletada",
+                "motivo_nao_coletada": None if meus else base.get("motivo_nao_coletada"),
                 "arquivos": len(oks),
                 "formatos": formatos,
                 "bytes": sum(r.bytes for r in oks),
@@ -570,6 +573,10 @@ def inventario_em_markdown(inv: dict[str, Any]) -> str:
             f"| {b['base_id']} | {b['natureza']} | {b['estado']} | {b['arquivos']} | {formatos} | "
             f"{_tamanho_legivel(b['bytes'])} | {b['volume_alvo'] if b['volume_alvo'] is not None else '-'} | {diverg} |"
         )
+    pendentes = [b for b in inv["por_base"] if b["estado"] == "nao_coletada"]
+    if pendentes:
+        linhas += ["", "## Bases ainda não coletadas", ""]
+        linhas += [f"- `{b['base_id']}`: {b.get('motivo_nao_coletada') or 'sem motivo informado'}" for b in pendentes]
     linhas += ["", "## Falhas", ""]
     if inv["falhas"]:
         linhas += [f"- `{f['origem']}`: {f['erro']}" for f in inv["falhas"]]
@@ -666,6 +673,10 @@ def fetch(
 
     coleta = Coleta(pastas, versao, **opcoes)
     for base in escolhidas:
+        if base.get("coletar") is False:
+            # Base declarada, mas ainda não pronta para coleta: não faz nenhuma requisição.
+            coleta.escrever(f"[{base['base_id']}] adiada: {base.get('motivo_nao_coletada', 'sem motivo informado')}")
+            continue
         coleta.coletar_base(base)
 
     estado["concluida_em"] = _agora()

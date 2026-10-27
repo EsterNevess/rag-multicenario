@@ -1,7 +1,7 @@
-# Inventário do corpus: rj (v1)
+# Inventário do corpus: rj (v2)
 
-Coletado em: 2026-10-27T15:33:12-03:00  
-Hash do manifesto: `sha256:6b40611ae9a729c4fcae3857ee0378d7c19c1aa359c57c049054569419cb245b`
+Coletado em: 2026-10-27T15:43:42-03:00  
+Hash do manifesto: `sha256:b8bcceabaabcedd40320395a80555420a3c0bc74e60ca4263d1973627982f792`
 
 **Total:** 13 arquivos, 8.5 MB, 0 falha(s).
 
@@ -13,6 +13,12 @@ Hash do manifesto: `sha256:6b40611ae9a729c4fcae3857ee0378d7c19c1aa359c57c0490545
 | contratos_estruturado | estruturada | nao_coletada | 0 | - | 0 B | cerca de 80 mil registros no snapshot de referência; declarar o volume real no inventário | - |
 | pca_agregada | agregada | nao_coletada | 0 | - | 0 B | a definir após a primeira coleta | - |
 | atas_conversacional | conversacional | nao_coletada | 0 | - | 0 B | 20 | - |
+
+## Bases ainda não coletadas
+
+- `contratos_estruturado`: a coleta pela API ainda não foi validada: falta confirmar como restringir ao RJ (parâmetro de UF ou seleção por órgão), passo 1.5b
+- `pca_agregada`: fase 4: bases agregadas ainda não desenhadas em detalhe
+- `atas_conversacional`: fase 4: base sintética, gerada por script próprio
 
 ## Falhas
 
