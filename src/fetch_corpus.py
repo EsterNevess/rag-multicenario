@@ -445,6 +445,9 @@ class Coleta:
           iterar          {parâmetro: [valores]}: uma coleta para cada valor (por exemplo, as 13 modalidades)
           por_orgao_de    nome de outro endpoint da base: uma coleta para cada órgão que ele devolveu
           parametro_orgao nome do parâmetro que recebe o CNPJ do órgão (padrão: cnpjOrgao)
+
+        Em `iterar`, uma chave que começa com "_" não vai para a URL: serve só de nome da subpasta e para
+        preencher `{chave}` dentro dos outros parâmetros (por exemplo, o ano dentro de um filtro).
         """
         endpoints: dict[str, dict[str, Any]] = {}
         for nome, valor in (acesso.get("endpoints") or {}).items():
@@ -457,7 +460,19 @@ class Coleta:
                 raise ValueError(f"{base_id}/{nome}: por_orgao_de aponta para um endpoint que não existe: {origem_orgaos!r}")
             for sufixo, extras in self._combinacoes(base_id, spec):
                 pasta = f"{nome}/{sufixo}" if sufixo else nome
-                self._coletar_endpoint(base_id, pasta, spec["url"], acesso, {**(spec.get("params") or {}), **extras})
+                self._coletar_endpoint(base_id, pasta, spec["url"], acesso, self._parametros(spec, extras))
+
+    @staticmethod
+    def _parametros(spec: dict[str, Any], extras: dict[str, Any]) -> dict[str, Any]:
+        """Junta os parâmetros do endpoint e os da combinação, preenchendo {chave} e tirando as chaves "_"."""
+        internos = {k[1:]: v for k, v in extras.items() if k.startswith("_")}
+        params = {**(spec.get("params") or {}), **{k: v for k, v in extras.items() if not k.startswith("_")}}
+        for chave, valor in params.items():
+            if isinstance(valor, str):
+                for nome, interno in internos.items():
+                    valor = valor.replace("{" + nome + "}", str(interno))
+                params[chave] = valor
+        return params
 
     def _combinacoes(self, base_id: str, spec: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
         """Todas as combinações de parâmetros que um endpoint pede, cada uma com o nome da sua subpasta."""
@@ -494,6 +509,8 @@ class Coleta:
         tamanho = pag.get("tamanho", 50)
         campo_tamanho = pag.get("campo_tamanho", "tamanhoPagina")
         inicio = pag.get("inicio", 1)
+        campo_itens = pag.get("campo_itens", "data")
+        limite_paginas = pag.get("max_paginas")
         rate_limit = float(acesso.get("rate_limit_seg") or 0)
 
         def vazio(origem: str) -> None:
@@ -501,6 +518,8 @@ class Coleta:
 
         pagina = inicio
         while self.max_paginas is None or (pagina - inicio) < self.max_paginas:
+            if limite_paginas and (pagina - inicio) >= int(limite_paginas):
+                return
             params = {**params_base, campo: pagina, campo_tamanho: tamanho}
             origem = endpoint + "?" + urlencode(sorted(params.items()))
             registro = self.registro.ler().get(origem)
@@ -531,7 +550,7 @@ class Coleta:
                     caminho.unlink(missing_ok=True)
                     self._falhou(base_id, "http", origem, "resposta que não é JSON")
                     return
-                itens = conteudo.get("data", []) if isinstance(conteudo, dict) else conteudo
+                itens = conteudo.get(campo_itens, []) if isinstance(conteudo, dict) else conteudo
                 if not itens:  # página vazia: acabou, e não guardamos página vazia
                     caminho.unlink(missing_ok=True)
                     _remover_se_vazia(caminho.parent)

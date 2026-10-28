@@ -117,6 +117,10 @@ def servidor():
                     return
                 corpo = {"data": [{"numeroControlePNCP": f"contrato-{cnpj}"}], "totalPaginas": 1}
                 self._responder(200, json.dumps(corpo).encode(), "application/json")
+            elif url.path == "/api/works":  # estilo OpenAlex: itens em "results", sem total de páginas
+                pagina = int(parse_qs(url.query)["page"][0])
+                itens = [{"id": f"W{pagina}{i}"} for i in range(2)] if pagina <= 10 else []
+                self._responder(200, json.dumps({"meta": {"count": 20}, "results": itens}).encode(), "application/json")
             elif url.path == "/api/contratos":
                 pagina = int(parse_qs(url.query).get("pagina", ["1"])[0])
                 itens = [{"id": pagina * 10 + i} for i in range(2)] if pagina <= 3 else []
@@ -566,3 +570,38 @@ def test_diff_entrou_saiu_mudou_igual():
 
     diff = diff_inventarios(inv(a="1", b="2", c="3"), inv(b="2", c="9", d="4"))
     assert diff == {"entrou": ["d"], "saiu": ["a"], "mudou": ["c"], "igual": ["b"]}
+
+
+def _base_openalex(servidor, **pag):
+    return {
+        "base_id": "trabalhos",
+        "natureza": "estruturada",
+        "acesso": {
+            "tipo": "rest_api",
+            "paginacao": {"campo": "page", "campo_tamanho": "per_page", "tamanho": 2, "campo_itens": "results", **pag},
+            "endpoints": {
+                "trabalhos": {
+                    "url": servidor.base + "/api/works",
+                    "params": {"filter": "inst:I1,publication_year:{ano},type:article"},
+                    "iterar": {"_ano": [2020, 2021]},
+                },
+            },
+        },
+    }
+
+
+def test_itens_em_results_limite_de_paginas_e_ano_dentro_do_filtro(tmp_path, pastas, servidor):
+    inv, _ = _rodar(_manifesto(tmp_path, [_base_openalex(servidor, max_paginas=3)]), pastas)
+
+    assert inv["totais"]["falhas"] == 0 and inv["totais"]["arquivos"] == 6  # 3 páginas por ano, sem pedir a quarta
+    assert servidor.chamadas["/api/works"] == 6
+    base = pastas.raw / "v1" / "trabalhos" / "trabalhos"
+    assert sorted(p.name for p in base.iterdir()) == ["_ano-2020", "_ano-2021"]
+    consultas = [c for c in servidor.consultas if c.startswith("/api/works")]
+    assert any("publication_year%3A2020" in c for c in consultas) and any("publication_year%3A2021" in c for c in consultas)
+    assert not any("_ano" in c or "%7Bano%7D" in c for c in consultas)  # o nome interno não vai para a URL
+
+
+def test_sem_limite_de_paginas_para_quando_a_pagina_vem_vazia(tmp_path, pastas, servidor):
+    inv, _ = _rodar(_manifesto(tmp_path, [_base_openalex(servidor)]), pastas)
+    assert inv["totais"]["arquivos"] == 20 and servidor.chamadas["/api/works"] == 22  # 10 páginas por ano + a vazia
