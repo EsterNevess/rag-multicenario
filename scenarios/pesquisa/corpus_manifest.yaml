@@ -31,27 +31,38 @@ bases:
 
   - base_id: openalex_estruturado
     natureza: estruturada
-    fonte: "OpenAlex: trabalhos, autores, instituições, financiamento e citações"
+    fonte: "OpenAlex: trabalhos, instituições, financiadores, citações e resumos (amostra dos mais citados)"
     acesso:
       tipo: rest_api
-      endpoint: "https://api.openalex.org/works"
       documentacao: "https://docs.openalex.org"
+      # Instituições do RJ, fixadas pelo identificador OpenAlex (conferido em 2026-10-28):
+      #   I122140584 UFRJ | I40034438 UERJ | I2699952 PUC-Rio | I161127581 UFF | I52325 Fiocruz
+      #   I3130050927 UENF | I161460629 UFRRJ | I141883831 IMPA | I158509141 CEFET-RJ | I83648350 UNIRIO
       params:
-        filtro_pais: "BR"
-        filtro_uf_ou_instituicoes: "instituições do RJ (lista fixa de identificadores)"
-        periodo: "2020 a 2024"
-      paginacao: "cursor (próprio da API)"
-      rate_limit_seg: 1.0
+        sort: "cited_by_count:desc"
+        select: "id,doi,title,publication_year,publication_date,type,language,primary_location,open_access,authorships,institutions_distinct_count,cited_by_count,fwci,primary_topic,keywords,funders,awards,abstract_inverted_index,is_retracted,updated_date"
+      endpoints:
+        trabalhos:
+          url: "https://api.openalex.org/works"
+          params:
+            filter: "institutions.id:I122140584|I40034438|I2699952|I161127581|I52325|I3130050927|I161460629|I141883831|I158509141|I83648350,publication_year:{ano},type:article,has_abstract:true"
+          iterar:
+            _ano: [2020, 2021, 2022, 2023, 2024]
+      paginacao: { campo: "page", campo_tamanho: "per_page", tamanho: 200, max_paginas: 5, campo_itens: "results" }
+      rate_limit_seg: 1.5
       observacoes:
-        - "Fixar a lista de instituições e o período, para a seleção ser determinística."
+        - "Sondado em 2026-10-28: 136.017 trabalhos de 2020 a 2024 nessas instituições, 91.277 artigos com resumo. Coleta-se uma amostra: os 1.000 mais citados de cada ano (5 páginas de 200), 5.000 no total."
+        - "A API não aceita desempate por id na ordenação; trabalhos com a mesma contagem de citações no corte podem trocar de lugar entre coletas. O inventário guarda o SHA-256 das páginas que foram de fato coletadas."
+        - "Sondado em 2026-10-28: o campo `institutions` da resposta vem sempre vazio; as instituições de cada trabalho estão em `authorships`. As páginas ficam grandes (cerca de 8 MB cada, 5.000 trabalhos no total) por causa dos artigos de colaboração gigante, que têm centenas de autores."
+        - "Sem chave de API a cota é diária e compartilhada pelo IP (US$ 0,10). A coleta usa cerca de 25 requisições."
     selecao_deterministica: true
-    volume_alvo: "alguns milhares de trabalhos, a declarar no inventário"
+    volume_alvo: "5.000 trabalhos (1.000 por ano, 2020 a 2024)"
     formato: json
     licenca: "OpenAlex: CC0"
     sensitivity_default: publico
     campo_vigencia: ano_publicacao
-    chunking_sugerido: "1 trabalho = 1 registro estruturado; abstract tratado como texto para a busca semântica"
-    metadados_extras: [titulo, ano, instituicoes, financiadores, citacoes, conceitos]
+    chunking_sugerido: "1 trabalho = 1 linha em SQL (trabalho, producao_instituicao, financiamento); o resumo fica como texto na tabela e pode ser indexado para a busca semântica"
+    metadados_extras: [titulo, ano, instituicoes, financiadores, citacoes, topico]
 
   - base_id: indicadores_agregado
     natureza: agregada

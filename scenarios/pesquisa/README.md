@@ -1,6 +1,6 @@
 # Cenário: inteligência sobre pesquisa acadêmica
 
-**Estado:** planejado (fase 2, a coleta mais fácil, por causa das APIs abertas).
+**Estado:** em andamento (fase 2). A base estruturada está coletada e normalizada: 5.000 artigos do OpenAlex (os 1.000 mais citados de cada ano, 2020 a 2024, de 10 instituições do RJ). Faltam os editais e normas de ética, a base agregada e a conversacional sintética.
 
 ## O problema
 
@@ -34,5 +34,6 @@ O sistema nunca revela a identidade de um revisor em revisão cega e não emite 
 
 ## Limitações já conhecidas
 
-- Nenhum dado foi coletado ainda; os editais e as normas exatas serão escolhidos na fase 2.
+- Só a base estruturada foi coletada; os editais e as normas de ética exatos ainda serão escolhidos.
+- A amostra são os artigos **mais citados**, não a produção inteira, e inclui colaborações gigantes. Os números das respostas valem para a amostra.
 - As bases conversacionais são sintéticas e marcadas como tal.

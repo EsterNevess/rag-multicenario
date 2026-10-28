@@ -345,17 +345,25 @@ def main(argv: list[str] | None = None) -> int:
     if not versao:
         print("Erro: nenhuma versão coletada. Rode primeiro o fetch_corpus.", file=sys.stderr)
         return 2
+    manifesto = args.manifest or pastas.cenario / "corpus_manifest.yaml"
     try:
-        r = normalizar(args.manifest or pastas.cenario / "corpus_manifest.yaml", versao, pastas)
+        if args.scenario == "pesquisa":
+            from src.normalize_openalex import normalizar as normalizar_cenario
+        else:
+            normalizar_cenario = normalizar
+        r = normalizar_cenario(manifesto, versao, pastas)
     except FileNotFoundError as erro:
         print(f"Erro: {erro}", file=sys.stderr)
         return 2
-    t = r["tabelas"]
-    print(f"{versao}: {t['contratacao']} contratações, {t['contrato']} contratos, {t['orgao']} órgãos.")
+    print(f"{versao}: " + ", ".join(f"{n} em {t}" for t, n in r["tabelas"].items()) + ".")
     print(f"  período: {r['periodo_de_publicacao']['de']} a {r['periodo_de_publicacao']['ate']}")
-    print(f"  em mais de uma fonte: {r['presentes_em_mais_de_uma_fonte']} | com conteúdo diferente: {r['com_conteudo_diferente_entre_fontes']}")
-    print(f"  rejeitados: {sum(r['rejeitados'].values())} | CPF de fornecedor mascarado: {r['fornecedores_pessoa_fisica_mascarados']}")
-    print(f"  contratos com a contratação encontrada: {r['contratos_com_contratacao_encontrada']['percentual']}%")
+    print(f"  rejeitados: {sum(r['rejeitados'].values())}")
+    if args.scenario == "rj":
+        print(f"  em mais de uma fonte: {r['presentes_em_mais_de_uma_fonte']} | com conteúdo diferente: {r['com_conteudo_diferente_entre_fontes']}")
+        print(f"  CPF de fornecedor mascarado: {r['fornecedores_pessoa_fisica_mascarados']}")
+        print(f"  contratos com a contratação encontrada: {r['contratos_com_contratacao_encontrada']['percentual']}%")
+    else:
+        print(f"  sem instituição na resposta da API: {r['trabalhos_sem_instituicao_na_resposta']} | com financiador: {r['trabalhos_com_financiador']} | com resumo: {r['trabalhos_com_resumo']}")
     return 0
 
 

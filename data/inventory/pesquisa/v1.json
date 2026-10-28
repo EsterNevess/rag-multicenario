@@ -1,0 +1,341 @@
+{
+  "scenario_id": "pesquisa",
+  "version": "v1",
+  "coletado_em": "2026-10-28T19:48:13-03:00",
+  "manifest_hash": "sha256:d88b12d9165ca76dee211a8eda9c775647b15f8455d9942b437ce9608704fbd2",
+  "totais": {
+    "arquivos": 25,
+    "bytes": 167698921,
+    "falhas": 0
+  },
+  "por_base": [
+    {
+      "base_id": "editais_normas_normativo",
+      "natureza": "normativa",
+      "estado": "nao_coletada",
+      "motivo_nao_coletada": null,
+      "arquivos": 0,
+      "formatos": {},
+      "bytes": 0,
+      "falhas": 0,
+      "volume_alvo": "cerca de 15 documentos",
+      "divergencia_alvo": null
+    },
+    {
+      "base_id": "openalex_estruturado",
+      "natureza": "estruturada",
+      "estado": "coletada",
+      "motivo_nao_coletada": null,
+      "arquivos": 25,
+      "formatos": {
+        "json": 25
+      },
+      "bytes": 167698921,
+      "falhas": 0,
+      "volume_alvo": "5.000 trabalhos (1.000 por ano, 2020 a 2024)",
+      "divergencia_alvo": null
+    },
+    {
+      "base_id": "indicadores_agregado",
+      "natureza": "agregada",
+      "estado": "nao_coletada",
+      "motivo_nao_coletada": null,
+      "arquivos": 0,
+      "formatos": {},
+      "bytes": 0,
+      "falhas": 0,
+      "volume_alvo": "a definir",
+      "divergencia_alvo": null
+    },
+    {
+      "base_id": "pareceres_conversacional",
+      "natureza": "conversacional",
+      "estado": "nao_coletada",
+      "motivo_nao_coletada": null,
+      "arquivos": 0,
+      "formatos": {},
+      "bytes": 0,
+      "falhas": 0,
+      "volume_alvo": 20,
+      "divergencia_alvo": null
+    }
+  ],
+  "arquivos": [
+    {
+      "path": "data/raw/pesquisa/v1/openalex_estruturado/trabalhos/_ano-2020/pagina_000001.json.json",
+      "base_id": "openalex_estruturado",
+      "tipo": "json",
+      "bytes": 9988472,
+      "sha256": "8f34856d5eec0ba5a93e44c70be5a1ff304ad3becfd307ffe9b7599a4eb11e46",
+      "origem": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2020%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=1&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "chave": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2020%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=1&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "coletado_em": "2026-10-28T19:46:24-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/pesquisa/v1/openalex_estruturado/trabalhos/_ano-2020/pagina_000002.json.json",
+      "base_id": "openalex_estruturado",
+      "tipo": "json",
+      "bytes": 6362120,
+      "sha256": "b5e130966835c3ae6b905885af1f6c5b8cd47a2d5903975759cf2bd6a4e339d0",
+      "origem": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2020%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=2&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "chave": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2020%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=2&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "coletado_em": "2026-10-28T19:46:29-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/pesquisa/v1/openalex_estruturado/trabalhos/_ano-2020/pagina_000003.json.json",
+      "base_id": "openalex_estruturado",
+      "tipo": "json",
+      "bytes": 5731043,
+      "sha256": "046d12212d35654d9afdf315f786776b2e90b7313efac7a359f7069f2c3217b7",
+      "origem": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2020%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=3&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "chave": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2020%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=3&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "coletado_em": "2026-10-28T19:46:34-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/pesquisa/v1/openalex_estruturado/trabalhos/_ano-2020/pagina_000004.json.json",
+      "base_id": "openalex_estruturado",
+      "tipo": "json",
+      "bytes": 5360243,
+      "sha256": "8dd75eed40d8de9b33b17972b1badf6d492e57506929835e69dbc49700f421cc",
+      "origem": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2020%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=4&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "chave": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2020%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=4&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "coletado_em": "2026-10-28T19:46:38-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/pesquisa/v1/openalex_estruturado/trabalhos/_ano-2020/pagina_000005.json.json",
+      "base_id": "openalex_estruturado",
+      "tipo": "json",
+      "bytes": 5857618,
+      "sha256": "ad0c8822eeec1fd0906f70f6d67f45e592c8e88f8ec7fa600373081e2488d765",
+      "origem": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2020%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=5&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "chave": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2020%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=5&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "coletado_em": "2026-10-28T19:46:42-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/pesquisa/v1/openalex_estruturado/trabalhos/_ano-2021/pagina_000001.json.json",
+      "base_id": "openalex_estruturado",
+      "tipo": "json",
+      "bytes": 10196497,
+      "sha256": "324a1f7741be720a3bb597dfaffb08f8c6d84e9b3ab419da24b72682a455d1f5",
+      "origem": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2021%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=1&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "chave": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2021%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=1&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "coletado_em": "2026-10-28T19:46:47-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/pesquisa/v1/openalex_estruturado/trabalhos/_ano-2021/pagina_000002.json.json",
+      "base_id": "openalex_estruturado",
+      "tipo": "json",
+      "bytes": 6896303,
+      "sha256": "788fd31fff2774e5fffb90aa34dee741d724bb1dd8f0992369f666a77145d84c",
+      "origem": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2021%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=2&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "chave": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2021%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=2&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "coletado_em": "2026-10-28T19:46:52-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/pesquisa/v1/openalex_estruturado/trabalhos/_ano-2021/pagina_000003.json.json",
+      "base_id": "openalex_estruturado",
+      "tipo": "json",
+      "bytes": 5860821,
+      "sha256": "e1f218589a77c4f14f072ca4c7f518a456bd20d25684440b37616e7847e33917",
+      "origem": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2021%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=3&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "chave": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2021%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=3&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "coletado_em": "2026-10-28T19:46:56-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/pesquisa/v1/openalex_estruturado/trabalhos/_ano-2021/pagina_000004.json.json",
+      "base_id": "openalex_estruturado",
+      "tipo": "json",
+      "bytes": 6805291,
+      "sha256": "3b2f971707785c23db4d95ae88e39736ad0e1306dc0ffda05998267761002d50",
+      "origem": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2021%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=4&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "chave": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2021%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=4&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "coletado_em": "2026-10-28T19:47:00-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/pesquisa/v1/openalex_estruturado/trabalhos/_ano-2021/pagina_000005.json.json",
+      "base_id": "openalex_estruturado",
+      "tipo": "json",
+      "bytes": 4454880,
+      "sha256": "dbf0c0e24b9bee1dae3cb36f5c9df2f43e83fd4fa9d157de72ba8073c12674b2",
+      "origem": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2021%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=5&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "chave": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2021%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=5&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "coletado_em": "2026-10-28T19:47:05-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/pesquisa/v1/openalex_estruturado/trabalhos/_ano-2022/pagina_000001.json.json",
+      "base_id": "openalex_estruturado",
+      "tipo": "json",
+      "bytes": 9220926,
+      "sha256": "d8258748a20e71266f4e4a661f3f3f5266092b4b1697a17f8a7bdce3c5ac5230",
+      "origem": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2022%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=1&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "chave": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2022%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=1&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "coletado_em": "2026-10-28T19:47:09-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/pesquisa/v1/openalex_estruturado/trabalhos/_ano-2022/pagina_000002.json.json",
+      "base_id": "openalex_estruturado",
+      "tipo": "json",
+      "bytes": 6322173,
+      "sha256": "8a9e217d64fd43e4d4b46e8a14b625e83b4e691fddbd82684649975a78b94254",
+      "origem": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2022%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=2&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "chave": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2022%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=2&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "coletado_em": "2026-10-28T19:47:14-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/pesquisa/v1/openalex_estruturado/trabalhos/_ano-2022/pagina_000003.json.json",
+      "base_id": "openalex_estruturado",
+      "tipo": "json",
+      "bytes": 5803931,
+      "sha256": "9013d3ed742ac7fe960359bf33062f00c0a489c2293c2b1460943ab8f4cfd9b6",
+      "origem": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2022%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=3&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "chave": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2022%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=3&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "coletado_em": "2026-10-28T19:47:18-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/pesquisa/v1/openalex_estruturado/trabalhos/_ano-2022/pagina_000004.json.json",
+      "base_id": "openalex_estruturado",
+      "tipo": "json",
+      "bytes": 5172968,
+      "sha256": "3f677d3160e7303e544eaa7acf4dd5a3990fe40d63977f38b8d7c79f225918a6",
+      "origem": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2022%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=4&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "chave": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2022%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=4&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "coletado_em": "2026-10-28T19:47:22-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/pesquisa/v1/openalex_estruturado/trabalhos/_ano-2022/pagina_000005.json.json",
+      "base_id": "openalex_estruturado",
+      "tipo": "json",
+      "bytes": 5011656,
+      "sha256": "5b51984c281150713cb082b29ece36d805c880307b7b39fe6243675e94675192",
+      "origem": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2022%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=5&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "chave": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2022%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=5&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "coletado_em": "2026-10-28T19:47:26-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/pesquisa/v1/openalex_estruturado/trabalhos/_ano-2023/pagina_000001.json.json",
+      "base_id": "openalex_estruturado",
+      "tipo": "json",
+      "bytes": 9143429,
+      "sha256": "2a8c731e20e0c6c5a7402f75e7869eee1a358aabcd869a1f2425cb50eb041fce",
+      "origem": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2023%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=1&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "chave": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2023%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=1&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "coletado_em": "2026-10-28T19:47:31-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/pesquisa/v1/openalex_estruturado/trabalhos/_ano-2023/pagina_000002.json.json",
+      "base_id": "openalex_estruturado",
+      "tipo": "json",
+      "bytes": 7169790,
+      "sha256": "224dc2c9d7a15a3c5e269a44686b431c033c4f4e76b2807bfc10ec92724998e8",
+      "origem": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2023%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=2&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "chave": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2023%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=2&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "coletado_em": "2026-10-28T19:47:35-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/pesquisa/v1/openalex_estruturado/trabalhos/_ano-2023/pagina_000003.json.json",
+      "base_id": "openalex_estruturado",
+      "tipo": "json",
+      "bytes": 6905871,
+      "sha256": "147e10e8a716a0cecac63869dc9b126564f921dce94a86a68ad167deb89fdde6",
+      "origem": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2023%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=3&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "chave": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2023%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=3&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "coletado_em": "2026-10-28T19:47:40-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/pesquisa/v1/openalex_estruturado/trabalhos/_ano-2023/pagina_000004.json.json",
+      "base_id": "openalex_estruturado",
+      "tipo": "json",
+      "bytes": 7062916,
+      "sha256": "ab4802975ef76ca1325028db8a8172e63ad8d597addb45a4a6e8596bb9d8b3d1",
+      "origem": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2023%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=4&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "chave": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2023%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=4&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "coletado_em": "2026-10-28T19:47:45-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/pesquisa/v1/openalex_estruturado/trabalhos/_ano-2023/pagina_000005.json.json",
+      "base_id": "openalex_estruturado",
+      "tipo": "json",
+      "bytes": 5289849,
+      "sha256": "fef0833387766b675b8cb862e02a2b4baab39bbfc8b4d0bb93b8f307a7b7f0e5",
+      "origem": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2023%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=5&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "chave": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2023%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=5&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "coletado_em": "2026-10-28T19:47:49-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/pesquisa/v1/openalex_estruturado/trabalhos/_ano-2024/pagina_000001.json.json",
+      "base_id": "openalex_estruturado",
+      "tipo": "json",
+      "bytes": 8469893,
+      "sha256": "c2741b703e78c3ec3493c81478bec712ed3e555b3508d1fe47ff5f60c8e9c541",
+      "origem": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2024%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=1&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "chave": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2024%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=1&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "coletado_em": "2026-10-28T19:47:53-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/pesquisa/v1/openalex_estruturado/trabalhos/_ano-2024/pagina_000002.json.json",
+      "base_id": "openalex_estruturado",
+      "tipo": "json",
+      "bytes": 7202174,
+      "sha256": "9a71dc986fe9b674b13685c0d91c094377ee95a21ffd8fcb99b560c241cb8c31",
+      "origem": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2024%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=2&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "chave": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2024%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=2&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "coletado_em": "2026-10-28T19:47:58-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/pesquisa/v1/openalex_estruturado/trabalhos/_ano-2024/pagina_000003.json.json",
+      "base_id": "openalex_estruturado",
+      "tipo": "json",
+      "bytes": 5970794,
+      "sha256": "44ac219db35b20c1da2fff6697d9c165fd7bd530a4570b1fb62830074b88cf6d",
+      "origem": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2024%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=3&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "chave": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2024%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=3&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "coletado_em": "2026-10-28T19:48:02-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/pesquisa/v1/openalex_estruturado/trabalhos/_ano-2024/pagina_000004.json.json",
+      "base_id": "openalex_estruturado",
+      "tipo": "json",
+      "bytes": 6046415,
+      "sha256": "1ef67c7e544a7101fa5d6fb5b9f97d64b73b2fd48d33bc4aa4fbd157fe592a40",
+      "origem": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2024%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=4&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "chave": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2024%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=4&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "coletado_em": "2026-10-28T19:48:07-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/pesquisa/v1/openalex_estruturado/trabalhos/_ano-2024/pagina_000005.json.json",
+      "base_id": "openalex_estruturado",
+      "tipo": "json",
+      "bytes": 5392848,
+      "sha256": "3f4b761af5cf5db0b9d7cc1070867f238919583640e67f92d44aaee21f31d820",
+      "origem": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2024%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=5&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "chave": "https://api.openalex.org/works?filter=institutions.id%3AI122140584%7CI40034438%7CI2699952%7CI161127581%7CI52325%7CI3130050927%7CI161460629%7CI141883831%7CI158509141%7CI83648350%2Cpublication_year%3A2024%2Ctype%3Aarticle%2Chas_abstract%3Atrue&page=5&per_page=200&select=id%2Cdoi%2Ctitle%2Cpublication_year%2Cpublication_date%2Ctype%2Clanguage%2Cprimary_location%2Copen_access%2Cauthorships%2Cinstitutions_distinct_count%2Ccited_by_count%2Cfwci%2Cprimary_topic%2Ckeywords%2Cfunders%2Cawards%2Cabstract_inverted_index%2Cis_retracted%2Cupdated_date&sort=cited_by_count%3Adesc",
+      "coletado_em": "2026-10-28T19:48:11-03:00",
+      "status": "ok"
+    }
+  ],
+  "falhas": []
+}

@@ -1,0 +1,93 @@
+# Capacidades do cenário: o que o roteador aceita perguntar. Lido por src/capacidades.py.
+cenario: pesquisa
+descricao: pesquisa acadêmica de instituições do Rio de Janeiro (artigos, instituições, financiadores e citações)
+
+dicas_do_analisador:
+  - "A base cobre uma amostra: os 1.000 artigos mais citados de cada ano, de 2020 a 2024, de 10 instituições do RJ. Perguntas sobre outros anos ou instituições não têm dados."
+  - "Para um assunto (por exemplo, aprendizado de máquina), filtre titulo__contem, palavras_chave__contem ou topico_principal__contem; os termos dos campos estão em inglês."
+  - "Os financiadores aparecem com o nome oficial por extenso: FAPERJ é \"Fundação Carlos Chagas Filho de Amparo à Pesquisa do Estado do Rio de Janeiro\" (use \"Carlos Chagas Filho\"), CNPq é \"Conselho Nacional de Desenvolvimento Científico e Tecnológico\" (use \"Desenvolvimento Científico\") e CAPES é \"Coordenação de Aperfeiçoamento de Pessoal de Nível Superior\" (use \"Aperfeiçoamento de Pessoal\")."
+  - "Para trabalhos de um financiador, use a entidade financiamento (financiador_nome__contem, por exemplo FAPERJ) ou trabalho com financiadores__contem. Para contar por instituição, use producao_instituicao com instituicao_alvo = 1, que seleciona as 10 instituições do RJ da amostra (sem isso entram também as coautoras de fora, como a USP)."
+  - "Os mais citados: operação listar com campo_agregacao citacoes."
+
+regras_de_resposta:
+  - "Informe sempre que os números vêm de uma amostra dos artigos mais citados, e não de toda a produção."
+  - "Não avalie a qualidade de um pesquisador. Apresente publicações, citações e financiamento como dados."
+
+catalogo:
+  estruturada: "artigos de instituições do RJ de 2020 a 2024 (os mais citados de cada ano), com instituições, financiadores, citações e resumos"
+  normativa: "editais de fomento e normas de ética em pesquisa"
+  aviso: "Não revelo a identidade de revisores, não avalio a qualidade de pesquisadores e não informo e-mails pessoais."
+
+regras_de_entrada:
+  - categoria: identidade_do_revisor
+    mensagem: "Não revelo nem ajudo a deduzir quem foi o revisor de um manuscrito: o anonimato da revisão cega é protegido."
+    padroes:
+      - "\\b(quem|qual)\\s+(foi|e|era|seria|sao|foram)\\s+(o|a|os|as)?\\s*(revisor|revisora|revisores|parecerista|pareceristas|avaliador|avaliadora|referee)\\b"
+      - "\\bidentific\\w+\\b.{0,25}\\b(revisor|revisora|parecerista|avaliador|avaliadora)\\b"
+      - "\\b(revel\\w+|descubr\\w+|desanonimiz\\w+)\\b.{0,30}\\b(revisor|revisora|parecerista|avaliador|avaliadora)\\b"
+      - "\\bquem\\s+(revisou|avaliou|aprovou|rejeitou|recusou)\\b"
+  - categoria: juizo_sobre_pesquisador
+    mensagem: "Não avalio a qualidade de um pesquisador. Posso mostrar publicações, citações e financiamento como dados, para você avaliar."
+    padroes:
+      - "\\b(e|eh|seria|sera)\\s+(um|uma)?\\s*(bom|boa|mau|ma|ruim|fraco|fraca|excelente|otimo|otima|pessimo|pessima|competente|incompetente)\\w*\\s+(pesquisador|pesquisadora|cientista|professor|professora|autor|autora)"
+      - "\\b(pesquisador|pesquisadora|cientista|autor|autora)\\b.{0,40}\\b(e|eh)\\s+(bom|boa|ruim|fraco|fraca|competente|incompetente|confiavel)\\b"
+      - "\\b(melhor|pior)\\s+(pesquisador|pesquisadora|cientista)\\b"
+  - categoria: dado_pessoal
+    mensagem: "Não informo e-mail ou outros dados pessoais de autores."
+    padroes:
+      - "\\be-?mail\\b.{0,20}\\b(d[eoa]s?)\\s+(autor|autora|pesquisador|pesquisadora|correspondente|revisor|revisora)"
+
+entidades:
+  trabalho:
+    tabela: trabalho
+    exibir: [id, titulo, ano, citacoes, periodico, financiadores]
+    ordem_padrao: data_publicacao
+    campos:
+      - { nome: id, tipo: id }
+      - { nome: doi, tipo: id }
+      - { nome: titulo, tipo: texto }
+      - { nome: ano, tipo: inteiro, agrupavel: true }
+      - { nome: data_publicacao, tipo: data }
+      - { nome: tipo, tipo: categoria, agrupavel: true }
+      - { nome: idioma, tipo: categoria, agrupavel: true }
+      - { nome: periodico, tipo: categoria, agrupavel: true }
+      - { nome: acesso_aberto, tipo: inteiro, agrupavel: true }
+      - { nome: status_acesso, tipo: categoria, agrupavel: true }
+      - { nome: citacoes, tipo: inteiro, agregavel: true }
+      - { nome: fwci, tipo: valor, agregavel: true }
+      - { nome: n_autores, tipo: inteiro, agregavel: true }
+      - { nome: n_instituicoes, tipo: inteiro, agregavel: true }
+      - { nome: area, tipo: categoria, agrupavel: true }
+      - { nome: topico_principal, tipo: categoria, agrupavel: true }
+      - { nome: palavras_chave, tipo: texto }
+      - { nome: financiadores, tipo: texto }
+      - { nome: resumo, tipo: texto }
+      - { nome: retratado, tipo: inteiro, agrupavel: true }
+  producao_instituicao:
+    tabela: producao_instituicao
+    exibir: [trabalho_id, instituicao_nome, titulo, ano, citacoes]
+    ordem_padrao: ano
+    campos:
+      - { nome: trabalho_id, tipo: id }
+      - { nome: instituicao_id, tipo: id, agrupavel: true }
+      - { nome: instituicao_nome, tipo: categoria, agrupavel: true }
+      - { nome: pais, tipo: categoria, agrupavel: true }
+      - { nome: instituicao_alvo, tipo: inteiro, agrupavel: true }
+      - { nome: ano, tipo: inteiro, agrupavel: true }
+      - { nome: titulo, tipo: texto }
+      - { nome: tipo, tipo: categoria, agrupavel: true }
+      - { nome: area, tipo: categoria, agrupavel: true }
+      - { nome: acesso_aberto, tipo: inteiro, agrupavel: true }
+      - { nome: citacoes, tipo: inteiro, agregavel: true }
+  financiamento:
+    tabela: financiamento
+    exibir: [trabalho_id, financiador_nome, titulo, ano, citacoes]
+    ordem_padrao: ano
+    campos:
+      - { nome: trabalho_id, tipo: id }
+      - { nome: financiador_id, tipo: id, agrupavel: true }
+      - { nome: financiador_nome, tipo: categoria, agrupavel: true }
+      - { nome: ano, tipo: inteiro, agrupavel: true }
+      - { nome: titulo, tipo: texto }
+      - { nome: area, tipo: categoria, agrupavel: true }
+      - { nome: citacoes, tipo: inteiro, agregavel: true }

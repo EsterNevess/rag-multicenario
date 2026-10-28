@@ -4,17 +4,17 @@ Plataforma de **Adaptive RAG** com um motor único e três cenários configuráv
 
 O ponto central do projeto: o sistema decide **que tipo de evidência** responde à pergunta antes de buscar. Não roteia por palavra-chave. Três perguntas com quase o mesmo vocabulário podem ir para três bases diferentes.
 
-> **Estado atual: fase 1 concluída no código, falta a rodada real.** Do motor existem a configuração, os esquemas, o mascaramento de dados pessoais, os logs estruturados, a coleta versionada, a ingestão em trechos, a indexação, a busca (BM25, vetores e fusão RRF), a normalização da base estruturada em SQL, o roteador com guardrails e a geração de respostas com fontes numeradas, tudo com testes (281). Ainda não foi feita a rodada completa com um modelo de verdade: ela depende de uma chave de API e de normalizar a coleta v3. A tabela abaixo mostra o estado real de cada cenário e é atualizada no fim de cada fase.
+> **Estado atual: motor pronto com dois cenários coletados; falta a rodada real com um modelo.** Do motor existem a configuração, os esquemas, o mascaramento de dados pessoais, os logs estruturados, a coleta versionada, a ingestão em trechos, a indexação, a busca (BM25, vetores e fusão RRF), a normalização da base estruturada em SQL, o roteador com guardrails e a geração de respostas com fontes numeradas, tudo com testes (323). Um mesmo motor atende dois cenários: o que muda de um para outro está em `scenarios/<id>/` (manifesto do corpus e `capacidades.yaml`). Ainda não foi feita a rodada completa com um modelo de verdade: ela depende de uma chave de API e de normalizar a coleta v3. A tabela abaixo mostra o estado real de cada cenário e é atualizada no fim de cada fase.
 
 ## Estado dos cenários
 
 | Cenário | Normativa | Estruturada | Agregada | Conversacional | Estado |
 |---|---|---|---|---|---|
-| [Contratações públicas do RJ](scenarios/rj/README.md) | desenhada | desenhada | desenhada | desenhada (sintética) | **em andamento (fase 1)** |
+| [Contratações públicas do RJ](scenarios/rj/README.md) | **coletada e indexada** (1.458 trechos) | **coletada e normalizada** (37 mil contratações, 46 mil contratos) | desenhada | desenhada (sintética) | **código pronto, falta a rodada real (fase 1)** |
 | [Saúde pública](scenarios/saude/README.md) | desenhada | desenhada | desenhada | desenhada (sintética) | planejado |
-| [Pesquisa acadêmica](scenarios/pesquisa/README.md) | desenhada | desenhada | desenhada | desenhada (sintética) | planejado |
+| [Pesquisa acadêmica](scenarios/pesquisa/README.md) | desenhada | **coletada e normalizada** (5.000 artigos) | desenhada | desenhada (sintética) | **em andamento (fase 2)** |
 
-"Desenhada" quer dizer: fonte, forma de acesso e regras de sensibilidade estão no manifesto, e há perguntas de avaliação. **Dados até agora:** a base normativa do RJ (13 documentos, 8,5 MB, com SHA-256 de cada um no inventário), cortada em 1.458 trechos. Do código, existem a base do motor (configuração, esquemas, logs e mascaramento) e o `fetch_corpus`.
+"Desenhada" quer dizer: fonte, forma de acesso e regras de sensibilidade estão no manifesto, e há perguntas de avaliação. **Dados até agora:** a base normativa do RJ (13 documentos, cortada em 1.458 trechos), as bases estruturadas do RJ (2026) e da pesquisa (OpenAlex, 2020 a 2024), todas com SHA-256 e inventário por versão.
 
 ## Como rodar (cenário RJ)
 
@@ -25,6 +25,8 @@ python -m src.index build --scenario rj     # índice de busca (precisa do Ollam
 python -m src.normalize --scenario rj       # contratações e contratos em tabelas SQL
 python -m src.generate --scenario rj "Quantas contratações por dispensa foram publicadas em janeiro de 2026?"
 ```
+
+O cenário de pesquisa usa os mesmos comandos com `--scenario pesquisa` (a coleta é `python -m src.fetch_corpus fetch --scenario pesquisa --base openalex_estruturado`).
 
 A geração usa a OpenAI por padrão (`OPENAI_API_KEY` no `.env`) ou um modelo local com `LLM_PROVIDER=ollama`. Sem pergunta na linha de comando, `src.generate` abre um modo interativo. Cada etapa fica registrada em `logs/pipeline-AAAA-MM-DD.jsonl`.
 
