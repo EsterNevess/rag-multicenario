@@ -97,6 +97,36 @@ bases:
     chunking_sugerido: "1 contrato ou contratação = 1 chunk, serializado em linguagem natural"
     metadados_extras: [orgao, modalidade, valor_global, municipio, ano, data_assinatura]
 
+  - base_id: snapshot_pncp_rj
+    natureza: estruturada
+    fonte: "Snapshot do projeto em equipe (Time 03): respostas da API do PNCP coletadas em outubro de 2026, de janeiro a agosto de 2026"
+    acesso:
+      tipo: snapshot_sqlite
+      # O banco é aberto só para leitura. Coloque-o em data/manual/snapshot/app.db ou use --snapshot-db.
+      arquivo: "data/manual/snapshot/app.db"
+      tabela: raw_asset
+      tipos:
+        contratacao: contratacoes
+        contrato: contratos
+      tamanho_pagina: 500
+      # A identidade do snapshot é o conteúdo, e não o arquivo (que muda a cada uso do banco): o hash dos
+      # hashes de cada registro, em ordem fixa. Quem reproduzir confere que está com os mesmos dados.
+      impressao_digital:
+        contratacao: "5f4caa7ae52d372ae3eb17aaf25792a53cd694684e76ef852b94ca9b40294149"
+        contrato: "7448bd8f27c0b6f04b75a64718ea43c93a68564fa0e2f332a7c0254a563d3eca"
+      observacoes:
+        - "37.637 contratações e 41.978 contratos, todos do RJ nas amostras examinadas, sem registros repetidos."
+        - "Cobre o período completo (jan. a ago. de 2026). A amostra pela API (contratos_estruturado) cobre só janeiro e serve para provar que a coleta oficial funciona."
+        - "O banco de origem é do projeto em equipe e é compartilhado pelo grupo, fora do Git."
+    selecao_deterministica: true
+    volume_alvo: 160   # páginas de até 500 registros (79.615 registros)
+    formato: json
+    licenca: "Dados abertos gov.br, com atribuição"
+    sensitivity_default: publico
+    campo_vigencia: dataVigenciaFim
+    chunking_sugerido: "Mesmo formato da API do PNCP; vai para tabelas SQL (contratacao e contrato), não para o índice de vetores"
+    metadados_extras: [orgao, modalidade, valor_global, municipio, ano, data_assinatura]
+
   - base_id: pca_agregada
     natureza: agregada
     coletar: false

@@ -36,6 +36,17 @@ Baixe-os no navegador, a partir das origens listadas no manifesto, e coloque em 
 
 Os 5 editais vêm do PNCP e são baixados por script. O servidor de arquivos do PNCP responde HTTP 422 de forma intermitente, e por isso o `fetch` repete com espera crescente.
 
+## Base estruturada: a API e o snapshot
+
+A base estruturada (contratações e contratos) tem duas fontes:
+
+- **A API do PNCP** (`contratos_estruturado`): é a fonte oficial e reprodutível. Para não sobrecarregar um serviço público, a coleta pela API cobre **uma amostra de janeiro de 2026** (as contratações do RJ nas 13 modalidades e os contratos de cada órgão encontrado), com 2,5 s entre as requisições.
+- **O snapshot** (`snapshot_pncp_rj`): as respostas da API que o projeto em equipe já havia guardado em um banco SQLite, para o **período completo** (janeiro a agosto de 2026: 37.637 contratações e 41.978 contratos). Coloque o banco em `data/manual/snapshot/app.db` ou use `--snapshot-db`. O manifesto traz a impressão digital do conteúdo, e o `fetch` recusa um snapshot diferente.
+
+```bash
+python -m src.fetch_corpus update --scenario rj --snapshot-db caminho/do/app.db
+```
+
 ## Como gerar os trechos
 
 Com o corpus coletado, a ingestão corta cada documento em trechos (um por artigo ou por seção) e grava `data/processed/rj/<versão>_editais_normativo.jsonl`, mais um relatório com a contagem por documento:

@@ -26,6 +26,7 @@ import itertools
 import json
 import re
 import shutil
+import sqlite3
 import sys
 import time
 from dataclasses import asdict, dataclass
@@ -48,7 +49,7 @@ from config import RAIZ
 from src.schema import Natureza
 
 USER_AGENT = "rag-multicenario/0.1 (+https://github.com/EsterNevess/rag-multicenario)"
-TIPOS_ACESSO = {"rest_api", "http_pdf", "arquivo_local", "sintetico"}
+TIPOS_ACESSO = {"rest_api", "http_pdf", "arquivo_local", "snapshot_sqlite", "sintetico"}
 EXTENSOES_CONHECIDAS = {".pdf", ".htm", ".html", ".json", ".xml", ".csv", ".txt"}
 STATUS_TRANSITORIOS = {429, 500, 502, 503, 504}
 TEXTO_422_TRANSITORIO = "Erro ao tentar carregar arquivo"  # o PNCP devolve isto de forma intermitente
@@ -245,6 +246,13 @@ def _espera_do_429(resposta: requests.Response, tentativa: int, espera_base: flo
         return min(espera_base * 15 * 2 ** (tentativa - 1), 300.0)
 
 
+def _identificador(nome: str) -> str:
+    """Nome de tabela ou coluna vindo do manifesto: só letras, números e sublinhado (nada de SQL solto)."""
+    if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", str(nome)):
+        raise ManifestoInvalido(f"identificador SQL inválido no manifesto: {nome!r}")
+    return str(nome)
+
+
 def _remover_se_vazia(pasta: Path) -> None:
     """Uma consulta sem registros não deixa uma pasta vazia para trás (rmdir só remove pasta vazia)."""
     try:
@@ -325,6 +333,7 @@ class Coleta:
         max_paginas: int | None = None,
         espera_base: float = 2.0,
         escrever: Callable[[str], None] = print,
+        snapshot_db: Path | None = None,
     ):
         self.pastas = pastas
         self.versao = versao
@@ -337,6 +346,7 @@ class Coleta:
         self.max_paginas = max_paginas
         self.espera_base = espera_base
         self.escrever = escrever
+        self.snapshot_db = snapshot_db
 
     # -- utilidades
     def _relativo(self, caminho: Path) -> str:
@@ -538,6 +548,79 @@ class Coleta:
                 return
             pagina += 1
 
+    # -- snapshot: payloads da API já coletados e guardados em um banco SQLite (por exemplo, pelo projeto em equipe)
+    def _importar_snapshot(self, base_id: str, acesso: dict[str, Any]) -> None:
+        """Copia os registros de uma tabela de um banco SQLite para páginas JSON no formato da API.
+
+        O banco é aberto só para leitura. A identidade do snapshot é a "impressão digital" do seu conteúdo
+        (hash dos hashes de cada registro, em ordem fixa), e não o hash do arquivo, que muda a cada uso do banco.
+        """
+        tabela = _identificador(acesso.get("tabela", "raw_asset"))
+        col_tipo = _identificador(acesso.get("coluna_tipo", "resource_type"))
+        col_payload = _identificador(acesso.get("coluna_payload", "payload"))
+        col_hash = _identificador(acesso.get("coluna_hash", "payload_hash"))
+        col_ordem = _identificador(acesso.get("coluna_ordem", "external_id"))
+        tipos: dict[str, str] = acesso["tipos"]
+        tamanho = int(acesso.get("tamanho_pagina", 500))
+        esperadas = acesso.get("impressao_digital") or {}
+        caminho = Path(self.snapshot_db) if self.snapshot_db else RAIZ / acesso["arquivo"]
+        chave = f"snapshot:{caminho.name}"
+        if not caminho.is_file():
+            self._falhou(base_id, "snapshot", chave, f"arquivo do snapshot ausente: {caminho}")
+            return
+
+        conexao = sqlite3.connect(caminho.resolve().as_uri() + "?mode=ro", uri=True)
+        resumo: dict[str, dict[str, Any]] = {}
+        try:
+            for tipo, pasta in tipos.items():
+                consulta = f"FROM {tabela} WHERE {col_tipo} = ? ORDER BY {col_ordem}, rowid"
+                # Passo 1: a impressão digital, antes de gravar qualquer coisa.
+                h = hashlib.sha256()
+                total = 0
+                for (hash_registro,) in conexao.execute(f"SELECT {col_hash} {consulta}", (tipo,)):
+                    h.update(str(hash_registro).encode("utf-8") + b"\n")
+                    total += 1
+                impressao = h.hexdigest()
+                if esperadas.get(tipo) and esperadas[tipo] != impressao:
+                    self._falhou(base_id, "snapshot", f"{chave}:{tipo}", "impressão digital do snapshot difere da declarada no manifesto")
+                    continue
+                # Passo 2: as páginas.
+                anteriores = self.registro.ler()
+                cursor = conexao.execute(f"SELECT {col_payload} {consulta}", (tipo,))
+                numero = 0
+                paginas_novas = 0
+                while True:
+                    linhas = cursor.fetchmany(tamanho)
+                    if not linhas:
+                        break
+                    numero += 1
+                    conteudo = json.dumps(
+                        {"data": [json.loads(payload) for (payload,) in linhas], "fonte": "snapshot", "tipo": tipo},
+                        ensure_ascii=False, separators=(",", ":"),
+                    ).encode("utf-8")
+                    sha = hashlib.sha256(conteudo).hexdigest()
+                    origem = f"snapshot:{tipo}:pagina_{numero:06d}"
+                    destino = self.pasta / base_id / pasta / f"pagina_{numero:06d}.json"
+                    anterior = anteriores.get(origem)
+                    if anterior and anterior.status == "ok" and anterior.sha256 == sha and destino.exists():
+                        continue  # já importada, idêntica: não reescreve
+                    destino.parent.mkdir(parents=True, exist_ok=True)
+                    destino.write_bytes(conteudo)
+                    self.registro.gravar(Registro(self._relativo(destino), base_id, "json", len(conteudo), sha, origem, _agora(), "ok"))
+                    paginas_novas += 1
+                self.escrever(f"  snapshot {tipo}: {total} registros em {numero} páginas ({paginas_novas} gravadas agora)")
+                resumo[tipo] = {"linhas": total, "paginas": numero, "impressao_digital": impressao}
+        finally:
+            conexao.close()
+        if resumo:
+            (self.pasta / "_snapshot.json").write_text(
+                json.dumps(
+                    {"base_id": base_id, "arquivo": caminho.name, "tabela": tabela, "tipos": resumo, "importado_em": _agora()},
+                    ensure_ascii=False, indent=2,
+                ),
+                encoding="utf-8",
+            )
+
     # -- orquestração
     def coletar_base(self, base: dict[str, Any]) -> None:
         base_id = base["base_id"]
@@ -554,6 +637,8 @@ class Coleta:
             self._coletar_locais(base_id, acesso)
         elif tipo == "rest_api":
             self._coletar_rest(base_id, acesso)
+        elif tipo == "snapshot_sqlite":
+            self._importar_snapshot(base_id, acesso)
         else:
             self.escrever("  (base sintética: gerada por script próprio, não coletada aqui)")
 
@@ -607,6 +692,8 @@ def montar_inventario(manifesto: dict[str, Any], hash_manifesto: str, pastas: Pa
     ]
     arquivos.sort(key=lambda a: (a["base_id"], a["path"]))
     falhas = [{"origem": r.origem, "base_id": r.base_id, "erro": r.erro} for r in registros if r.status == "falhou"]
+    snapshot_path = pasta / "_snapshot.json"
+    inventario_snapshot = json.loads(snapshot_path.read_text(encoding="utf-8")) if snapshot_path.exists() else None
     return {
         "scenario_id": manifesto["scenario_id"],
         "version": versao,
@@ -620,6 +707,7 @@ def montar_inventario(manifesto: dict[str, Any], hash_manifesto: str, pastas: Pa
         "por_base": por_base,
         "arquivos": arquivos,
         "falhas": falhas,
+        **({"snapshot": inventario_snapshot} if inventario_snapshot else {}),
     }
 
 
@@ -658,6 +746,13 @@ def inventario_em_markdown(inv: dict[str, Any]) -> str:
     if pendentes:
         linhas += ["", "## Bases ainda não coletadas", ""]
         linhas += [f"- `{b['base_id']}`: {b.get('motivo_nao_coletada') or 'sem motivo informado'}" for b in pendentes]
+    if inv.get("snapshot"):
+        s = inv["snapshot"]
+        linhas += ["", "## Snapshot importado", "", f"Arquivo de origem: `{s['arquivo']}` (tabela `{s['tabela']}`), em {s['importado_em']}.", ""]
+        linhas += [
+            f"- {tipo}: {d['linhas']} registros em {d['paginas']} páginas; impressão digital `{d['impressao_digital'][:16]}…`"
+            for tipo, d in s["tipos"].items()
+        ]
     linhas += ["", "## Falhas", ""]
     if inv["falhas"]:
         linhas += [f"- `{f['origem']}`: {f['erro']}" for f in inv["falhas"]]
@@ -816,6 +911,7 @@ def _parser() -> argparse.ArgumentParser:
             s.add_argument("--base", action="append", dest="bases", help="coletar só esta base (pode repetir)")
         if nome in ("fetch", "update"):
             s.add_argument("--pasta-local", type=Path, help="onde estão os documentos baixados à mão")
+            s.add_argument("--snapshot-db", type=Path, help="banco SQLite do snapshot (padrão: o caminho do manifesto)")
             s.add_argument("--max-paginas", type=int, help="limite de páginas em bases rest_api (para testes)")
     return p
 
@@ -828,7 +924,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.comando == "inventory":
             inv = inventory(manifesto, args.versao, pastas)
         else:
-            opcoes = {"pasta_local": args.pasta_local, "max_paginas": args.max_paginas}
+            opcoes = {"pasta_local": args.pasta_local, "max_paginas": args.max_paginas, "snapshot_db": args.snapshot_db}
             if args.comando == "fetch":
                 inv = fetch(manifesto, args.versao, pastas, bases=args.bases, **opcoes)
             else:
