@@ -36,6 +36,8 @@ class _Estado:
         self.chamadas: dict[str, int] = {}
         self.conteudo_muda = PDF_A
         self.falhas_422_restantes = 0
+        self.limite_429_restantes = 0
+        self.retry_after: str | None = None
 
 
 @pytest.fixture()
@@ -79,6 +81,19 @@ def servidor():
                     self._responder(422, corpo, "application/json")
                 else:
                     self._responder(200, PDF_A)
+            elif url.path == "/limitado.pdf":  # o servidor pede calma (HTTP 429)
+                if estado.limite_429_restantes > 0:
+                    estado.limite_429_restantes -= 1
+                    self.send_response(429)
+                    if estado.retry_after:
+                        self.send_header("Retry-After", estado.retry_after)
+                    self.send_header("Content-Length", "0")
+                    self.end_headers()
+                else:
+                    self._responder(200, PDF_A)
+            elif url.path == "/api/vazio":  # consulta válida sem nenhum registro
+                self.send_response(204)
+                self.end_headers()
             elif url.path == "/api/contratos":
                 pagina = int(parse_qs(url.query).get("pagina", ["1"])[0])
                 itens = [{"id": pagina * 10 + i} for i in range(2)] if pagina <= 3 else []
@@ -352,6 +367,33 @@ def test_rest_api_pagina_ate_o_fim(tmp_path, pastas, servidor):
     assert inv["totais"]["arquivos"] == 3
     assert servidor.chamadas["/api/contratos"] == 3  # para na última página, sem pedir uma quarta
     assert esperas == [1.0, 1.0, 1.0]
+
+
+def test_429_respeita_o_retry_after_do_servidor(tmp_path, pastas, servidor):
+    servidor.limite_429_restantes = 1
+    servidor.retry_after = "7"
+    inv, esperas = _rodar(_manifesto(tmp_path, [_base_pdf(servidor, ["/limitado.pdf"])]), pastas)
+
+    assert inv["totais"]["arquivos"] == 1
+    assert esperas == [7.0]
+
+
+def test_429_sem_retry_after_espera_bem_mais_que_nos_outros_erros(tmp_path, pastas, servidor):
+    servidor.limite_429_restantes = 2
+    servidor.retry_after = None
+    inv, esperas = _rodar(_manifesto(tmp_path, [_base_pdf(servidor, ["/limitado.pdf"])]), pastas)
+
+    assert inv["totais"]["arquivos"] == 1
+    assert esperas == [30.0, 60.0]  # 15 x a espera base, dobrando; um 503 esperaria só 2 s e 4 s
+
+
+def test_204_e_uma_consulta_sem_registros_e_nao_uma_falha(tmp_path, pastas, servidor):
+    base = _base_rest(servidor)
+    base["acesso"]["endpoint"] = servidor.base + "/api/vazio"
+    inv, _ = _rodar(_manifesto(tmp_path, [base]), pastas)
+
+    assert inv["totais"] == {"arquivos": 0, "bytes": 0, "falhas": 0}
+    assert not list((pastas.raw / "v1" / "contratos").rglob("*.bin"))  # nenhum arquivo vazio fica para trás
 
 
 def test_rest_api_respeita_max_paginas(tmp_path, pastas, servidor):

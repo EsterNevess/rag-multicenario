@@ -9,7 +9,7 @@ Plano de passos, cada um com testes e um commit:
 - [x] **1.3 `ingest`:** extrai o texto (PDF e HTML), corta por artigo (Lei e decretos) ou por seção numerada (editais), com metadados de vigência, sensibilidade e mascaramento de dados pessoais. Gera **1.458 trechos** da base normativa do RJ (298 da Lei 14.133, 343 dos 7 decretos, 817 dos 5 editais), sem avisos. 117 testes passam.
 - [x] **1.4 `index` (código):** embeddings por Ollama local ou OpenAI, cache em disco, índice FAISS e FTS5 por base, com recusa de índice incompatível. 27 testes. **O índice real da normativa (1.458 trechos) está sendo gerado**; ver as observações abaixo.
 - [x] **1.5 `retrieve`:** BM25 (FTS5), busca por vetores (FAISS), fusão RRF, filtros por metadado (inclusive `vigente_em`) e busca por base com garantia de representação. 22 testes. 166 testes no total. O rerank por cross-encoder fica para a fase de avaliação.
-- [ ] **1.5b Base estruturada do RJ:** validar o `rest_api` contra a API do PNCP, descobrir como restringir ao RJ (parâmetro de UF ou seleção por órgão) e coletar. Precisa existir antes do 1.6, que consulta essa base por SQL.
+- [ ] **1.5b Base estruturada do RJ (em andamento):** API do PNCP investigada (ver abaixo). Falta decidir como coletar (API, snapshot do grupo ou os dois) e implementar a coleta por modalidade e por órgão. Precisa existir antes do 1.6, que consulta essa base por SQL.
 - [ ] 1.6 `router`: plano validado contra a tabela de capacidades, guardrails e consulta SQL controlada.
 - [ ] 1.7 `generate`, demonstração por linha de comando e README do cenário.
 
@@ -20,6 +20,13 @@ Observações do passo 1.2:
 - O PNCP entrega PDF com `Content-Type: application/octet-stream`. A extensão é decidida pelo conteúdo do arquivo (um PDF começa com `%PDF-`). Esse defeito só apareceu na coleta real, porque o servidor dos testes informava o tipo certo, e foi corrigido com um teste novo.
 - O tipo de acesso `rest_api` (páginas JSON, retomável) está implementado e testado contra um servidor local. Contra o PNCP de verdade só houve sondagens: a API exige datas no formato `yyyyMMdd` (com `2026-01-01` responde 422), e sem filtro de UF devolve contratos de todo o país (um veio do Ceará). **Não foi verificado** se existe um parâmetro de UF. A coleta completa fica para o passo 1.5b.
 - Bases com `coletar: false` no manifesto (estruturada, agregada e conversacional) não fazem nenhuma requisição e aparecem no inventário como "nao_coletada", com o motivo.
+
+Observações do passo 1.5b (API do PNCP, sondada em 2026-10-28):
+
+- **`uf` existe em `/v1/contratacoes/publicacao`** e funciona (a amostra veio toda do RJ), mas o endpoint exige `codigoModalidadeContratacao`, então é uma consulta por modalidade (1 a 13). **`/v1/contratos` não tem filtro de UF**: só `cnpjOrgao` e `codigoUnidadeAdministrativa`. Isso corrige a nota anterior, que dizia que a existência do parâmetro "não foi verificada".
+- **Volume (contratações do RJ, jan. a ago. de 2026):** as modalidades que responderam somam 10.622 (Inexigibilidade 9.127, Concorrência eletrônica 967, Credenciamento 452, Concorrência presencial 45, Leilão eletrônico 24, e poucas nas demais). Dispensa e Pregão (as maiores) foram barradas na sondagem; o snapshot do grupo indica algo como 16 mil de Dispensa. A ordem de grandeza total é de 35 a 40 mil contratações.
+- **A API limita o ritmo (HTTP 429).** Uma rajada de 14 requisições, com 1 s entre elas, foi barrada em 4 delas. O `fetch_corpus` agora respeita o `Retry-After` do servidor e, sem ele, espera de 30 a 120 s. Uma consulta sem registros responde **HTTP 204** (corpo vazio), tratada como "acabou" e não como falha.
+- Datas no formato `yyyyMMdd`; `tamanhoPagina` é opcional.
 
 Observações dos passos 1.4 e 1.5:
 

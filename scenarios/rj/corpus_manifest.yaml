@@ -75,7 +75,7 @@ bases:
         dataInicial: "20260101"   # a API exige yyyyMMdd (testado em 2026-10-27)
         dataFinal: "20260831"
       observacoes:
-        - "Sem filtro de UF, a API de consulta devolve contratos de todo o país (a sondagem de 2026-10-27 trouxe um contrato do Ceará). Não foi verificado se existe um parâmetro de UF; isso será validado no passo 1.5b, e a alternativa é selecionar o RJ por órgão (CNPJ)."
+        - "Verificado em 2026-10-28 na especificação oficial e em uma sondagem: /v1/contratacoes/publicacao TEM o parâmetro uf (a amostra com uf=RJ veio toda do RJ), mas exige o codigoModalidadeContratacao (13 modalidades, uma consulta por vez). /v1/contratos NÃO tem filtro de UF; só cnpjOrgao e codigoUnidadeAdministrativa. Para os contratos do RJ, o caminho é achar os órgãos pelas contratações (uf=RJ) e consultar os contratos de cada órgão."
         - "A API não tem busca textual; o filtro por objeto é feito localmente."
         - "As consultas por publicação ou atualização exigem o código da modalidade."
       paginacao: { campo: "pagina", tamanho: 50 }

@@ -235,6 +235,15 @@ def _extensao_pelo_conteudo(caminho: Path) -> str:
     return ".bin"
 
 
+def _espera_do_429(resposta: requests.Response, tentativa: int, espera_base: float) -> float:
+    """HTTP 429 é o servidor pedindo calma. Vale o `Retry-After` dele; sem ele, uma espera bem maior
+    que a dos outros erros (a API do PNCP barrou uma rajada de 1 requisição por segundo)."""
+    try:
+        return min(float(resposta.headers["Retry-After"]), 300.0)
+    except (KeyError, ValueError):
+        return min(espera_base * 15 * 2 ** (tentativa - 1), 300.0)
+
+
 def _transitorio(resposta: requests.Response) -> bool:
     if resposta.status_code in STATUS_TRANSITORIOS:
         return True
@@ -258,6 +267,7 @@ def baixar(
     """
     ultimo_erro = "sem resposta"
     for tentativa in range(1, tentativas + 1):
+        espera = espera_base * 2 ** (tentativa - 1)
         try:
             with sessao.get(url, params=params, stream=True, timeout=60) as resposta:
                 if resposta.ok:
@@ -278,12 +288,14 @@ def baixar(
                     parcial.replace(destino)
                     return destino, h.hexdigest(), total, tipo
                 ultimo_erro = f"HTTP {resposta.status_code}"
+                if resposta.status_code == 429:
+                    espera = _espera_do_429(resposta, tentativa, espera_base)
                 if not _transitorio(resposta):
                     raise FalhaDeColeta(ultimo_erro)
         except (requests.ConnectionError, requests.Timeout) as erro:
             ultimo_erro = type(erro).__name__
         if tentativa < tentativas:
-            dormir(espera_base * 2 ** (tentativa - 1))
+            dormir(espera)
     raise FalhaDeColeta(f"{ultimo_erro} (após {tentativas} tentativas)")
 
 
@@ -437,6 +449,9 @@ class Coleta:
                         self.sessao, endpoint, destino, params=params,
                         espera_base=self.espera_base, dormir=self.dormir,
                     )
+                    if tamanho_bytes == 0:  # HTTP 204: a consulta é válida e não tem nenhum registro
+                        caminho.unlink(missing_ok=True)
+                        return
                     conteudo = json.loads(caminho.read_text(encoding="utf-8"))
                 except FalhaDeColeta as erro:
                     self._falhou(base_id, "http", origem, str(erro))
