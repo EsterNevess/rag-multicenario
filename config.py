@@ -10,7 +10,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 RAIZ = Path(__file__).resolve().parent
 CENARIOS_VALIDOS = ("rj", "saude", "pesquisa")
-PROVEDORES_VALIDOS = ("openai", "ollama")
+PROVEDORES_LLM = ("openai", "groq", "ollama")
+PROVEDORES_EMBEDDING = ("openai", "ollama")  # a Groq não oferece embeddings
+MODELO_PADRAO_DO_LLM = {"openai": "gpt-4.1-mini", "groq": "openai/gpt-oss-120b", "ollama": "qwen3:4b"}
 
 
 class Settings(BaseSettings):
@@ -24,8 +26,9 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./app.db"
 
     llm_provider: str = "openai"
-    llm_model: str = "gpt-4.1-mini"
+    llm_model: str | None = None  # vazio: usa o modelo padrão do provedor
     openai_api_key: SecretStr | None = None
+    groq_api_key: SecretStr | None = None
     ollama_url: str = "http://localhost:11434/v1"
 
     # Embeddings: Ollama local por padrão (gratuito, sem chave, reproduzível). Um servidor
@@ -46,12 +49,23 @@ class Settings(BaseSettings):
             raise ValueError(f"cenário deve ser um de {CENARIOS_VALIDOS}")
         return valor
 
-    @field_validator("llm_provider", "embedding_provider")
+    @field_validator("llm_provider")
     @classmethod
-    def _provedor_conhecido(cls, valor: str) -> str:
-        if valor not in PROVEDORES_VALIDOS:
-            raise ValueError(f"provedor deve ser um de {PROVEDORES_VALIDOS}")
+    def _provedor_de_geracao_conhecido(cls, valor: str) -> str:
+        if valor not in PROVEDORES_LLM:
+            raise ValueError(f"provedor deve ser um de {PROVEDORES_LLM}")
         return valor
+
+    @field_validator("embedding_provider")
+    @classmethod
+    def _provedor_de_embedding_conhecido(cls, valor: str) -> str:
+        if valor not in PROVEDORES_EMBEDDING:
+            raise ValueError(f"provedor deve ser um de {PROVEDORES_EMBEDDING}")
+        return valor
+
+    @property
+    def modelo_llm(self) -> str:
+        return self.llm_model or MODELO_PADRAO_DO_LLM[self.llm_provider]
 
     @property
     def scenario_dir(self) -> Path:

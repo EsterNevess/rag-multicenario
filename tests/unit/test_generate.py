@@ -283,3 +283,27 @@ def test_criar_llm_sem_chave_da_openai_diz_como_resolver(monkeypatch):
     with pytest.raises(LLMIndisponivel, match="OPENAI_API_KEY"):
         criar_llm(Settings(_env_file=None, llm_provider="openai", openai_api_key=None))
     assert criar_llm(Settings(_env_file=None, llm_provider="ollama")).base_url.endswith("/v1")
+
+
+def test_groq_exige_chave_usa_o_modelo_e_o_endereco_certos(monkeypatch):
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    with pytest.raises(LLMIndisponivel, match="GROQ_API_KEY"):
+        criar_llm(Settings(_env_file=None, llm_provider="groq", groq_api_key=None))
+    c = criar_llm(Settings(_env_file=None, llm_provider="groq", groq_api_key="gsk-teste"))
+    assert c.base_url == "https://api.groq.com/openai/v1" and c.modelo == "openai/gpt-oss-120b"
+    assert criar_llm(Settings(_env_file=None, llm_provider="groq", groq_api_key="gsk-teste", llm_model="outro")).modelo == "outro"
+
+
+def test_groq_nao_serve_para_embeddings():
+    with pytest.raises(Exception):
+        Settings(_env_file=None, embedding_provider="groq")
+
+
+def test_cliente_respeita_o_retry_after_curto_do_servidor():
+    class R429(_Resp):
+        headers = {"Retry-After": "7"}
+
+    esperas = []
+    c = ClienteLLM("groq", "https://x/v1", "m", sessao=_Sessao(R429(429), _ok()), dormir=esperas.append)
+    c.completar("a", "b")
+    assert esperas == [7.0]
