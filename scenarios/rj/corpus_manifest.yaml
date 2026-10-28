@@ -62,27 +62,34 @@ bases:
 
   - base_id: contratos_estruturado
     natureza: estruturada
-    coletar: false
-    motivo_nao_coletada: "a coleta pela API ainda não foi validada: falta confirmar como restringir ao RJ (parâmetro de UF ou seleção por órgão), passo 1.5b"
-    fonte: "PNCP, API de consulta"
+    fonte: "PNCP, API de consulta (amostra de janeiro de 2026; o período completo vem do snapshot, ver abaixo)"
     acesso:
       tipo: rest_api
       documentacao: "https://pncp.gov.br/api/consulta/v3/api-docs"
-      endpoints:
-        contratos: "https://pncp.gov.br/api/consulta/v1/contratos"
-        contratacoes: "https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
       params:
-        dataInicial: "20260101"   # a API exige yyyyMMdd (testado em 2026-10-27)
-        dataFinal: "20260831"
+        dataInicial: "20260101"   # a API exige yyyyMMdd
+        dataFinal: "20260131"     # amostra de um mês: ~1/8 do período completo, para não sobrecarregar um serviço público
+      endpoints:
+        contratacoes:
+          url: "https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao"
+          params: { uf: "RJ" }
+          # O endpoint exige a modalidade (Tabela de domínio do PNCP); uma consulta para cada uma.
+          iterar:
+            codigoModalidadeContratacao: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+        contratos:
+          url: "https://pncp.gov.br/api/consulta/v1/contratos"
+          # Não há filtro de UF nos contratos: consulta-se cada órgão que apareceu nas contratações do RJ.
+          por_orgao_de: contratacoes
+          parametro_orgao: cnpjOrgao
       observacoes:
-        - "Verificado em 2026-10-28 na especificação oficial e em uma sondagem: /v1/contratacoes/publicacao TEM o parâmetro uf (a amostra com uf=RJ veio toda do RJ), mas exige o codigoModalidadeContratacao (13 modalidades, uma consulta por vez). /v1/contratos NÃO tem filtro de UF; só cnpjOrgao e codigoUnidadeAdministrativa. Para os contratos do RJ, o caminho é achar os órgãos pelas contratações (uf=RJ) e consultar os contratos de cada órgão."
+        - "Verificado em 2026-10-28 na especificação oficial e em uma sondagem: /v1/contratacoes/publicacao TEM o parâmetro uf (a amostra com uf=RJ veio toda do RJ), mas exige o codigoModalidadeContratacao (13 modalidades, uma consulta por vez). /v1/contratos NÃO tem filtro de UF; só cnpjOrgao e codigoUnidadeAdministrativa."
+        - "A API limita o ritmo (HTTP 429). O fetch respeita o Retry-After do servidor e usa uma pausa de 2,5 s entre requisições."
         - "A API não tem busca textual; o filtro por objeto é feito localmente."
-        - "As consultas por publicação ou atualização exigem o código da modalidade."
       paginacao: { campo: "pagina", tamanho: 50 }
-      rate_limit_seg: 1.0
-      alternativa_local: "Um snapshot RAW já coletado (contratos e contratações de jan a ago/2026) pode ser usado como atalho (tipo arquivo_local); a coleta pela API continua sendo a fonte oficial e reprodutível."
+      rate_limit_seg: 2.5
+      alternativa_local: "O snapshot RAW do grupo (contratos e contratações de jan a ago/2026, 79.615 registros) cobre o período completo. A coleta pela API continua sendo a fonte oficial e reprodutível; o snapshot é o atalho para o período inteiro."
     selecao_deterministica: true
-    volume_alvo: "cerca de 80 mil registros no snapshot de referência; declarar o volume real no inventário"
+    volume_alvo: "amostra de janeiro de 2026: algumas milhares de contratações do RJ; o volume real fica no inventário"
     formato: json
     licenca: "Dados abertos gov.br, com atribuição"
     sensitivity_default: publico

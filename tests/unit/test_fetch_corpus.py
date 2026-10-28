@@ -38,6 +38,7 @@ class _Estado:
         self.falhas_422_restantes = 0
         self.limite_429_restantes = 0
         self.retry_after: str | None = None
+        self.consultas: list[str] = []
 
 
 @pytest.fixture()
@@ -58,6 +59,7 @@ def servidor():
         def do_GET(self):
             url = urlparse(self.path)
             estado.chamadas[url.path] = estado.chamadas.get(url.path, 0) + 1
+            estado.consultas.append(self.path)
             if url.path == "/ok.pdf":
                 self._responder(200, PDF_A)
             elif url.path == "/muda.pdf":
@@ -94,6 +96,27 @@ def servidor():
             elif url.path == "/api/vazio":  # consulta válida sem nenhum registro
                 self.send_response(204)
                 self.end_headers()
+            elif url.path == "/api/compras":  # uma consulta por modalidade; a 3 não tem nenhum registro
+                q = parse_qs(url.query)
+                modalidade, pagina = int(q["modalidade"][0]), int(q["pagina"][0])
+                if modalidade == 3:
+                    self.send_response(204)
+                    self.end_headers()
+                    return
+                if modalidade == 1:
+                    itens = [{"orgaoEntidade": {"cnpj": "111"}}, {"orgaoEntidade": {"cnpj": "222"}}] if pagina == 1 else [{"orgaoEntidade": {"cnpj": "111"}}]
+                    corpo = {"data": itens, "totalPaginas": 2}
+                else:
+                    corpo = {"data": [{"orgaoEntidade": {"cnpj": "333"}}], "totalPaginas": 1}
+                self._responder(200, json.dumps(corpo).encode(), "application/json")
+            elif url.path == "/api/contratos-orgao":  # contratos de um órgão; o 222 não tem nenhum
+                cnpj = parse_qs(url.query)["cnpjOrgao"][0]
+                if cnpj == "222":
+                    self.send_response(204)
+                    self.end_headers()
+                    return
+                corpo = {"data": [{"numeroControlePNCP": f"contrato-{cnpj}"}], "totalPaginas": 1}
+                self._responder(200, json.dumps(corpo).encode(), "application/json")
             elif url.path == "/api/contratos":
                 pagina = int(parse_qs(url.query).get("pagina", ["1"])[0])
                 itens = [{"id": pagina * 10 + i} for i in range(2)] if pagina <= 3 else []
@@ -367,6 +390,60 @@ def test_rest_api_pagina_ate_o_fim(tmp_path, pastas, servidor):
     assert inv["totais"]["arquivos"] == 3
     assert servidor.chamadas["/api/contratos"] == 3  # para na última página, sem pedir uma quarta
     assert esperas == [1.0, 1.0, 1.0]
+
+
+def _base_modalidades_e_orgaos(servidor):
+    return {
+        "base_id": "estruturada",
+        "natureza": "estruturada",
+        "acesso": {
+            "tipo": "rest_api",
+            "params": {"dataInicial": "20260101"},
+            "paginacao": {"campo": "pagina", "tamanho": 10},
+            "endpoints": {
+                "compras": {
+                    "url": servidor.base + "/api/compras",
+                    "params": {"uf": "RJ"},
+                    "iterar": {"modalidade": [1, 2, 3]},
+                },
+                "contratos": {
+                    "url": servidor.base + "/api/contratos-orgao",
+                    "por_orgao_de": "compras",
+                    "parametro_orgao": "cnpjOrgao",
+                },
+            },
+        },
+    }
+
+
+def test_itera_as_modalidades_e_depois_os_orgaos_encontrados(tmp_path, pastas, servidor):
+    inv, _ = _rodar(_manifesto(tmp_path, [_base_modalidades_e_orgaos(servidor)]), pastas)
+
+    assert inv["totais"]["falhas"] == 0
+    assert servidor.chamadas["/api/compras"] == 4  # modalidade 1 (2 páginas), 2 e 3 (sem registros)
+    assert servidor.chamadas["/api/contratos-orgao"] == 3  # os órgãos 111, 222 e 333, cada um uma vez
+    base = pastas.raw / "v1" / "estruturada"
+    assert sorted(p.name for p in (base / "compras").iterdir()) == ["modalidade-1", "modalidade-2"]  # a 3 não deixa pasta
+    assert sorted(p.name for p in (base / "contratos").iterdir()) == ["cnpjOrgao-111", "cnpjOrgao-333"]  # o 222 também não
+    assert inv["totais"]["arquivos"] == 5  # 2 + 1 páginas de compras e 2 de contratos
+    assert any("uf=RJ" in c for c in servidor.consultas if c.startswith("/api/compras"))
+
+
+def test_consulta_sem_registros_nao_e_repetida_na_proxima_execucao(tmp_path, pastas, servidor):
+    manifesto = _manifesto(tmp_path, [_base_modalidades_e_orgaos(servidor)])
+    _rodar(manifesto, pastas)
+    chamadas_antes = dict(servidor.chamadas)
+    inv, _ = _rodar(manifesto, pastas)
+
+    assert servidor.chamadas == chamadas_antes  # nada novo: nem as páginas já coletadas, nem as consultas vazias
+    assert inv["totais"]["falhas"] == 0 and inv["totais"]["arquivos"] == 5
+
+
+def test_por_orgao_de_aponta_para_um_endpoint_que_nao_existe(tmp_path, pastas, servidor):
+    base = _base_modalidades_e_orgaos(servidor)
+    base["acesso"]["endpoints"]["contratos"]["por_orgao_de"] = "inexistente"
+    with pytest.raises(ValueError, match="não existe"):
+        _rodar(_manifesto(tmp_path, [base]), pastas)
 
 
 def test_429_respeita_o_retry_after_do_servidor(tmp_path, pastas, servidor):

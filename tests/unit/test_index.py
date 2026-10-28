@@ -14,6 +14,7 @@ import pytest
 
 from config import Settings
 from src.index import (
+    _com_repeticao,
     INSTRUCAO_CONSULTA_QWEN3,
     CacheDeEmbeddings,
     EmbedderCompativelComOpenAI,
@@ -374,3 +375,54 @@ def test_um_indice_por_base_sao_independentes(tmp_path):
     b, _ = _construir(tmp_path, [_chunk(n) for n in range(1, 8)], saida=tmp_path / "base_b")
     assert carregar_indice(tmp_path / "base_a").indice.ntotal == 3
     assert carregar_indice(tmp_path / "base_b").indice.ntotal == 7
+
+
+# ----------------------------------------------------------------- Windows nega a troca de pasta por um instante
+
+
+def test_acesso_negado_passageiro_nao_derruba_a_construcao_do_indice(tmp_path, monkeypatch):
+    """O antivírus segura a pasta recém-gravada: o rename falha duas vezes e depois funciona."""
+    import pathlib
+
+    original = pathlib.Path.rename
+    falhas = {"restantes": 2, "chamadas": 0}
+
+    def rename_instavel(self, destino):
+        if self.name.endswith(".tmp"):
+            falhas["chamadas"] += 1
+            if falhas["restantes"] > 0:
+                falhas["restantes"] -= 1
+                raise PermissionError(5, "Acesso negado")
+        return original(self, destino)
+
+    monkeypatch.setattr(pathlib.Path, "rename", rename_instavel)
+    esperas: list[float] = []
+    resultado, _ = _construir(tmp_path, [_chunk(1), _chunk(2)], dormir=esperas.append)
+
+    assert resultado["total_vetores"] == 2 and falhas["chamadas"] == 3
+    assert esperas == [0.25, 0.5]
+    assert carregar_indice(tmp_path / "indice").indice.ntotal == 2
+
+
+def test_acesso_negado_que_nao_passa_continua_sendo_erro():
+    chamadas = []
+
+    def sempre_nega():
+        chamadas.append(1)
+        raise PermissionError(5, "Acesso negado")
+
+    with pytest.raises(PermissionError):
+        _com_repeticao(sempre_nega, dormir=lambda _: None, tentativas=3)
+    assert len(chamadas) == 3
+
+
+def test_outros_erros_nao_sao_repetidos():
+    chamadas = []
+
+    def quebra():
+        chamadas.append(1)
+        raise FileNotFoundError("sumiu")
+
+    with pytest.raises(FileNotFoundError):
+        _com_repeticao(quebra, dormir=lambda _: None)
+    assert len(chamadas) == 1

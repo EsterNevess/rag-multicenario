@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import itertools
 import json
 import re
 import shutil
@@ -244,6 +245,14 @@ def _espera_do_429(resposta: requests.Response, tentativa: int, espera_base: flo
         return min(espera_base * 15 * 2 ** (tentativa - 1), 300.0)
 
 
+def _remover_se_vazia(pasta: Path) -> None:
+    """Uma consulta sem registros não deixa uma pasta vazia para trás (rmdir só remove pasta vazia)."""
+    try:
+        pasta.rmdir()
+    except OSError:
+        pass
+
+
 def _transitorio(resposta: requests.Response) -> bool:
     if resposta.status_code in STATUS_TRANSITORIOS:
         return True
@@ -418,16 +427,58 @@ class Coleta:
 
     # -- rest_api paginada
     def _coletar_rest(self, base_id: str, acesso: dict[str, Any]) -> None:
-        """Uma base pode declarar um `endpoint` ou vários em `endpoints`; cada um vai para a sua subpasta."""
-        endpoints = dict(acesso.get("endpoints") or {})
-        if "endpoint" in acesso:
-            endpoints.setdefault("dados", acesso["endpoint"])
-        for nome, endpoint in endpoints.items():
-            self._coletar_endpoint(base_id, nome, endpoint, acesso)
+        """Uma base pode declarar um `endpoint` ou vários em `endpoints`; cada um vai para a sua subpasta.
 
-    def _coletar_endpoint(self, base_id: str, nome: str, endpoint: str, acesso: dict[str, Any]) -> None:
-        self.escrever(f"  endpoint {nome}: {endpoint}")
-        params_base = dict(acesso.get("params") or {})
+        Um endpoint pode ser só a URL ou um objeto com:
+          url             o endereço
+          params          parâmetros só deste endpoint (somam-se aos da base)
+          iterar          {parâmetro: [valores]}: uma coleta para cada valor (por exemplo, as 13 modalidades)
+          por_orgao_de    nome de outro endpoint da base: uma coleta para cada órgão que ele devolveu
+          parametro_orgao nome do parâmetro que recebe o CNPJ do órgão (padrão: cnpjOrgao)
+        """
+        endpoints: dict[str, dict[str, Any]] = {}
+        for nome, valor in (acesso.get("endpoints") or {}).items():
+            endpoints[nome] = valor if isinstance(valor, dict) else {"url": valor}
+        if "endpoint" in acesso:
+            endpoints.setdefault("dados", {"url": acesso["endpoint"]})
+        for nome, spec in endpoints.items():
+            origem_orgaos = spec.get("por_orgao_de")
+            if origem_orgaos and origem_orgaos not in endpoints:
+                raise ValueError(f"{base_id}/{nome}: por_orgao_de aponta para um endpoint que não existe: {origem_orgaos!r}")
+            for sufixo, extras in self._combinacoes(base_id, spec):
+                pasta = f"{nome}/{sufixo}" if sufixo else nome
+                self._coletar_endpoint(base_id, pasta, spec["url"], acesso, {**(spec.get("params") or {}), **extras})
+
+    def _combinacoes(self, base_id: str, spec: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
+        """Todas as combinações de parâmetros que um endpoint pede, cada uma com o nome da sua subpasta."""
+        listas: dict[str, list[Any]] = {k: list(v) for k, v in (spec.get("iterar") or {}).items()}
+        if spec.get("por_orgao_de"):
+            listas[spec.get("parametro_orgao", "cnpjOrgao")] = self._orgaos_de(base_id, spec["por_orgao_de"])
+        if not listas:
+            return [("", {})]
+        combinacoes = []
+        for valores in itertools.product(*listas.values()):
+            extras = dict(zip(listas.keys(), valores))
+            sufixo = "_".join(f"{k}-{v}" for k, v in extras.items())
+            combinacoes.append((sufixo, extras))
+        return combinacoes
+
+    def _orgaos_de(self, base_id: str, nome_endpoint: str) -> list[str]:
+        """CNPJs distintos dos órgãos que apareceram nas páginas já coletadas de outro endpoint."""
+        orgaos: set[str] = set()
+        for pagina in sorted((self.pasta / base_id / nome_endpoint).rglob("pagina_*.json")):
+            conteudo = json.loads(pagina.read_text(encoding="utf-8"))
+            for item in (conteudo.get("data", []) if isinstance(conteudo, dict) else conteudo):
+                cnpj = (item.get("orgaoEntidade") or {}).get("cnpj")
+                if cnpj:
+                    orgaos.add(cnpj)
+        self.escrever(f"  {len(orgaos)} órgão(s) encontrados em {nome_endpoint}")
+        return sorted(orgaos)
+
+    def _coletar_endpoint(
+        self, base_id: str, pasta: str, endpoint: str, acesso: dict[str, Any], params_extra: dict[str, Any] | None = None
+    ) -> None:
+        params_base = {**(acesso.get("params") or {}), **(params_extra or {})}
         pag = acesso.get("paginacao") or {}
         campo = pag.get("campo", "pagina")
         tamanho = pag.get("tamanho", 50)
@@ -435,15 +486,20 @@ class Coleta:
         inicio = pag.get("inicio", 1)
         rate_limit = float(acesso.get("rate_limit_seg") or 0)
 
+        def vazio(origem: str) -> None:
+            self.registro.gravar(Registro("", base_id, "http", 0, None, origem, _agora(), "vazio"))
+
         pagina = inicio
         while self.max_paginas is None or (pagina - inicio) < self.max_paginas:
             params = {**params_base, campo: pagina, campo_tamanho: tamanho}
             origem = endpoint + "?" + urlencode(sorted(params.items()))
             registro = self.registro.ler().get(origem)
+            if registro and registro.status == "vazio":
+                return  # já se sabe que esta consulta não tem registros; não pergunta de novo
             if registro and registro.status == "ok" and (self.pastas.dados.parent / registro.path).exists():
                 conteudo = json.loads((self.pastas.dados.parent / registro.path).read_text(encoding="utf-8"))
             else:
-                destino = self.pasta / base_id / nome / f"pagina_{pagina:06d}.json"
+                destino = self.pasta / base_id / pasta / f"pagina_{pagina:06d}.json"
                 try:
                     caminho, sha, tamanho_bytes, _ = baixar(
                         self.sessao, endpoint, destino, params=params,
@@ -451,6 +507,11 @@ class Coleta:
                     )
                     if tamanho_bytes == 0:  # HTTP 204: a consulta é válida e não tem nenhum registro
                         caminho.unlink(missing_ok=True)
+                        _remover_se_vazia(caminho.parent)
+                        if pagina == inicio:
+                            vazio(origem)
+                        if rate_limit:
+                            self.dormir(rate_limit)
                         return
                     conteudo = json.loads(caminho.read_text(encoding="utf-8"))
                 except FalhaDeColeta as erro:
@@ -463,6 +524,11 @@ class Coleta:
                 itens = conteudo.get("data", []) if isinstance(conteudo, dict) else conteudo
                 if not itens:  # página vazia: acabou, e não guardamos página vazia
                     caminho.unlink(missing_ok=True)
+                    _remover_se_vazia(caminho.parent)
+                    if pagina == inicio:
+                        vazio(origem)
+                    if rate_limit:
+                        self.dormir(rate_limit)
                     return
                 self._ok(base_id, caminho, sha, tamanho_bytes, origem)
                 if rate_limit:

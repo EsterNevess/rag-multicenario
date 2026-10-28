@@ -242,6 +242,21 @@ def vetorizar_com_cache(
 # --------------------------------------------------------------------------- construção
 
 
+def _com_repeticao(operacao: Callable[[], Any], dormir: Dormir = time.sleep, tentativas: int = 6) -> Any:
+    """Repete uma operação de pasta que o Windows nega por um instante.
+
+    Logo depois de gravar arquivos novos, o antivírus ou o indexador do Windows os examina e segura a
+    pasta; renomeá-la ou apagá-la nesse intervalo dá "Acesso negado" (WinError 5). Esperar um pouco resolve.
+    """
+    for tentativa in range(1, tentativas + 1):
+        try:
+            return operacao()
+        except PermissionError:
+            if tentativa == tentativas:
+                raise
+            dormir(0.25 * 2 ** (tentativa - 1))
+
+
 def ler_chunks(jsonl: Path) -> list[dict[str, Any]]:
     return [json.loads(linha) for linha in jsonl.read_text(encoding="utf-8").splitlines() if linha.strip()]
 
@@ -307,7 +322,7 @@ def construir_indice(
     # Constrói em uma pasta temporária e troca no fim, para um erro no meio não deixar um índice pela metade.
     temporaria = saida.with_name(saida.name + ".tmp")
     if temporaria.exists():
-        shutil.rmtree(temporaria)
+        _com_repeticao(lambda: shutil.rmtree(temporaria), dormir)
     temporaria.mkdir(parents=True)
     indice = faiss.IndexFlatIP(embedder.dimensions)
     indice.add(vetores)
@@ -327,8 +342,8 @@ def construir_indice(
     }
     (temporaria / "estado_indexacao.json").write_text(json.dumps(estado, ensure_ascii=False, indent=2), encoding="utf-8")
     if saida.exists():
-        shutil.rmtree(saida)
-    temporaria.rename(saida)
+        _com_repeticao(lambda: shutil.rmtree(saida), dormir)
+    _com_repeticao(lambda: temporaria.rename(saida), dormir)
     return {**estado, "reaproveitado": False, "calculados_agora": calculados}
 
 
