@@ -10,7 +10,7 @@ Plano de passos, cada um com testes e um commit:
 - [x] **1.4 `index` (código):** embeddings por Ollama local ou OpenAI, cache em disco, índice FAISS e FTS5 por base, com recusa de índice incompatível. 27 testes. **O índice real da normativa (1.458 trechos) está sendo gerado**; ver as observações abaixo.
 - [x] **1.5 `retrieve`:** BM25 (FTS5), busca por vetores (FAISS), fusão RRF, filtros por metadado (inclusive `vigente_em`) e busca por base com garantia de representação. 22 testes. 166 testes no total. O rerank por cross-encoder fica para a fase de avaliação.
 - [ ] **1.5b Base estruturada do RJ (em andamento):** decidido coletar de duas formas (opção C): a API do PNCP para uma **amostra de janeiro de 2026** (contratações do RJ nas 13 modalidades e, depois, os contratos de cada órgão encontrado) e o **snapshot do grupo** para o período inteiro. A coleta pela API e a importação do snapshot estão implementadas e testadas; falta rodar a coleta (v3) e normalizar tudo em tabelas SQL. Precisa existir antes do 1.6.
-- [ ] 1.6 `router`: plano validado contra a tabela de capacidades, guardrails e consulta SQL controlada.
+- [x] **1.6 `router`:** guardrail de entrada (injeção de prompt, comandos SQL, dados bancários e credenciais, juízo de legalidade, CPF), validação do plano contra a tabela de capacidades e consulta SQL controlada, só leitura. 55 testes; 260 no total. Falta ligar ao analisador (LLM) no 1.7.
 - [ ] 1.7 `generate`, demonstração por linha de comando e README do cenário.
 
 Observações do passo 1.2:
@@ -20,6 +20,14 @@ Observações do passo 1.2:
 - O PNCP entrega PDF com `Content-Type: application/octet-stream`. A extensão é decidida pelo conteúdo do arquivo (um PDF começa com `%PDF-`). Esse defeito só apareceu na coleta real, porque o servidor dos testes informava o tipo certo, e foi corrigido com um teste novo.
 - O tipo de acesso `rest_api` (páginas JSON, retomável) está implementado e testado contra um servidor local. Contra o PNCP de verdade só houve sondagens: a API exige datas no formato `yyyyMMdd` (com `2026-01-01` responde 422), e sem filtro de UF devolve contratos de todo o país (um veio do Ceará). **Não foi verificado** se existe um parâmetro de UF. A coleta completa fica para o passo 1.5b.
 - Bases com `coletar: false` no manifesto (estruturada, agregada e conversacional) não fazem nenhuma requisição e aparecem no inventário como "nao_coletada", com o motivo.
+
+Passo 1.6 (roteador), decisões que valem registrar:
+
+- **A LLM nunca escreve SQL.** O plano só traz nomes de campo e valores. O SQL é montado em `src/router.py` com nomes tirados da tabela de capacidades e valores sempre como parâmetro; a conexão abre o banco em modo só leitura (`mode=ro` e `query_only`) e cancela consultas que passem de 10 s. Um teste manda `x'; DROP TABLE ...` como valor e confere que vira texto comum.
+- **Tabela de capacidades por entidade.** Cada campo declara tipo, se aceita filtro, se aceita soma ou média e se aceita agrupamento. Soma de texto, filtro em campo inventado ou data fora de AAAA-MM-DD viram `PlanoInvalido`, que lista todos os problemas de uma vez, para o analisador poder corrigir o plano.
+- **Resultado que não engana.** Médias e somas vêm com a contagem de valores realmente considerados (um valor homologado vazio fica fora da média e isso aparece), e listas cortadas no limite avisam que há mais.
+- **Guardrail com cuidado para não bloquear demais.** A primeira versão recusava qualquer pergunta com a palavra "fraude", o que barraria "qual o procedimento para apurar fraude em licitação segundo a lei?". Ficaram só os padrões de acusação ("houve fraude", "confirme a fraude"). Há testes dos dois lados: o que deve ser recusado e o que deve passar.
+- **Limite conhecido:** a rota agregada (PCA) ainda não existe; o plano que a pedir é recusado com mensagem clara.
 
 Passo 1.5c (normalizador): `python -m src.normalize --scenario rj` lê as páginas JSON das bases estruturadas (API e snapshot) e grava `data/normalized/<cenário>/<versão>.sqlite` com as tabelas `contratacao`, `contrato`, `orgao` e `metadados`, mais um `.relatorio.json`.
 
