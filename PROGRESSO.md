@@ -21,6 +21,13 @@ Observações do passo 1.2:
 - O tipo de acesso `rest_api` (páginas JSON, retomável) está implementado e testado contra um servidor local. Contra o PNCP de verdade só houve sondagens: a API exige datas no formato `yyyyMMdd` (com `2026-01-01` responde 422), e sem filtro de UF devolve contratos de todo o país (um veio do Ceará). **Não foi verificado** se existe um parâmetro de UF. A coleta completa fica para o passo 1.5b.
 - Bases com `coletar: false` no manifesto (estruturada, agregada e conversacional) não fazem nenhuma requisição e aparecem no inventário como "nao_coletada", com o motivo.
 
+Passo 1.5c (normalizador): `python -m src.normalize --scenario rj` lê as páginas JSON das bases estruturadas (API e snapshot) e grava `data/normalized/<cenário>/<versão>.sqlite` com as tabelas `contratacao`, `contrato`, `orgao` e `metadados`, mais um `.relatorio.json`.
+
+- **Uma linha por registro.** Se o mesmo `numeroControlePNCP` vem da API e do snapshot, vale o de `dataAtualizacaoGlobal` mais recente; em empate, a API (fonte oficial). A coluna `fonte` guarda a origem (por exemplo `api+snapshot`) e o relatório conta quantos se repetem e quantos diferem no conteúdo.
+- **Dados pessoais.** CPF de fornecedor pessoa física vira `[CPF]` (o nome de quem contrata com o poder público é público, o CPF não precisa ser); textos livres passam pelo mascaramento comum do projeto.
+- **Nada some sem aviso.** Registro sem número de controle válido é rejeitado e contado no relatório, com exemplos.
+- **Teste em escala real** (só o snapshot): 37.637 contratações e 41.978 contratos, 528 órgãos, zero rejeitados, 1.597 CPFs mascarados e nenhum CPF cru no banco, em 13 s. Só 41,5% dos contratos encontram a contratação na própria base: o snapshot guarda contratos de compras feitas em outras épocas ou fora do RJ. Isso limita consultas que cruzam contrato e contratação, e o roteador (1.6) deve tratar o cruzamento como opcional.
+
 Observações do passo 1.5b (API do PNCP, sondada em 2026-10-28):
 
 - **Importação do snapshot (novo tipo de acesso `snapshot_sqlite`).** Lê as tabelas de um banco SQLite só para leitura e grava páginas JSON no mesmo formato da API, então a normalização tratará as duas origens do mesmo jeito. Em escala real: 79.615 registros (37.637 contratações e 41.978 contratos) em 160 páginas, 147 MB, em 5,9 segundos. A identidade do snapshot é a **impressão digital do conteúdo** (hash dos hashes de cada registro, em ordem fixa), gravada no manifesto, e não o hash do arquivo de 700 MB, que muda a cada uso do banco. Os nomes de tabela e coluna do manifesto são validados (nada de SQL solto). O teste da ordem fixa foi conferido por mutação: sem o `ORDER BY`, ele falha.

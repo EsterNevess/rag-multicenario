@@ -40,6 +40,7 @@ import requests
 
 from config import RAIZ, Settings, get_settings
 from src.fetch_corpus import pastas_do_cenario, versoes_existentes
+from src.fsutil import com_repeticao
 
 ESQUEMA = "faiss_flat_ip_v1"
 INSTRUCAO_CONSULTA_QWEN3 = (
@@ -242,19 +243,8 @@ def vetorizar_com_cache(
 # --------------------------------------------------------------------------- construção
 
 
-def _com_repeticao(operacao: Callable[[], Any], dormir: Dormir = time.sleep, tentativas: int = 6) -> Any:
-    """Repete uma operação de pasta que o Windows nega por um instante.
-
-    Logo depois de gravar arquivos novos, o antivírus ou o indexador do Windows os examina e segura a
-    pasta; renomeá-la ou apagá-la nesse intervalo dá "Acesso negado" (WinError 5). Esperar um pouco resolve.
-    """
-    for tentativa in range(1, tentativas + 1):
-        try:
-            return operacao()
-        except PermissionError:
-            if tentativa == tentativas:
-                raise
-            dormir(0.25 * 2 ** (tentativa - 1))
+# A rotina de repetição ficou em src/fsutil.py; o nome antigo continua valendo aqui.
+_com_repeticao = com_repeticao
 
 
 def ler_chunks(jsonl: Path) -> list[dict[str, Any]]:
