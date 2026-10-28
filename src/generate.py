@@ -20,13 +20,14 @@ from typing import Any
 from pydantic import ValidationError
 
 from config import Settings
+from src.capacidades import Capacidades, capacidades_do_cenario
 from src.fetch_corpus import Pastas, pastas_do_cenario
 from src.index import EmbeddingIndisponivel, IndiceCarregado, carregar_indice, criar_embedder
 from src.llm import LLM, LLMIndisponivel, criar_llm
 from src.obs import PipelineLogger, Stage, Tokens
 from src.pii import mascarar_dados_pessoais
 from src.retrieve import buscar_por_bases
-from src.router import ENTIDADES, PlanoInvalido, ResultadoSQL, avaliar_pergunta, consultar, localizar_banco, validar_plano
+from src.router import PlanoInvalido, ResultadoSQL, avaliar_pergunta, consultar, localizar_banco, validar_plano
 from src.schema import Fonte, Natureza, PlanoConsulta, RAGResponse, Rota
 
 MAX_LINHAS_NA_EVIDENCIA = 25
@@ -46,6 +47,7 @@ class Contexto:
 
     llm: LLM
     logger: PipelineLogger
+    cap: Capacidades
     banco: Path | None = None
     indices: dict[str, IndiceCarregado] = field(default_factory=dict)
     embedder: Any = None
@@ -77,19 +79,19 @@ class Evidencia:
 
 
 def montar_prompt_analise(ctx: Contexto) -> str:
-    linhas = ["Você transforma uma pergunta sobre contratações públicas do Rio de Janeiro em um plano de consulta em JSON.", ""]
+    linhas = [f"Você transforma uma pergunta sobre {ctx.cap.descricao} em um plano de consulta em JSON.", ""]
     rotas = []
     if Natureza.ESTRUTURADA in ctx.naturezas:
         rotas.append("- \"estruturada\": números, contagens, somas, listas e rankings de contratações e contratos (tabelas abaixo).")
     if Natureza.NORMATIVA in ctx.naturezas:
-        rotas.append("- \"documentos\": o que a Lei 14.133, os decretos e os editais dizem (texto de normas). Exige \"consulta_semantica\".")
+        rotas.append("- \"documentos\": o que dizem os documentos de texto (normas, editais). Exige \"consulta_semantica\".")
     if len(ctx.naturezas) == 2:
         rotas.append("- \"hibrida\": a pergunta mistura dados e norma. Use naturezas [\"estruturada\", \"normativa\"], a entidade, os filtros e a consulta_semantica.")
     rotas.append("- \"catalogo\": a pessoa pergunta o que o sistema sabe, que bases e que período existem.")
     linhas += ["Rotas disponíveis:", *rotas, ""]
     if Natureza.ESTRUTURADA in ctx.naturezas:
         linhas.append("Entidades e campos (tipo; f=aceita filtro, s=aceita soma/média/mín/máx, g=aceita agrupar):")
-        for nome, ent in ENTIDADES.items():
+        for nome, ent in ctx.cap.entidades.items():
             campos = ", ".join(
                 f"{c.nome} ({c.tipo};{'f' if c.filtravel else ''}{'s' if c.agregavel else ''}{'g' if c.agrupavel else ''})"
                 for c in ent.campos.values()
@@ -101,7 +103,7 @@ def montar_prompt_analise(ctx: Contexto) -> str:
             "\"campo__contem\" para texto parcial (campos texto ou categoria). Valores de categoria não precisam de acento exato.",
             "Operações: listar, contar, somar, media, minimo, maximo, agrupar. somar/media/minimo/maximo exigem campo_agregacao",
             "(campo com s). agrupar exige agrupar_por (campos com g) e pode vir junto com as outras. Para \"os maiores\", use listar com campo_agregacao.",
-            "Valores de modalidade_nome incluem: Dispensa, Pregão - Eletrônico, Inexigibilidade, Concorrência - Eletrônica, Credenciamento.",
+            *ctx.cap.dicas_do_analisador,
         ]
     linhas += [
         "",
@@ -136,7 +138,7 @@ def analisar(pergunta: str, ctx: Contexto) -> PlanoConsulta:
             e.extra = {"tentativa": tentativa}
         try:
             plano = PlanoConsulta.model_validate(_extrair_json(c.texto))
-            validar_plano(plano)
+            validar_plano(plano, ctx.cap)
             _conferir_disponibilidade(plano, ctx)
             return plano
         except (ValueError, ValidationError, PlanoInvalido) as erro:
@@ -188,7 +190,7 @@ def coletar(plano: PlanoConsulta, pergunta: str, ctx: Contexto) -> tuple[list[Ev
     if usa_sql:
         with ctx.logger.etapa(Stage.ROTEAMENTO, plano.model_dump_json()) as e:
             try:
-                r = consultar(plano, ctx.banco)
+                r = consultar(plano, ctx.banco, ctx.cap)
             except sqlite3.Error as erro:
                 raise RuntimeError(f"A base estruturada não pôde ser consultada: {erro}") from erro
             e.output = f"{len(r.linhas)} linhas"
@@ -208,15 +210,16 @@ def coletar(plano: PlanoConsulta, pergunta: str, ctx: Contexto) -> tuple[list[Ev
 
 # --------------------------------------------------------------------------- geração e validação
 
-SISTEMA_GERACAO = """Você responde perguntas sobre contratações públicas do Estado do Rio de Janeiro usando SOMENTE as evidências numeradas que vêm abaixo.
-
-Regras:
-- Cite a evidência com [n] logo depois de cada afirmação, por exemplo "Foram 896 dispensas [1]." Nunca cite um número que não existe.
-- Use apenas fatos e números das evidências. Não complete com conhecimento próprio. Se a evidência não basta, diga o que falta.
-- Escreva valores em reais como R$ 1.234,56 e cite o identificador PNCP quando listar contratações ou contratos.
-- Não afirme que um contrato ou compra é legal, ilegal, fraudulento ou superfaturado. Apresente os dados e o que a norma diz.
-- Se a evidência avisar que a lista foi cortada, diga que há mais resultados.
-- Responda em português, direto, em até cerca de 8 linhas."""
+def sistema_geracao(cap: Capacidades) -> str:
+    regras = [
+        "Cite a evidência com [n] logo depois de cada afirmação, por exemplo \"Foram 896 dispensas [1].\" Nunca cite um número que não existe.",
+        "Use apenas fatos e números das evidências. Não complete com conhecimento próprio. Se a evidência não basta, diga o que falta.",
+        *cap.regras_de_resposta,
+        "Se a evidência avisar que a lista foi cortada, diga que há mais resultados.",
+        "Responda em português, direto, em até cerca de 8 linhas.",
+    ]
+    return (f"Você responde perguntas sobre {cap.descricao} usando SOMENTE as evidências numeradas que vêm abaixo.\n\nRegras:\n"
+            + "\n".join(f"- {r}" for r in regras))
 
 
 def _prompt_geracao(pergunta: str, evidencias: list[Evidencia], avisos: list[str], correcao: str = "") -> str:
@@ -244,7 +247,7 @@ def gerar(pergunta: str, evidencias: list[Evidencia], avisos: list[str], ctx: Co
     texto = ""
     for tentativa in range(1, 3):
         with ctx.logger.etapa(Stage.GERACAO, pergunta) as e:
-            c = ctx.llm.completar(SISTEMA_GERACAO, _prompt_geracao(pergunta, evidencias, avisos, correcao))
+            c = ctx.llm.completar(sistema_geracao(ctx.cap), _prompt_geracao(pergunta, evidencias, avisos, correcao))
             e.modelo, e.output = c.modelo, c.texto
             e.tokens.somar(c.tokens)
             ctx.tokens.somar(c.tokens)
@@ -274,20 +277,22 @@ def _recusa(motivo: str, mensagem: str, ctx: Contexto, rotas: list[Rota] | None 
 
 
 def _resposta_catalogo(ctx: Contexto) -> str:
+    cat = ctx.cap.catalogo
     partes = ["Posso consultar:"]
-    if Natureza.ESTRUTURADA in ctx.naturezas:
-        partes.append("- contratações e contratos públicos do RJ (valores, órgãos, fornecedores, modalidades);")
-    if Natureza.NORMATIVA in ctx.naturezas:
-        partes.append("- a Lei 14.133/2021, decretos estaduais e editais de licitação do RJ.")
+    if Natureza.ESTRUTURADA in ctx.naturezas and cat.get("estruturada"):
+        partes.append(f"- {cat['estruturada']};")
+    if Natureza.NORMATIVA in ctx.naturezas and cat.get("normativa"):
+        partes.append(f"- {cat['normativa']}.")
     if ctx.cobertura:
         partes.append(f"Cobertura: {ctx.cobertura}")
-    partes.append("Não faço juízo sobre a legalidade de contratações específicas nem informo dados pessoais.")
+    if cat.get("aviso"):
+        partes.append(cat["aviso"])
     return "\n".join(partes)
 
 
 def responder(pergunta: str, ctx: Contexto) -> RAGResponse:
     with ctx.logger.etapa(Stage.GUARDRAIL, pergunta) as e:
-        decisao = avaliar_pergunta(pergunta)
+        decisao = avaliar_pergunta(pergunta, ctx.cap)
         e.output = "permitida" if decisao.permitida else f"recusada: {decisao.categoria}"
     if not decisao.permitida:
         return _recusa(decisao.categoria or "recusada", decisao.mensagem or "Não posso responder a essa pergunta.", ctx)
@@ -325,6 +330,7 @@ def responder(pergunta: str, ctx: Contexto) -> RAGResponse:
 
 def carregar_contexto(config: Settings, pastas: Pastas) -> Contexto:
     logger = PipelineLogger(config.log_dir)
+    cap = capacidades_do_cenario(pastas.cenario_id)
     try:
         banco = localizar_banco(pastas)
     except FileNotFoundError:
@@ -345,7 +351,7 @@ def carregar_contexto(config: Settings, pastas: Pastas) -> Contexto:
         embedder = criar_embedder(config)
         for pasta in sorted(p for p in pasta_indices.iterdir() if (p / "estado_indexacao.json").exists()):
             indices[pasta.name] = carregar_indice(pasta, embedder.identity)
-    return Contexto(llm=criar_llm(config), logger=logger, banco=banco, indices=indices, embedder=embedder,
+    return Contexto(llm=criar_llm(config), logger=logger, cap=cap, banco=banco, indices=indices, embedder=embedder,
                     cobertura=cobertura, bases=sorted(indices))
 
 

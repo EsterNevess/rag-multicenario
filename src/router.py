@@ -21,6 +21,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from src.capacidades import Capacidades, Entidade, capacidades_do_cenario
 from src.fetch_corpus import Pastas, versoes_existentes
 from src.schema import Natureza, PlanoConsulta, Rota
 
@@ -43,8 +44,9 @@ def _sem_acento(texto: str) -> str:
     return "".join(c for c in decomposto if not unicodedata.combining(c)).lower()
 
 
-# (categoria, mensagem, padrões sobre o texto sem acento e em minúsculas)
-REGRAS_DE_ENTRADA: list[tuple[str, str, list[str]]] = [
+# Regras de qualquer cenário (categoria, mensagem, padrões sobre o texto sem acento e em minúsculas).
+# As regras próprias de cada cenário ficam em `capacidades.yaml`.
+REGRAS_COMUNS: list[tuple[str, str, list[str]]] = [
     (
         "injecao_de_prompt",
         "Não posso seguir instruções que tentam mudar as regras do sistema. Posso responder perguntas sobre contratações públicas do RJ.",
@@ -76,34 +78,28 @@ REGRAS_DE_ENTRADA: list[tuple[str, str, list[str]]] = [
             r"\b(senha|password|token de acesso|chave de api|api key|credenciais?)\b",
         ],
     ),
-    (
-        "juizo_de_legalidade",
-        "Não faço juízo sobre a legalidade de uma contratação específica nem acuso ninguém. Posso apresentar os dados e o que a lei diz, para você avaliar.",
-        [
-            r"\b(foi|e|houve|ha|existe|teve) (uma? )?(fraude|corrupcao|superfaturamento|ilegal|ilegalidade|crime|desvio)",
-            r"\b(confirm\w+|prov\w+|comprov\w+) (a |que (foi |houve )?)?(fraude|corrupcao|superfaturamento|desvio|crime)",
-        ],
-    ),
-    (
-        "dado_pessoal",
-        "Não consulto nem informo CPF ou dados pessoais de pessoas físicas. Posso responder sobre órgãos, empresas (CNPJ) e valores.",
-        [
-            r"\bcpf\b",
-            r"(telefone|celular|whatsapp|endereco residencial|e-?mail pessoal)\s+(d[eoa]s?\s+)?(servidor|fiscal|pregoeir|pessoa|fulano|ciclano)",
-        ],
-    ),
 ]
-_REGRAS_COMPILADAS = [(c, m, [re.compile(p) for p in ps]) for c, m, ps in REGRAS_DE_ENTRADA]
+_REGRAS_COMUNS_COMPILADAS = [(c, m, [re.compile(p) for p in ps]) for c, m, ps in REGRAS_COMUNS]
 
 
-def avaliar_pergunta(pergunta: str) -> Decisao:
+def _capacidades(cap: Capacidades | None) -> Capacidades:
+    """Sem cenário explícito vale o do RJ, o primeiro. O pipeline sempre passa o do cenário ativo."""
+    return cap or capacidades_do_cenario("rj")
+
+
+def _regras(cap: Capacidades) -> list[tuple[str, str, list[re.Pattern[str]]]]:
+    proprias = [(r.categoria, r.mensagem, [re.compile(p) for p in r.padroes]) for r in cap.regras_de_entrada]
+    return _REGRAS_COMUNS_COMPILADAS + proprias
+
+
+def avaliar_pergunta(pergunta: str, cap: Capacidades | None = None) -> Decisao:
     """Primeira barreira: decide se a pergunta pode seguir para o analisador."""
     if not pergunta or not pergunta.strip():
         return Decisao(False, "pergunta_vazia", "Escreva uma pergunta sobre contratações públicas do RJ.")
     if len(pergunta) > TAMANHO_MAXIMO_PERGUNTA:
         return Decisao(False, "pergunta_longa", f"A pergunta passa de {TAMANHO_MAXIMO_PERGUNTA} caracteres. Resuma em uma ou duas frases.")
     texto = _sem_acento(unicodedata.normalize("NFKC", pergunta))
-    for categoria, mensagem, padroes in _REGRAS_COMPILADAS:
+    for categoria, mensagem, padroes in _regras(_capacidades(cap)):
         if any(p.search(texto) for p in padroes):
             return Decisao(False, categoria, mensagem)
     return Decisao(True)
@@ -112,96 +108,8 @@ def avaliar_pergunta(pergunta: str) -> Decisao:
 # --------------------------------------------------------------------------- tabela de capacidades
 
 
-@dataclass(frozen=True)
-class Campo:
-    nome: str
-    tipo: str  # texto | categoria | inteiro | valor | data | id
-    filtravel: bool = True
-    agregavel: bool = False  # aceita soma, média, mínimo e máximo
-    agrupavel: bool = False
-    expr: str | None = None  # expressão SQL quando o campo é calculado (nunca vem do plano)
-
-    @property
-    def sql(self) -> str:
-        return self.expr or self.nome
-
-
-@dataclass(frozen=True)
-class Entidade:
-    tabela: str
-    campos: dict[str, Campo]
-    exibir: tuple[str, ...]
-    ordem_padrao: str
-
-
-def _campos(*cs: Campo) -> dict[str, Campo]:
-    return {c.nome: c for c in cs}
-
-
-ENTIDADES: dict[str, Entidade] = {
-    "contratacao": Entidade(
-        tabela="contratacao",
-        exibir=("numero_controle_pncp", "orgao_razao_social", "objeto_compra", "modalidade_nome",
-                "valor_total_estimado", "valor_total_homologado", "data_publicacao"),
-        ordem_padrao="data_publicacao",
-        campos=_campos(
-            Campo("numero_controle_pncp", "id"),
-            Campo("orgao_cnpj", "id", agrupavel=True),
-            Campo("orgao_razao_social", "categoria", agrupavel=True),
-            Campo("esfera_id", "categoria", agrupavel=True),
-            Campo("uf_sigla", "categoria", agrupavel=True),
-            Campo("municipio_nome", "categoria", agrupavel=True),
-            Campo("ano_compra", "inteiro", agrupavel=True),
-            Campo("modalidade_nome", "categoria", agrupavel=True),
-            Campo("situacao_nome", "categoria", agrupavel=True),
-            Campo("srp", "inteiro", agrupavel=True),
-            Campo("objeto_compra", "texto"),
-            Campo("amparo_legal_nome", "categoria", agrupavel=True),
-            Campo("valor_total_estimado", "valor", agregavel=True),
-            Campo("valor_total_homologado", "valor", agregavel=True),
-            Campo("data_publicacao", "data"),
-            Campo("mes_publicacao", "texto", filtravel=False, agrupavel=True, expr="substr(data_publicacao, 1, 7)"),
-        ),
-    ),
-    "contrato": Entidade(
-        tabela="contrato",
-        exibir=("numero_controle_pncp", "orgao_razao_social", "nome_fornecedor", "objeto_contrato",
-                "valor_global", "data_assinatura"),
-        ordem_padrao="data_assinatura",
-        campos=_campos(
-            Campo("numero_controle_pncp", "id"),
-            Campo("numero_controle_pncp_compra", "id"),
-            Campo("orgao_cnpj", "id", agrupavel=True),
-            Campo("orgao_razao_social", "categoria", agrupavel=True),
-            Campo("esfera_id", "categoria", agrupavel=True),
-            Campo("uf_sigla", "categoria", agrupavel=True),
-            Campo("municipio_nome", "categoria", agrupavel=True),
-            Campo("ano_contrato", "inteiro", agrupavel=True),
-            Campo("tipo_contrato_nome", "categoria", agrupavel=True),
-            Campo("categoria_processo_nome", "categoria", agrupavel=True),
-            Campo("objeto_contrato", "texto"),
-            Campo("tipo_pessoa", "categoria", agrupavel=True),
-            Campo("ni_fornecedor", "id", agrupavel=True),
-            Campo("nome_fornecedor", "categoria", agrupavel=True),
-            Campo("valor_inicial", "valor", agregavel=True),
-            Campo("valor_global", "valor", agregavel=True),
-            Campo("valor_acumulado", "valor", agregavel=True),
-            Campo("valor_parcela", "valor", agregavel=True),
-            Campo("numero_parcelas", "inteiro", agregavel=True),
-            Campo("data_assinatura", "data"),
-            Campo("data_vigencia_fim", "data"),
-            Campo("mes_assinatura", "texto", filtravel=False, agrupavel=True, expr="substr(data_assinatura, 1, 7)"),
-        ),
-    ),
-}
-
 SUFIXOS = {"__gte": ">=", "__lte": "<=", "__contem": "contem"}
 _DATA = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-
-
-def campos_disponiveis(entidade: str) -> list[str]:
-    """Os nomes que o analisador pode usar, para entrar no prompt dele."""
-    return sorted(ENTIDADES[entidade].campos)
 
 
 # --------------------------------------------------------------------------- validação do plano
@@ -220,7 +128,7 @@ def _separar_filtro(chave: str) -> tuple[str, str]:
     return chave, ""
 
 
-def validar_plano(plano: PlanoConsulta) -> None:
+def validar_plano(plano: PlanoConsulta, cap: Capacidades | None = None) -> None:
     """Confere o plano contra a tabela de capacidades. Levanta `PlanoInvalido` com todos os problemas."""
     problemas: list[str] = []
 
@@ -237,9 +145,10 @@ def validar_plano(plano: PlanoConsulta) -> None:
             raise PlanoInvalido(problemas)
         return
 
-    entidade = ENTIDADES.get(plano.entidade)
+    entidades = _capacidades(cap).entidades
+    entidade = entidades.get(plano.entidade)
     if entidade is None:
-        raise PlanoInvalido(problemas + [f"entidade desconhecida: {plano.entidade!r} (use {sorted(ENTIDADES)})"])
+        raise PlanoInvalido(problemas + [f"entidade desconhecida: {plano.entidade!r} (use {sorted(entidades)})"])
 
     for chave, valor in plano.filtros.items():
         nome, sufixo = _separar_filtro(chave)
@@ -360,12 +269,13 @@ _FUNCOES = {"somar": "SUM", "media": "AVG", "minimo": "MIN", "maximo": "MAX"}
 _ROTULOS = {"somar": "soma", "media": "media", "minimo": "minimo", "maximo": "maximo"}
 
 
-def consultar(plano: PlanoConsulta, banco: Path) -> ResultadoSQL:
+def consultar(plano: PlanoConsulta, banco: Path, cap: Capacidades | None = None) -> ResultadoSQL:
     """Executa a parte estruturada do plano. Valida antes; só lê."""
-    validar_plano(plano)
+    cap = _capacidades(cap)
+    validar_plano(plano, cap)
     if plano.entidade is None:
         raise PlanoInvalido(["o plano não indica a entidade a consultar"])
-    entidade = ENTIDADES[plano.entidade]
+    entidade = cap.entidades[plano.entidade]
     limite = plano.limite or LIMITE_PADRAO
     clausulas, parametros, partes = _montar_filtros(entidade, plano.filtros)
     onde = f" WHERE {' AND '.join(clausulas)}" if clausulas else ""
@@ -400,7 +310,7 @@ def consultar(plano: PlanoConsulta, banco: Path) -> ResultadoSQL:
         if campo_agr and campo_agr.nome not in colunas:
             colunas.append(campo_agr.nome)
         sql = (f"SELECT {', '.join(colunas)} FROM {entidade.tabela}{onde} "
-               f"ORDER BY {ordem} DESC, numero_controle_pncp LIMIT {int(limite) + 1}")
+               f"ORDER BY {ordem} DESC, {', '.join(entidade.exibir)} LIMIT {int(limite) + 1}")
         descricao = f"listar {entidade.tabela}" + (f" ordenado por {campo_agr.nome} (maiores primeiro)" if campo_agr else " (mais recentes primeiro)")
     if partes:
         descricao += " com " + " e ".join(partes)

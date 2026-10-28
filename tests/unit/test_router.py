@@ -6,9 +6,9 @@ import sqlite3
 
 import pytest
 
+from src.capacidades import capacidades_do_cenario
 from src.normalize import COLUNAS_CONTRATACAO, COLUNAS_CONTRATO, _ddl
 from src.router import (
-    ENTIDADES,
     LIMITE_PADRAO,
     PlanoInvalido,
     avaliar_pergunta,
@@ -224,7 +224,7 @@ def test_descricao_diz_o_que_foi_feito(banco):
 
 def test_capacidades_so_apontam_para_colunas_que_existem_no_banco(banco):
     c = sqlite3.connect(banco)
-    for nome, ent in ENTIDADES.items():
+    for nome, ent in capacidades_do_cenario("rj").entidades.items():
         colunas = {r[1] for r in c.execute(f"PRAGMA table_info({nome})")}
         for campo in ent.campos.values():
             if campo.expr is None:

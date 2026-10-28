@@ -9,6 +9,7 @@ import pytest
 import requests
 
 from config import Settings
+from src.capacidades import capacidades_do_cenario
 from src.index import CacheDeEmbeddings, carregar_indice, construir_indice
 from src.llm import ClienteLLM, Completacao, LLMIndisponivel, criar_llm
 from src.generate import Contexto, analisar, formatar, responder
@@ -79,7 +80,7 @@ def indice(tmp_path):
 
 
 def _ctx(tmp_path, llm, banco=None, indices=None, embedder=None) -> Contexto:
-    return Contexto(llm=llm, logger=PipelineLogger(tmp_path / "logs"), banco=banco, indices=indices or {}, embedder=embedder,
+    return Contexto(llm=llm, logger=PipelineLogger(tmp_path / "logs"), cap=capacidades_do_cenario("rj"), banco=banco, indices=indices or {}, embedder=embedder,
                     hoje="2026-10-28", cobertura="jan a ago de 2026")
 
 

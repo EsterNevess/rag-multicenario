@@ -1,0 +1,158 @@
+# Capacidades do cenário: o que o roteador aceita perguntar. Lido por src/capacidades.py.
+cenario: rj
+descricao: contratações públicas do Estado do Rio de Janeiro
+dicas_do_analisador:
+- 'Valores de modalidade_nome incluem: Dispensa, Pregão - Eletrônico, Inexigibilidade, Concorrência - Eletrônica, Credenciamento.'
+regras_de_resposta:
+- Escreva valores em reais como R$ 1.234,56 e cite o identificador PNCP quando listar contratações ou contratos.
+- Não afirme que um contrato ou compra é legal, ilegal, fraudulento ou superfaturado. Apresente os dados e o que a norma diz.
+catalogo:
+  estruturada: contratações e contratos públicos do RJ (valores, órgãos, fornecedores, modalidades)
+  normativa: a Lei 14.133/2021, decretos estaduais e editais de licitação do RJ
+  aviso: Não faço juízo sobre a legalidade de contratações específicas nem informo dados pessoais.
+regras_de_entrada:
+- categoria: juizo_de_legalidade
+  mensagem: Não faço juízo sobre a legalidade de uma contratação específica nem acuso ninguém. Posso apresentar os dados e o que a lei diz, para
+    você avaliar.
+  padroes:
+  - \b(foi|e|houve|ha|existe|teve) (uma? )?(fraude|corrupcao|superfaturamento|ilegal|ilegalidade|crime|desvio)
+  - \b(confirm\w+|prov\w+|comprov\w+) (a |que (foi |houve )?)?(fraude|corrupcao|superfaturamento|desvio|crime)
+- categoria: dado_pessoal
+  mensagem: Não consulto nem informo CPF ou dados pessoais de pessoas físicas. Posso responder sobre órgãos, empresas (CNPJ) e valores.
+  padroes:
+  - \bcpf\b
+  - (telefone|celular|whatsapp|endereco residencial|e-?mail pessoal)\s+(d[eoa]s?\s+)?(servidor|fiscal|pregoeir|pessoa|fulano|ciclano)
+entidades:
+  contratacao:
+    tabela: contratacao
+    exibir:
+    - numero_controle_pncp
+    - orgao_razao_social
+    - objeto_compra
+    - modalidade_nome
+    - valor_total_estimado
+    - valor_total_homologado
+    - data_publicacao
+    ordem_padrao: data_publicacao
+    campos:
+    - nome: numero_controle_pncp
+      tipo: id
+    - nome: orgao_cnpj
+      tipo: id
+      agrupavel: true
+    - nome: orgao_razao_social
+      tipo: categoria
+      agrupavel: true
+    - nome: esfera_id
+      tipo: categoria
+      agrupavel: true
+    - nome: uf_sigla
+      tipo: categoria
+      agrupavel: true
+    - nome: municipio_nome
+      tipo: categoria
+      agrupavel: true
+    - nome: ano_compra
+      tipo: inteiro
+      agrupavel: true
+    - nome: modalidade_nome
+      tipo: categoria
+      agrupavel: true
+    - nome: situacao_nome
+      tipo: categoria
+      agrupavel: true
+    - nome: srp
+      tipo: inteiro
+      agrupavel: true
+    - nome: objeto_compra
+      tipo: texto
+    - nome: amparo_legal_nome
+      tipo: categoria
+      agrupavel: true
+    - nome: valor_total_estimado
+      tipo: valor
+      agregavel: true
+    - nome: valor_total_homologado
+      tipo: valor
+      agregavel: true
+    - nome: data_publicacao
+      tipo: data
+    - nome: mes_publicacao
+      tipo: texto
+      filtravel: false
+      agrupavel: true
+      expr: substr(data_publicacao, 1, 7)
+  contrato:
+    tabela: contrato
+    exibir:
+    - numero_controle_pncp
+    - orgao_razao_social
+    - nome_fornecedor
+    - objeto_contrato
+    - valor_global
+    - data_assinatura
+    ordem_padrao: data_assinatura
+    campos:
+    - nome: numero_controle_pncp
+      tipo: id
+    - nome: numero_controle_pncp_compra
+      tipo: id
+    - nome: orgao_cnpj
+      tipo: id
+      agrupavel: true
+    - nome: orgao_razao_social
+      tipo: categoria
+      agrupavel: true
+    - nome: esfera_id
+      tipo: categoria
+      agrupavel: true
+    - nome: uf_sigla
+      tipo: categoria
+      agrupavel: true
+    - nome: municipio_nome
+      tipo: categoria
+      agrupavel: true
+    - nome: ano_contrato
+      tipo: inteiro
+      agrupavel: true
+    - nome: tipo_contrato_nome
+      tipo: categoria
+      agrupavel: true
+    - nome: categoria_processo_nome
+      tipo: categoria
+      agrupavel: true
+    - nome: objeto_contrato
+      tipo: texto
+    - nome: tipo_pessoa
+      tipo: categoria
+      agrupavel: true
+    - nome: ni_fornecedor
+      tipo: id
+      agrupavel: true
+    - nome: nome_fornecedor
+      tipo: categoria
+      agrupavel: true
+    - nome: valor_inicial
+      tipo: valor
+      agregavel: true
+    - nome: valor_global
+      tipo: valor
+      agregavel: true
+    - nome: valor_acumulado
+      tipo: valor
+      agregavel: true
+    - nome: valor_parcela
+      tipo: valor
+      agregavel: true
+    - nome: numero_parcelas
+      tipo: inteiro
+      agregavel: true
+    - nome: data_assinatura
+      tipo: data
+    - nome: data_vigencia_fim
+      tipo: data
+    - nome: mes_assinatura
+      tipo: texto
+      filtravel: false
+      agrupavel: true
+      expr: substr(data_assinatura, 1, 7)
