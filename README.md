@@ -4,7 +4,7 @@ Plataforma de **Adaptive RAG** com um motor único e três cenários configuráv
 
 O ponto central do projeto: o sistema decide **que tipo de evidência** responde à pergunta antes de buscar. Não roteia por palavra-chave. Três perguntas com quase o mesmo vocabulário podem ir para três bases diferentes.
 
-> **Estado atual: fase 1 em andamento (base do motor).** Os três cenários estão desenhados (manifestos, personas e perguntas de avaliação). Do motor, já existem a configuração, os esquemas de dados, o mascaramento de dados pessoais, os logs estruturados, a coleta versionada do corpus e a ingestão em trechos, com testes. O roteador e a geração de respostas ainda não. A busca (BM25, vetores e fusão RRF) está escrita e testada, e o índice real da normativa está sendo gerado. A tabela abaixo mostra o estado real de cada cenário e é atualizada no fim de cada fase.
+> **Estado atual: fase 1 concluída no código, falta a rodada real.** Do motor existem a configuração, os esquemas, o mascaramento de dados pessoais, os logs estruturados, a coleta versionada, a ingestão em trechos, a indexação, a busca (BM25, vetores e fusão RRF), a normalização da base estruturada em SQL, o roteador com guardrails e a geração de respostas com fontes numeradas, tudo com testes (281). Ainda não foi feita a rodada completa com um modelo de verdade: ela depende de uma chave de API e de normalizar a coleta v3. A tabela abaixo mostra o estado real de cada cenário e é atualizada no fim de cada fase.
 
 ## Estado dos cenários
 
@@ -15,6 +15,18 @@ O ponto central do projeto: o sistema decide **que tipo de evidência** responde
 | [Pesquisa acadêmica](scenarios/pesquisa/README.md) | desenhada | desenhada | desenhada | desenhada (sintética) | planejado |
 
 "Desenhada" quer dizer: fonte, forma de acesso e regras de sensibilidade estão no manifesto, e há perguntas de avaliação. **Dados até agora:** a base normativa do RJ (13 documentos, 8,5 MB, com SHA-256 de cada um no inventário), cortada em 1.458 trechos. Do código, existem a base do motor (configuração, esquemas, logs e mascaramento) e o `fetch_corpus`.
+
+## Como rodar (cenário RJ)
+
+```bash
+python -m src.fetch_corpus update --scenario rj --snapshot-db caminho/do/app.db   # coleta (opcional: snapshot)
+python -m src.ingest --scenario rj          # normas em trechos
+python -m src.index build --scenario rj     # índice de busca (precisa do Ollama para os vetores)
+python -m src.normalize --scenario rj       # contratações e contratos em tabelas SQL
+python -m src.generate --scenario rj "Quantas contratações por dispensa foram publicadas em janeiro de 2026?"
+```
+
+A geração usa a OpenAI por padrão (`OPENAI_API_KEY` no `.env`) ou um modelo local com `LLM_PROVIDER=ollama`. Sem pergunta na linha de comando, `src.generate` abre um modo interativo. Cada etapa fica registrada em `logs/pipeline-AAAA-MM-DD.jsonl`.
 
 ## Como o sistema pensa
 

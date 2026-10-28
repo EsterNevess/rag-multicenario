@@ -11,7 +11,7 @@ Plano de passos, cada um com testes e um commit:
 - [x] **1.5 `retrieve`:** BM25 (FTS5), busca por vetores (FAISS), fusão RRF, filtros por metadado (inclusive `vigente_em`) e busca por base com garantia de representação. 22 testes. 166 testes no total. O rerank por cross-encoder fica para a fase de avaliação.
 - [ ] **1.5b Base estruturada do RJ (em andamento):** decidido coletar de duas formas (opção C): a API do PNCP para uma **amostra de janeiro de 2026** (contratações do RJ nas 13 modalidades e, depois, os contratos de cada órgão encontrado) e o **snapshot do grupo** para o período inteiro. A coleta pela API e a importação do snapshot estão implementadas e testadas; falta rodar a coleta (v3) e normalizar tudo em tabelas SQL. Precisa existir antes do 1.6.
 - [x] **1.6 `router`:** guardrail de entrada (injeção de prompt, comandos SQL, dados bancários e credenciais, juízo de legalidade, CPF), validação do plano contra a tabela de capacidades e consulta SQL controlada, só leitura. 55 testes; 260 no total. Falta ligar ao analisador (LLM) no 1.7.
-- [ ] 1.7 `generate`, demonstração por linha de comando e README do cenário.
+- [~] **1.7 `generate`:** analisador (a LLM devolve o plano JSON; plano inválido volta a ela com a lista de problemas, uma vez), execução das rotas estruturada, documentos, híbrida e catálogo, geração com citações [n] conferidas por código, linha de comando (`python -m src.generate`). 21 testes com modelo falso; 281 no total. **Falta:** a rodada real com um modelo (precisa da chave) e a normalização da coleta v3.
 
 Observações do passo 1.2:
 
@@ -20,6 +20,14 @@ Observações do passo 1.2:
 - O PNCP entrega PDF com `Content-Type: application/octet-stream`. A extensão é decidida pelo conteúdo do arquivo (um PDF começa com `%PDF-`). Esse defeito só apareceu na coleta real, porque o servidor dos testes informava o tipo certo, e foi corrigido com um teste novo.
 - O tipo de acesso `rest_api` (páginas JSON, retomável) está implementado e testado contra um servidor local. Contra o PNCP de verdade só houve sondagens: a API exige datas no formato `yyyyMMdd` (com `2026-01-01` responde 422), e sem filtro de UF devolve contratos de todo o país (um veio do Ceará). **Não foi verificado** se existe um parâmetro de UF. A coleta completa fica para o passo 1.5b.
 - Bases com `coletar: false` no manifesto (estruturada, agregada e conversacional) não fazem nenhuma requisição e aparecem no inventário como "nao_coletada", com o motivo.
+
+Passo 1.7 (geração), decisões:
+
+- **Citação conferida por código.** A resposta tem de citar [n] e cada n precisa existir nas evidências. Citação inexistente ou ausente faz o modelo refazer uma vez; se persistir, o sistema recusa em vez de entregar uma resposta sem fonte verificável. Citações inventadas que sobram são removidas do texto.
+- **O trecho restrito nunca chega ao modelo.** A busca de documentos filtra por `sensitivity = publico` e por vigência; há um teste que falha se o filtro for removido (conferido por mutação).
+- **Ambientes incompletos são ditos, não escondidos.** Sem a base estruturada ou sem o índice de normas, o analisador só enxerga as rotas disponíveis e um plano para base ausente é recusado pelo validador.
+- **Sem acesso ao modelo, falha clara.** Chave ausente, recusada (401), servidor fora do ar ou limite de tentativas viram `LLMIndisponivel` com a instrução de correção, sem repetir a chave na mensagem.
+- **Ainda não medido:** a qualidade das respostas e do analisador com um modelo de verdade. Conferir se os números do texto batem com a evidência (além das citações) fica para a avaliação.
 
 Passo 1.6 (roteador), decisões que valem registrar:
 
