@@ -605,3 +605,14 @@ def test_itens_em_results_limite_de_paginas_e_ano_dentro_do_filtro(tmp_path, pas
 def test_sem_limite_de_paginas_para_quando_a_pagina_vem_vazia(tmp_path, pastas, servidor):
     inv, _ = _rodar(_manifesto(tmp_path, [_base_openalex(servidor)]), pastas)
     assert inv["totais"]["arquivos"] == 20 and servidor.chamadas["/api/works"] == 22  # 10 páginas por ano + a vazia
+
+
+def test_nome_de_url_longa_guarda_a_extensao_e_nao_colide():
+    base = "https://www.faperj.br/rp/downloads/Edital_FAPERJ_N_13_2023_" + "x" * 200
+    a, b = nome_de_url(base + "A.pdf"), nome_de_url(base + "B.pdf")
+    assert a.endswith(".pdf") and b.endswith(".pdf") and len(a) <= 140 and a != b
+    assert a == nome_de_url(base + "A.pdf")  # determinístico
+
+
+def test_nome_de_url_curta_nao_muda():
+    assert nome_de_url("https://x.gov.br/a/b.pdf") == "x.gov.br_a_b.pdf"

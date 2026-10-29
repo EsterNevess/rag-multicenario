@@ -54,13 +54,19 @@ def cpf_valido(texto: str) -> bool:
     return True
 
 
-def _mascarar_email(m: re.Match[str]) -> str:
-    return m.group(0) if _DOMINIO_INSTITUCIONAL.search(m.group(1)) else MARCA_EMAIL
+def _institucional(dominio: str, extras: tuple[str, ...]) -> bool:
+    dominio = dominio.lower()
+    return bool(_DOMINIO_INSTITUCIONAL.search(dominio)) or any(dominio == d or dominio.endswith("." + d) for d in extras)
 
 
-def mascarar_dados_pessoais(texto: str) -> str:
-    """Troca CPF, e-mail pessoal e telefone por marcas. CNPJ (pessoa jurídica) não é alterado."""
-    texto = _EMAIL.sub(_mascarar_email, texto)
+def mascarar_dados_pessoais(texto: str, dominios_institucionais: tuple[str, ...] = ()) -> str:
+    """Troca CPF, e-mail pessoal e telefone por marcas. CNPJ (pessoa jurídica) não é alterado.
+
+    `dominios_institucionais`: domínios que o corpus declara como de órgãos (por exemplo `faperj.br`), além dos
+    `.gov.br` e equivalentes; os e-mails deles são contato público e ficam no texto.
+    """
+    extras = tuple(d.lower().lstrip("@.") for d in dominios_institucionais)
+    texto = _EMAIL.sub(lambda m: m.group(0) if _institucional(m.group(1), extras) else MARCA_EMAIL, texto)
     texto = _CPF_FORMATADO.sub(MARCA_CPF, texto)
     texto = _CPF_SOLTO.sub(lambda m: MARCA_CPF if cpf_valido(m.group()) else m.group(), texto)
     texto = _TELEFONE.sub(MARCA_TELEFONE, texto)

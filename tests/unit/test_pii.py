@@ -98,3 +98,15 @@ def test_valor_em_reais_nao_e_alterado():
 def test_contem_dado_pessoal():
     assert contem_dado_pessoal("meu e-mail é a@b.com")
     assert not contem_dado_pessoal("Quantas contratações em 2026?")
+
+
+def test_dominio_institucional_declarado_pelo_corpus_mantem_o_email():
+    texto = "Dúvidas: atendimento@faperj.br ou joao@gmail.com ou x@sub.cnpq.br"
+    mascarado = mascarar_dados_pessoais(texto, ("faperj.br", "cnpq.br"))
+    assert "atendimento@faperj.br" in mascarado and "x@sub.cnpq.br" in mascarado
+    assert "joao@gmail.com" not in mascarado
+    assert "atendimento@faperj.br" not in mascarar_dados_pessoais(texto)  # sem declarar, continua mascarando
+
+
+def test_dominio_declarado_nao_libera_dominio_parecido():
+    assert "faperj.br" not in mascarar_dados_pessoais("a@naofaperj.br b@faperj.br.falso.com", ("faperj.br",))

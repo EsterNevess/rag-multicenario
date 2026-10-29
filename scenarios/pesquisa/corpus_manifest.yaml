@@ -51,6 +51,7 @@ bases:
       observacoes:
         - "A chamada do CNPq vem do sistema oficial de fomento (HTTP, sem nome de arquivo); a página oficial em gov.br aponta para o mesmo PDF. O SHA-256 gravado no inventário detecta qualquer mudança."
         - "O Edital FAPERJ 05/2025, cogitado antes, retornou 404 e ficou de fora."
+    dominios_institucionais: [faperj.br, cnpq.br]   # e-mails de atendimento destes órgãos são contato público
     selecao_deterministica: true     # lista fixa de URLs com SHA-256 gravado no inventário
     volume_alvo: 8
     formato: pdf

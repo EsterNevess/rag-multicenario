@@ -303,6 +303,83 @@ def cortar_por_secoes(texto: str) -> list[Secao]:
     return secoes
 
 
+# Itens numerados (resoluções sem artigos, instruções, chamadas): "II.1", "1.1" ou "3.2 –", sob seções "1 – Objeto"
+# ou "II - DOS TERMOS". Os subitens (II.3.1, a), b)) ficam dentro do item que os contém.
+_INICIO_DE_ITEM = re.compile(
+    r"^\s*(?:(?:[IVX]+|\d{1,2})(?:\.\d{1,2})*\s*[-–.)]\s+\S|\d{1,2}(?:\.\d{1,2})+\s+\S|[a-z]\)\s|[-•●]\s|§)"
+)
+_ITEM_PRINCIPAL = re.compile(r"^((?:[IVX]+|\d{1,2})\.\d{1,2})(?!\.?\d)(?:\s*[-–.)]\s*\S|\s+[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ(\d])")
+_REMISSAO = re.compile(r"\s*\(voltar ao sumário\)\s*$", re.IGNORECASE)
+_SECAO_EM_MAIUSCULAS = re.compile(r"^(?:[IVX]+|\d{1,2})\s*[-–.]?\s+[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][A-ZÁÀÂÃÉÊÍÓÔÕÚÇ0-9 ,;:/()'\-–]{4,}$")
+_SECAO_COM_TRAVESSAO = re.compile(r"^\d{1,2}\s*[-–]\s+[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][^.:;]{2,70}$")
+_SUMARIO = re.compile(r"\.{4,}|…{2,}")
+
+
+def _juntar_itens(texto: str) -> list[str]:
+    """Uma linha por parágrafo: só uma linha que abre um item, uma seção ou uma alínea começa um parágrafo novo."""
+    paragrafos: list[str] = []
+    fechado = False  # título de seção não recebe a linha seguinte
+    for linha in texto.splitlines():
+        linha = _REMISSAO.sub("", linha.strip())
+        if not linha or _SUMARIO.search(linha):  # sumário com pontilhado: ruído que duplicaria os títulos
+            continue
+        titulo = bool(_SECAO_EM_MAIUSCULAS.match(linha) or _SECAO_COM_TRAVESSAO.match(linha))
+        if not paragrafos or fechado or titulo or _INICIO_DE_ITEM.match(linha):
+            paragrafos.append(linha)
+        elif paragrafos[-1].endswith("-") and linha[:1].islower():
+            paragrafos[-1] = paragrafos[-1][:-1] + linha
+        else:
+            paragrafos[-1] += " " + linha
+        fechado = titulo
+    return paragrafos
+
+
+def cortar_por_itens(texto: str) -> list[Secao]:
+    """Um bloco por item principal (II.1, 1.1), com a seção em que ele está; o que vem antes é o preâmbulo."""
+    secoes: list[Secao] = []
+    secao_atual = ""
+    atual = Secao("Preâmbulo", "preambulo", "")
+    vistos: Counter[str] = Counter()
+    ordem = 0
+
+    def fechar() -> None:
+        if atual.texto.strip():
+            secoes.append(atual)
+
+    for linha in _juntar_itens(texto):
+        if _SECAO_EM_MAIUSCULAS.match(linha) or _SECAO_COM_TRAVESSAO.match(linha):
+            fechar()
+            ordem += 1
+            secao_atual = linha
+            atual = Secao(linha, f"s{ordem:02d}", linha, [])
+            continue
+        m = _ITEM_PRINCIPAL.match(linha)
+        if m:
+            fechar()
+            numero = m.group(1)
+            vistos[numero] += 1
+            chave = "item-" + numero.lower().replace(".", "-") + (f"-r{vistos[numero]}" if vistos[numero] > 1 else "")
+            atual = Secao(f"Item {numero}", chave, linha, [secao_atual] if secao_atual else [], numero)
+            continue
+        atual.texto += ("\n" if atual.texto else "") + linha
+    fechar()
+    return _sem_restos_de_sumario(secoes)
+
+
+def _sem_restos_de_sumario(secoes: list[Secao]) -> list[Secao]:
+    """Um item curto cujo número volta depois com texto de verdade é resto do sumário (linha quebrada sem pontilhado)."""
+    numeros = Counter(s.artigo for s in secoes if s.artigo)
+    saida: list[Secao] = []
+    vistos: Counter[str] = Counter()
+    for s in secoes:
+        if s.artigo and numeros[s.artigo] > 1:
+            vistos[s.artigo] += 1
+            if vistos[s.artigo] < numeros[s.artigo] and len(s.texto) < 200:
+                continue
+        saida.append(s)
+    return saida
+
+
 # --------------------------------------------------------------------------- documentos e metadados
 
 
@@ -371,13 +448,22 @@ def texto_do_documento(doc: Documento) -> tuple[str, dict[str, Any]]:
     if sufixo in (".html", ".htm"):
         texto, riscados = texto_de_html(doc.caminho.read_bytes())
         return texto, {"trechos_riscados_ignorados": riscados}
-    if sufixo == ".pdf":
+    if sufixo == ".pdf" or doc.caminho.read_bytes()[:5] == b"%PDF-":  # sem extensão confiável, o conteúdo decide
         return texto_de_pdf(doc.caminho), {}
     raise ValueError(f"formato não suportado: {doc.caminho.name}")
 
 
 def cortar_documento(doc: Documento, texto: str) -> list[Secao]:
-    return cortar_por_secoes(texto) if doc.doc_type == "edital" else cortar_por_artigos(texto)
+    """Escolhe o cortador pelo tipo do documento; normas de ética sem artigos (como a Resolução 466) caem nos itens."""
+    if doc.doc_type == "edital":
+        secoes = cortar_por_secoes(texto)
+        return secoes if len(secoes) > 1 else cortar_por_itens(texto)  # chamada com títulos "1 – Objeto"
+    if doc.doc_type == "instrucao":
+        return cortar_por_itens(texto)
+    secoes = cortar_por_artigos(texto)
+    if doc.doc_type == "norma_etica" and sum(1 for s in secoes if s.artigo) < 3:
+        return cortar_por_itens(texto)
+    return secoes
 
 
 def montar_chunks(
@@ -385,6 +471,7 @@ def montar_chunks(
     secoes: list[Secao],
     sensibilidade: Sensibilidade,
     natureza: Natureza = Natureza.NORMATIVA,
+    dominios_institucionais: tuple[str, ...] = (),
 ) -> tuple[list[Chunk], int]:
     """Transforma as seções em `Chunk`s. Devolve também quantos continham dado pessoal (mascarado)."""
     chunks: list[Chunk] = []
@@ -393,7 +480,7 @@ def montar_chunks(
         partes = dividir_texto(secao.texto)
         for i, parte in enumerate(partes, start=1):
             rotulo = secao.rotulo + (f" (parte {i}/{len(partes)})" if len(partes) > 1 else "")
-            corpo = mascarar_dados_pessoais(parte)
+            corpo = mascarar_dados_pessoais(parte, dominios_institucionais)
             pessoal = corpo != parte
             com_dado_pessoal += pessoal
             extras: dict[str, Any] = {
@@ -451,7 +538,7 @@ def ingerir(manifesto_path: Path, versao: str, base_id: str, pastas: Pastas) -> 
         if not doc.data_publicacao:
             avisos.append(f"{doc.caminho.name}: sem data de publicação (o metadado de vigência ficará vazio)")
         secoes = cortar_documento(doc, texto)
-        chunks, pessoais = montar_chunks(doc, secoes, sensibilidade, natureza)
+        chunks, pessoais = montar_chunks(doc, secoes, sensibilidade, natureza, tuple(base.get("dominios_institucionais") or ()))
         if not chunks:
             avisos.append(f"{doc.caminho.name}: nenhum trecho gerado")
         tamanhos = [len(c.texto) for c in chunks]

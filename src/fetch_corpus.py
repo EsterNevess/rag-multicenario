@@ -202,7 +202,14 @@ def nome_de_url(url: str) -> str:
     nome = re.sub(r"[^A-Za-z0-9._-]+", "_", "_".join(partes)).strip("_")
     if analisada.query:
         nome += "_" + hashlib.sha1(analisada.query.encode()).hexdigest()[:8]
-    return nome[:140] or "arquivo"
+    if len(nome) <= 140:
+        return nome or "arquivo"
+    # Nome longo: corta o miolo, mas guarda a extensão (senão o arquivo deixa de ser reconhecido) e um hash da
+    # URL inteira (senão duas URLs com o mesmo começo viram o mesmo arquivo).
+    sufixo = Path(analisada.path).suffix.lower() if not analisada.query else ""
+    sufixo = sufixo if sufixo in EXTENSOES_CONHECIDAS else ""
+    resumo = hashlib.sha1(url.encode()).hexdigest()[:8]
+    return f"{nome[: 140 - len(sufixo) - 9]}_{resumo}{sufixo}"
 
 
 def _extensao(url: str, content_type: str | None) -> str:

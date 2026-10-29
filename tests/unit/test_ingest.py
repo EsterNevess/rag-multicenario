@@ -366,3 +366,130 @@ def test_base_sem_documentos_coletados_da_erro(corpus):
     manifesto, pastas = corpus
     with pytest.raises(FileNotFoundError):
         ingerir(manifesto, "v9", "editais_normativo", pastas)
+
+
+# ----------------------------------------------------------------- cortador de itens (resoluções sem artigos, instruções, chamadas)
+
+from src.ingest import Documento, cortar_documento, cortar_por_itens  # noqa: E402
+
+RESOLUCAO_SEM_ARTIGOS = """RESOLUÇÃO Nº 1, DE 12 DE DEZEMBRO DE 2012.
+O Plenário resolve:
+I – DAS DISPOSIÇÕES PRELIMINARES
+A presente Resolução incorpora referenciais.
+II - DOS TERMOS E DEFINIÇÕES
+II.1 - achados da pesquisa - fatos encontrados pelo pesquisador no
+decurso da pesquisa;
+II.2 - assentimento - anuência do participante;
+II.2.1 - assentimento livre - sem coação;
+III - DOS ASPECTOS ÉTICOS
+III.1 - A eticidade da pesquisa implica em:
+a) respeito ao participante;
+b) ponderação entre riscos e benefícios.
+III.2 - Toda pesquisa deve ser aprovada.
+"""
+
+
+def test_itens_de_resolucao_sem_artigos_ficam_sob_a_secao_certa():
+    s = cortar_por_itens(RESOLUCAO_SEM_ARTIGOS)
+    por_numero = {x.artigo: x for x in s if x.artigo}
+    assert list(por_numero) == ["II.1", "II.2", "III.1", "III.2"]
+    assert por_numero["II.1"].hierarquia == ["II - DOS TERMOS E DEFINIÇÕES"]
+    assert por_numero["III.2"].hierarquia == ["III - DOS ASPECTOS ÉTICOS"]
+    assert "decurso da pesquisa" in por_numero["II.1"].texto  # a linha quebrada volta para o item
+    assert "II.2.1" in por_numero["II.2"].texto  # subitem fica dentro do item
+    assert "b) ponderação" in por_numero["III.1"].texto  # alíneas ficam dentro do item
+    assert s[0].rotulo == "Preâmbulo" and "Plenário" in s[0].texto
+
+
+def test_chave_do_item_romano_nao_se_confunde_entre_ii_e_iii():
+    chaves = [x.chave for x in cortar_por_itens(RESOLUCAO_SEM_ARTIGOS)]
+    assert "item-ii-1" in chaves and "item-iii-1" in chaves and len(chaves) == len(set(chaves))
+
+
+CHAMADA_COM_TRAVESSAO = """Chamada Nº 10/2023 - UNIVERSAL
+O Conselho torna pública a presente Chamada.
+1 – Objeto
+1.1 – Apoiar projetos de pesquisa em qualquer área.
+1.2 - As propostas deverão ser inseridas nas faixas:
+1.2.1 - Faixa A - Grupos Emergentes, limitados a R$ 165.000,00.
+2 – Cronograma
+Lançamento da Chamada                21/06/2023
+3 – Critérios de Elegibilidade
+3.1 – Os critérios são obrigatórios.
+"""
+
+
+def test_chamada_com_titulos_e_itens_com_travessao():
+    s = cortar_por_itens(CHAMADA_COM_TRAVESSAO)
+    assert [x.artigo for x in s if x.artigo] == ["1.1", "1.2", "3.1"]
+    assert [x.rotulo for x in s if not x.artigo] == ["Preâmbulo", "1 – Objeto", "2 – Cronograma", "3 – Critérios de Elegibilidade"]
+    assert "21/06/2023" in next(x for x in s if x.rotulo == "2 – Cronograma").texto
+    assert "165.000,00" in next(x for x in s if x.artigo == "1.2").texto
+
+
+INSTRUCOES_COM_SUMARIO = """INSTRUÇÕES PARA PRESTAÇÃO DE CONTAS
+SUMÁRIO
+1  ORIENTAÇÕES GERAIS ....................................... 6
+1.1  O dever de prestar contas ................................ 6
+1.2    Apresentação da Prestação de Contas (Relatório Técnico e
+Financeiro) ......................... 7
+1     ORIENTAÇÕES GERAIS      (voltar ao sumário)
+1.1    O dever de prestar contas    (voltar ao sumário)
+1.1.1 Todo beneficiário deve prestar contas.
+1.2     Apresentação da Prestação de Contas    (voltar ao sumário)
+1.2.1 A prestação ocorre no sistema. Veja o item 1.4
+1.4 destas Instruções para detalhes.
+1.4      Atos vedados ao outorgado   (voltar ao sumário)
+a) Utilizar recursos em despesas não previstas.
+"""
+
+
+def test_sumario_com_pontilhado_remissao_e_referencia_cruzada_nao_viram_itens():
+    s = cortar_por_itens(INSTRUCOES_COM_SUMARIO)
+    itens = [x for x in s if x.artigo]
+    assert [x.artigo for x in itens] == ["1.1", "1.2", "1.4"]  # sem 1.4 duplicado da remissão
+    assert "(voltar ao sumário)" not in " ".join(x.texto + x.rotulo for x in s)
+    assert "destas Instruções para detalhes" in itens[1].texto  # a remissão ficou dentro do item 1.2
+    assert all("...." not in x.texto for x in s)
+    assert s[0].hierarquia == [] and any(x.rotulo.startswith("1     ORIENTAÇÕES") or "ORIENTAÇÕES GERAIS" in x.rotulo for x in s)
+
+
+def test_item_curto_repetido_do_sumario_e_descartado_mas_o_do_corpo_fica():
+    texto = "1.2    Apresentação da\n1.1 Primeiro item com texto suficiente para ficar, de verdade.\n" + "1.2 Apresentação da Prestação de Contas " + "x" * 300
+    itens = [x for x in cortar_por_itens(texto) if x.artigo == "1.2"]
+    assert len(itens) == 1 and len(itens[0].texto) > 300
+
+
+def _doc_tipo(doc_type):
+    from pathlib import Path
+
+    return Documento("b", Path("x.pdf"), "x", "Norma", doc_type, "2026-01-01", "http://x")
+
+
+def test_norma_etica_com_artigos_usa_artigos_e_sem_artigos_usa_itens():
+    com_artigos = "Preâmbulo\nArt. 1º Primeiro.\nArt. 2º Segundo.\nArt. 3º Terceiro.\nArt. 4º Quarto.\n"
+    assert [x.rotulo for x in cortar_documento(_doc_tipo("norma_etica"), com_artigos)][1:3] == ["Art. 1", "Art. 2"]
+    assert any(x.artigo == "II.1" for x in cortar_documento(_doc_tipo("norma_etica"), RESOLUCAO_SEM_ARTIGOS))
+
+
+def test_edital_sem_secoes_em_maiusculas_cai_nos_itens_e_instrucao_vai_direto_aos_itens():
+    assert any(x.artigo == "1.1" for x in cortar_documento(_doc_tipo("edital"), CHAMADA_COM_TRAVESSAO))
+    assert any(x.artigo == "1.4" for x in cortar_documento(_doc_tipo("instrucao"), INSTRUCOES_COM_SUMARIO))
+
+
+def test_edital_com_secoes_em_maiusculas_continua_usando_secoes():
+    texto = "Abertura do edital.\n1. OBJETIVOS\nTexto do objetivo.\n2. ELEGIBILIDADE E RESTRIÇÕES\nTexto da elegibilidade.\n"
+    assert [x.rotulo for x in cortar_documento(_doc_tipo("edital"), texto)] == ["Abertura", "1. OBJETIVOS", "2. ELEGIBILIDADE E RESTRIÇÕES"]
+
+
+def test_pdf_sem_extensao_e_reconhecido_pelo_conteudo(tmp_path):
+    import pymupdf
+
+    from src.ingest import texto_do_documento
+
+    pdf = pymupdf.open()
+    pdf.new_page().insert_text((72, 72), "Texto do edital")
+    caminho = tmp_path / "arquivo_sem_extensao"
+    caminho.write_bytes(pdf.tobytes())
+    texto, _ = texto_do_documento(Documento("b", caminho, "x", "Norma", "edital", None, "http://x"))
+    assert "Texto do edital" in texto
