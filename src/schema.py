@@ -28,6 +28,7 @@ class Rota(str, Enum):
     DOCUMENTOS = "documentos"
     HIBRIDA = "hibrida"
     CATALOGO = "catalogo"
+    FORA_DO_ESCOPO = "fora_do_escopo"
 
 
 class Sensibilidade(str, Enum):
@@ -85,7 +86,7 @@ class PlanoConsulta(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     rota: Rota
-    naturezas: list[Natureza] = Field(min_length=1)
+    naturezas: list[Natureza] = Field(default_factory=list)
     entidade: str | None = None
     filtros: dict[str, ValorFiltro] = Field(default_factory=dict)
     operacoes: list[Literal["listar", "contar", "somar", "media", "minimo", "maximo", "agrupar"]] = Field(
@@ -96,8 +97,17 @@ class PlanoConsulta(BaseModel):
     limite: int | None = Field(default=None, ge=1, le=100)
     consulta_semantica: str | None = None
 
+    @model_validator(mode="before")
+    @classmethod
+    def _naturezas_nulas_viram_lista_vazia(cls, dados):
+        if isinstance(dados, dict) and dados.get("naturezas") is None:
+            dados = {**dados, "naturezas": []}
+        return dados
+
     @model_validator(mode="after")
     def _coerente_com_a_rota(self) -> "PlanoConsulta":
+        if self.rota not in (Rota.CATALOGO, Rota.FORA_DO_ESCOPO) and not self.naturezas:
+            raise ValueError("informe ao menos uma natureza")
         if self.rota in (Rota.ESTRUTURADA, Rota.AGREGADA) and not self.entidade:
             raise ValueError(f"a rota {self.rota.value} exige a entidade consultada")
         if self.rota is Rota.DOCUMENTOS and not self.consulta_semantica:

@@ -136,7 +136,7 @@ def validar_plano(plano: PlanoConsulta, cap: Capacidades | None = None) -> None:
         problemas.append("a rota estruturada exige a natureza estruturada")
     if plano.rota is Rota.AGREGADA:
         problemas.append("a base agregada (PCA) ainda não está disponível neste cenário")
-    if plano.rota is Rota.CATALOGO:
+    if plano.rota in (Rota.CATALOGO, Rota.FORA_DO_ESCOPO):
         return
     if plano.entidade is None:
         if plano.rota is Rota.HIBRIDA and Natureza.ESTRUTURADA in plano.naturezas:
@@ -161,6 +161,10 @@ def validar_plano(plano: PlanoConsulta, cap: Capacidades | None = None) -> None:
             continue
         if valor is None:
             problemas.append(f"filtro {chave!r} sem valor")
+        elif campo.valores and sufixo:
+            problemas.append(f"o campo {nome!r} é codificado ({campo.valores_validos()}); use só igualdade")
+        elif campo.valores and campo.traduzir(valor) is None:
+            problemas.append(f"valor {valor!r} inválido para {nome!r}; use um destes: {campo.valores_validos()}")
         elif sufixo == "__contem" and campo.tipo not in ("texto", "categoria"):
             problemas.append(f"__contem só vale para campos de texto, e {nome!r} é {campo.tipo}")
         elif sufixo in ("__gte", "__lte"):
@@ -254,6 +258,11 @@ def _montar_filtros(entidade: Entidade, filtros: dict[str, Any]) -> tuple[list[s
             clausulas.append(f"{campo.sql} {SUFIXOS[sufixo]} ?")
             parametros.append(valor)
             partes.append(f"{nome} {'>=' if sufixo == '__gte' else '<='} {valor}")
+        elif campo.valores:
+            codigo = campo.traduzir(valor)
+            clausulas.append(f"{campo.sql} = ?")
+            parametros.append(codigo)
+            partes.append(f"{nome} = {codigo} ({campo.valores[codigo]})")
         elif campo.tipo == "categoria":
             clausulas.append(f"sem_acento({campo.sql}) = ?")
             parametros.append(_sem_acento(str(valor)))

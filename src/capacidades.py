@@ -8,6 +8,7 @@ geração) lê essa tabela e não tem nenhum nome de campo ou de domínio escrit
 from __future__ import annotations
 
 import re
+import unicodedata
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
@@ -35,10 +36,29 @@ class Campo:
     agregavel: bool = False  # aceita soma, média, mínimo e máximo
     agrupavel: bool = False
     expr: str | None = None  # expressão SQL quando o campo é calculado
+    valores: dict[str, str] | None = None  # campo codificado: código -> rótulo (por exemplo, E -> Estadual)
+    listar_valores: bool = False  # mostrar ao analisador os valores que existem no banco (campos de poucos valores)
 
     @property
     def sql(self) -> str:
         return self.expr or self.nome
+
+    def traduzir(self, valor: Any) -> str | None:
+        """Aceita o código ou o rótulo (sem diferença de acento ou caixa) e devolve o código; None se não existe."""
+        if not self.valores:
+            return str(valor)
+        procurado = _simples(str(valor))
+        for codigo, rotulo in self.valores.items():
+            if procurado in (_simples(codigo), _simples(rotulo)):
+                return codigo
+        return None
+
+    def valores_validos(self) -> str:
+        return ", ".join(f"{c} ({r})" for c, r in (self.valores or {}).items())
+
+
+def _simples(texto: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFKD", texto) if not unicodedata.combining(c)).lower().strip()
 
 
 @dataclass(frozen=True)
@@ -68,7 +88,7 @@ class Capacidades:
 
 
 def _campo(bruto: dict[str, Any], onde: str) -> Campo:
-    desconhecidas = set(bruto) - {"nome", "tipo", "filtravel", "agregavel", "agrupavel", "expr"}
+    desconhecidas = set(bruto) - {"nome", "tipo", "filtravel", "agregavel", "agrupavel", "expr", "valores", "listar_valores"}
     if desconhecidas:
         raise CapacidadesInvalidas(f"{onde}: chaves desconhecidas {sorted(desconhecidas)}")
     nome, tipo = bruto.get("nome"), bruto.get("tipo")
@@ -79,7 +99,12 @@ def _campo(bruto: dict[str, Any], onde: str) -> Campo:
     expr = bruto.get("expr")
     if expr is not None and not _EXPR_PERMITIDA.match(str(expr)):
         raise CapacidadesInvalidas(f"{onde}/{nome}: expressão não permitida: {expr!r}")
+    valores = bruto.get("valores")
+    if valores is not None and (not isinstance(valores, dict) or not valores or tipo != "categoria"):
+        raise CapacidadesInvalidas(f"{onde}/{nome}: `valores` é um dicionário código -> rótulo e só vale para campo categoria")
     return Campo(
+        valores={str(k): str(v) for k, v in valores.items()} if valores else None,
+        listar_valores=bool(bruto.get("listar_valores", False)),
         nome=nome,
         tipo=tipo,
         filtravel=bool(bruto.get("filtravel", True)),

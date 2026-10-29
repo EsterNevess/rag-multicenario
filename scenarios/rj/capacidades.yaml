@@ -1,12 +1,12 @@
 # Capacidades do cenário: o que o roteador aceita perguntar. Lido por src/capacidades.py.
 cenario: rj
 descricao: contratações públicas do Estado do Rio de Janeiro
-dicas_do_analisador:
-- 'Valores de modalidade_nome incluem: Dispensa, Pregão - Eletrônico, Inexigibilidade, Concorrência - Eletrônica, Credenciamento.'
+dicas_do_analisador: []
 regras_de_resposta:
 - Escreva valores em reais como R$ 1.234,56 e cite o identificador PNCP quando listar contratações ou contratos.
 - Não afirme que um contrato ou compra é legal, ilegal, fraudulento ou superfaturado. Apresente os dados e o que a norma diz.
 catalogo:
+  cobertura: contratações e contratos publicados
   estruturada: contratações e contratos públicos do RJ (valores, órgãos, fornecedores, modalidades)
   normativa: a Lei 14.133/2021, decretos estaduais e editais de licitação do RJ
   aviso: Não faço juízo sobre a legalidade de contratações específicas nem informo dados pessoais.
@@ -46,6 +46,7 @@ entidades:
     - nome: esfera_id
       tipo: categoria
       agrupavel: true
+      valores: {F: Federal, E: Estadual, M: Municipal}
     - nome: uf_sigla
       tipo: categoria
       agrupavel: true
@@ -57,9 +58,11 @@ entidades:
       agrupavel: true
     - nome: modalidade_nome
       tipo: categoria
+      listar_valores: true
       agrupavel: true
     - nome: situacao_nome
       tipo: categoria
+      listar_valores: true
       agrupavel: true
     - nome: srp
       tipo: inteiro
@@ -106,6 +109,7 @@ entidades:
     - nome: esfera_id
       tipo: categoria
       agrupavel: true
+      valores: {F: Federal, E: Estadual, M: Municipal}
     - nome: uf_sigla
       tipo: categoria
       agrupavel: true
@@ -117,9 +121,11 @@ entidades:
       agrupavel: true
     - nome: tipo_contrato_nome
       tipo: categoria
+      listar_valores: true
       agrupavel: true
     - nome: categoria_processo_nome
       tipo: categoria
+      listar_valores: true
       agrupavel: true
     - nome: objeto_contrato
       tipo: texto

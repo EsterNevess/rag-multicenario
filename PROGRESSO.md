@@ -82,7 +82,7 @@ Observação do passo 1.1: o mascaramento de telefone só age com um sinal claro
 - [x] **2.0 Generalização do motor.** A tabela de capacidades (entidades, campos, o que aceita filtro, soma ou agrupamento), as regras de recusa próprias do cenário e os textos dos prompts saíram do código e foram para `scenarios/<id>/capacidades.yaml`, lidos por `src/capacidades.py`. O arquivo é validado ao carregar (tipo de campo, nomes de tabela e de coluna, expressões calculadas, regex). O YAML do RJ foi gerado a partir das definições antigas e conferido campo a campo antes de remover o código; os 281 testes do RJ continuaram passando. Um teste com os dois cenários prova que um plano de um não vale no outro e que a regra de recusa de um não vaza para o outro.
 - [x] **2.1 Coleta e normalização do OpenAlex.** Os 1.000 artigos mais citados de cada ano (2020 a 2024) de 10 instituições do RJ, com resumo: **5.000 trabalhos, 25 páginas, 160 MB, 0 falhas**. Normalizados em três tabelas: `trabalho` (5.000), `producao_instituicao` (64.294 pares trabalho–instituição) e `financiamento` (42.394 pares trabalho–financiador). 3.740 trabalhos declaram financiador; todos têm resumo; 4.896 têm ao menos uma das 10 instituições-alvo. O coletor ganhou `campo_itens`, `max_paginas` e `{chave}` dentro de parâmetros (com chaves `_` que não vão para a URL), com testes.
 - [ ] 2.2 Editais de fomento e normas de ética (base normativa do cenário): escolher e fixar as URLs, ingerir e indexar.
-- [ ] 2.3 Rodada real: as 10 perguntas de avaliação do cenário (PE-01 a PE-10) com um modelo de verdade.
+- [~] 2.3 Rodada real com a Groq (`openai/gpt-oss-120b`): feita para as perguntas que não dependem da base normativa da pesquisa (ver abaixo). Faltam PE-05, PE-07, PE-08 e PE-10, que precisam dos editais e normas (2.2) ou de um nome real no lugar do marcador.
 
 Lições da fase 2:
 
@@ -91,6 +91,39 @@ Lições da fase 2:
 - **Nomes oficiais, não siglas.** A FAPERJ aparece como "Fundação Carlos Chagas Filho de Amparo à Pesquisa do Estado do Rio de Janeiro". Um filtro por "FAPERJ" não acharia nada; a tabela de capacidades ensina o analisador a usar o nome por extenso.
 - **"Instituições do RJ" precisa de um marcador.** Sem ele, a produção por instituição mistura as 10 do RJ com coautoras como USP e CNRS. A coluna `instituicao_alvo` é preenchida lendo os identificadores do filtro do próprio manifesto, então a seleção e a análise não podem divergir.
 - **Limites da amostra:** são os mais citados, não a produção toda; os mais citados incluem colaborações gigantes; a ordenação da API não aceita desempate, então trabalhos com a mesma contagem no corte podem trocar entre coletas (o inventário guarda o SHA-256 das páginas coletadas).
+
+## Primeira rodada real (Groq, `openai/gpt-oss-120b`)
+
+Perguntas de avaliação dos dois cenários, rodadas de ponta a ponta (guardrail, analisador, consulta, resposta). Resultado honesto, depois dos ajustes que a própria rodada pediu. Cada rodada gasta cerca de 25 mil tokens de entrada e 9 mil de saída.
+
+| Pergunta | Resultado | Observação |
+|---|---|---|
+| RJ-01 modalidades da Lei 14.133 | certo | cinco modalidades do art. 28, com a fonte |
+| RJ-02 limite de dispensa e decreto | parcial, honesto | acha o artigo e o Decreto 48.820/2023; diz que o valor numérico não está nas evidências (ele é atualizado por decreto federal que a base não tem) |
+| RJ-03 material de escritório em 2026 | certo | lista 20 e avisa que há mais; 231 casos no banco |
+| RJ-04 contratações diretas e proporção | certo | 16.527 + 8.478 = 25.005 de 35.423 (70,6%), conferido no banco |
+| RJ-05 contratos acima de R$ 1 milhão, órgãos estaduais | certo depois do ajuste | antes respondia "nenhum contrato": o filtro usava "Estadual", e o banco guarda `E` |
+| RJ-06 "foi fraude?" | recusa correta | barrada pelo guardrail, sem chamar o modelo |
+| RJ-07 microempresa e contratações de limpeza | certo depois do ajuste | passou a usar a rota híbrida (norma + dados) e cita a LC 123 |
+| RJ-08 documentos de habilitação no pregão | certo | cinco fontes (decreto e editais) |
+| RJ-09 previsão do tempo | recusa correta depois do ajuste | "fora do escopo", com o que o sistema sabe |
+| RJ-10 preço médio por quilo de arroz | recusa honesta | a base não tem preço por item; a base agregada ainda não existe |
+| PE-01 mais citados sobre aprendizado de máquina | certo | com as citações de cada trabalho |
+| PE-02 trabalhos financiados pela FAPERJ ou CNPq | parcial | lista só os 20 primeiros; a pergunta depende de "desses", sem memória de conversa |
+| PE-03 quem foi o revisor | recusa correta | guardrail do cenário |
+| PE-04 publicações com FAPERJ em 2023 | certo depois do ajuste | 305, conferido no banco; antes dizia não ter evidência, porque não ligava "FAPERJ" ao nome por extenso |
+| PE-06, PE-07 | fora do escopo, esperado | dependem das bases conversacional e normativa da pesquisa, que ainda não existem |
+| PE-09 restaurante | recusa correta | fora do escopo |
+
+Defeitos que a rodada revelou, todos corrigidos com teste:
+
+- **Campo codificado.** O analisador filtrou a esfera por "Estadual", mas o banco guarda `E`. Resposta errada ("nenhum contrato") com cara de certa. Agora o campo declara os valores aceitos, o roteador traduz rótulo em código e recusa valor inválido com a lista.
+- **Valor que não existe.** O RJ-07 filtrou a situação por "aberta", valor que não existe, e concluiu "não há contratações abertas". Agora o sistema consulta no banco os valores reais dos campos de categoria, mostra ao analisador e recusa o plano que use um valor fora da lista.
+- **Esquema rígido demais.** O modelo devolvia `naturezas` vazio para "fora do escopo" e o plano era rejeitado como "não entendi". Natureza vazia agora só vale para catálogo e fora do escopo.
+- **Rótulo da fonte** dizia "contratacaos".
+- **Catálogo versus fora do escopo.** O modelo mandava "preço por quilo" para o catálogo; a rota passou a ser só para perguntas sobre o próprio sistema.
+
+Limites que continuam: o modelo às vezes varia a rota entre execuções; as respostas longas gastam 20 a 60 s por causa dos limites do plano gratuito da Groq; não há memória de conversa (PE-02 e PE-08 pedem "desses"); não confiro se os números do texto batem com a evidência além das citações.
 
 ## Fase 0: desenho (concluída)
 

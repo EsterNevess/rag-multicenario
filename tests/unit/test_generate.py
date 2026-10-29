@@ -307,3 +307,57 @@ def test_cliente_respeita_o_retry_after_curto_do_servidor():
     c = ClienteLLM("groq", "https://x/v1", "m", sessao=_Sessao(R429(429), _ok()), dormir=esperas.append)
     c.completar("a", "b")
     assert esperas == [7.0]
+
+
+def test_pergunta_fora_do_escopo_vira_recusa_com_o_que_o_sistema_sabe(tmp_path, banco):
+    llm = LLMRoteirizado(json.dumps({"rota": "fora_do_escopo", "naturezas": ["estruturada"]}))
+    r = responder("Qual a previsão do tempo?", _ctx(tmp_path, llm, banco))
+    assert r.is_refusal and r.refusal_reason == "fora_do_escopo" and "Posso consultar" in r.answer and len(llm.chamadas) == 1
+
+
+def test_rotulo_da_fonte_estruturada_nao_inventa_plural(tmp_path, banco):
+    llm = LLMRoteirizado(_plano_json(operacoes=["contar"]), "São 3 [1].")
+    r = responder("Quantas?", _ctx(tmp_path, llm, banco))
+    assert r.sources_used[0].rotulo.startswith("Consulta à base estruturada (contratacao):")
+
+
+def test_plano_com_valor_invalido_de_campo_codificado_volta_ao_modelo(tmp_path, banco):
+    ruim = _plano_json(operacoes=["contar"], entidade="contrato", filtros={"esfera_id": "Marciana"})
+    llm = LLMRoteirizado(ruim, _plano_json(operacoes=["contar"]), "São 3 [1].")
+    responder("Quantos contratos?", _ctx(tmp_path, llm, banco))
+    assert "Federal" in llm.chamadas[1][1]
+
+
+def test_fora_do_escopo_aceita_naturezas_vazias_ou_nulas_mas_estruturada_nao():
+    from pydantic import ValidationError
+
+    from src.schema import PlanoConsulta
+
+    for naturezas in ([], None):
+        assert PlanoConsulta.model_validate({"rota": "fora_do_escopo", "naturezas": naturezas}).naturezas == []
+    with pytest.raises(ValidationError, match="ao menos uma natureza"):
+        PlanoConsulta.model_validate({"rota": "estruturada", "naturezas": [], "entidade": "contratacao"})
+
+
+def test_valores_existentes_sao_listados_do_banco_e_aparecem_no_prompt(tmp_path, banco):
+    from src.generate import listar_valores_existentes, montar_prompt_analise
+
+    valores = listar_valores_existentes(banco, capacidades_do_cenario("rj"))
+    assert valores["contratacao"]["modalidade_nome"] == ["Dispensa", "Inexigibilidade"]
+    ctx = _ctx(tmp_path, LLMRoteirizado(), banco)
+    ctx.valores_conhecidos = valores
+    assert "valores existentes: Dispensa | Inexigibilidade" in montar_prompt_analise(ctx)
+
+
+def test_plano_com_valor_que_nao_existe_no_banco_volta_ao_modelo_com_a_lista(tmp_path, banco):
+    from src.generate import listar_valores_existentes
+
+    ctx = _ctx(tmp_path, None, banco)
+    ctx.valores_conhecidos = listar_valores_existentes(banco, capacidades_do_cenario("rj"))
+    ctx.llm = LLMRoteirizado(
+        _plano_json(operacoes=["contar"], filtros={"modalidade_nome": "Concurso"}),
+        _plano_json(operacoes=["contar"], filtros={"modalidade_nome": "dispensa"}),
+        "São 2 [1].",
+    )
+    r = responder("Quantos concursos?", ctx)
+    assert not r.is_refusal and "Inexigibilidade" in ctx.llm.chamadas[1][1]

@@ -279,3 +279,54 @@ def test_producao_por_instituicao_com_soma_de_citacoes(banco_pesquisa):
 def test_campo_do_rj_nao_existe_na_pesquisa(banco_pesquisa):
     with pytest.raises(PlanoInvalido, match="campo desconhecido"):
         consultar(_plano("trabalho", filtros={"modalidade_nome": "Dispensa"}), banco_pesquisa, PESQUISA)
+
+
+# ----------------------------------------------------------------- campos codificados (código -> rótulo)
+
+
+def _contrato_com_esfera(tmp_path):
+    from src.normalize import COLUNAS_CONTRATO, _ddl
+
+    caminho = tmp_path / "v.sqlite"
+    c = sqlite3.connect(caminho)
+    c.execute(_ddl("contrato", COLUNAS_CONTRATO))
+    for n, esfera in enumerate(["E", "E", "F", "M"], 1):
+        linha = dict.fromkeys(COLUNAS_CONTRATO)
+        linha.update(numero_controle_pncp=f"00000000000001-2-{n:06d}/2026", esfera_id=esfera, valor_global=2_000_000.0,
+                     data_assinatura="2026-03-01", ano_contrato=2026)
+        c.execute(f"INSERT INTO contrato VALUES ({','.join('?' * len(COLUNAS_CONTRATO))})", [linha[k] for k in COLUNAS_CONTRATO])
+    c.commit()
+    c.close()
+    return caminho
+
+
+@pytest.mark.parametrize("dito", ["Estadual", "estadual", "E", "e"])
+def test_rotulo_ou_codigo_viram_o_codigo_gravado_no_banco(tmp_path, dito):
+    banco = _contrato_com_esfera(tmp_path)
+    r = consultar(_plano("contrato", operacoes=["contar"], filtros={"esfera_id": dito}), banco, RJ)
+    assert r.linhas == [{"total": 2}] and "E (Estadual)" in r.descricao
+
+
+def test_valor_que_nao_existe_no_campo_codificado_lista_os_validos():
+    with pytest.raises(PlanoInvalido, match="Federal"):
+        validar_plano(_plano("contrato", filtros={"esfera_id": "Distrital"}), RJ)
+
+
+def test_campo_codificado_so_aceita_igualdade():
+    with pytest.raises(PlanoInvalido, match="só igualdade"):
+        validar_plano(_plano("contrato", filtros={"esfera_id__contem": "Esta"}), RJ)
+
+
+def test_valores_so_valem_em_campo_categoria():
+    dados = _base()
+    dados["entidades"]["e"]["campos"][0] = {"nome": "a", "tipo": "inteiro", "valores": {"1": "um"}}
+    with pytest.raises(CapacidadesInvalidas, match="valores"):
+        interpretar(dados)
+
+
+def test_o_prompt_do_analisador_mostra_os_valores_do_campo_codificado(tmp_path):
+    from src.generate import Contexto, montar_prompt_analise
+    from src.obs import PipelineLogger
+
+    ctx = Contexto(llm=None, logger=PipelineLogger(tmp_path), cap=RJ, banco=tmp_path / "x")
+    assert "F (Federal), E (Estadual), M (Municipal)" in montar_prompt_analise(ctx)

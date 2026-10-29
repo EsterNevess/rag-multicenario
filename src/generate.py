@@ -27,7 +27,7 @@ from src.llm import LLM, LLMIndisponivel, criar_llm
 from src.obs import PipelineLogger, Stage, Tokens
 from src.pii import mascarar_dados_pessoais
 from src.retrieve import buscar_por_bases
-from src.router import PlanoInvalido, ResultadoSQL, avaliar_pergunta, consultar, localizar_banco, validar_plano
+from src.router import _sem_acento, PlanoInvalido, ResultadoSQL, avaliar_pergunta, consultar, localizar_banco, validar_plano
 from src.schema import Fonte, Natureza, PlanoConsulta, RAGResponse, Rota
 
 MAX_LINHAS_NA_EVIDENCIA = 25
@@ -55,6 +55,8 @@ class Contexto:
     cobertura: str | None = None
     bases: list[str] = field(default_factory=list)
     tokens: Tokens = field(default_factory=Tokens)
+    # entidade -> campo -> valores que existem no banco, para os campos com `listar_valores`
+    valores_conhecidos: dict[str, dict[str, list[str]]] = field(default_factory=dict)
 
     @property
     def naturezas(self) -> list[Natureza]:
@@ -87,13 +89,16 @@ def montar_prompt_analise(ctx: Contexto) -> str:
         rotas.append("- \"documentos\": o que dizem os documentos de texto (normas, editais). Exige \"consulta_semantica\".")
     if len(ctx.naturezas) == 2:
         rotas.append("- \"hibrida\": a pergunta mistura dados e norma. Use naturezas [\"estruturada\", \"normativa\"], a entidade, os filtros e a consulta_semantica.")
-    rotas.append("- \"catalogo\": a pessoa pergunta o que o sistema sabe, que bases e que período existem.")
-    linhas += ["Rotas disponíveis:", *rotas, ""]
+    rotas.append("- \"catalogo\": SOMENTE quando a pessoa pergunta sobre o próprio sistema (o que ele sabe, que bases e que período existem).")
+    rotas.append("- \"fora_do_escopo\": a pergunta é sobre outro assunto, ou pede um dado que as tabelas não têm (por exemplo, um preço por quilo de um item).")
+    linhas += ["Rotas disponíveis:", *rotas, "Se a pergunta tem duas partes, uma sobre o que a norma diz (direitos, regras, prazos) e outra sobre dados (quantas, quais, quanto), use \"hibrida\".", ""]
     if Natureza.ESTRUTURADA in ctx.naturezas:
         linhas.append("Entidades e campos (tipo; f=aceita filtro, s=aceita soma/média/mín/máx, g=aceita agrupar):")
         for nome, ent in ctx.cap.entidades.items():
             campos = ", ".join(
                 f"{c.nome} ({c.tipo};{'f' if c.filtravel else ''}{'s' if c.agregavel else ''}{'g' if c.agrupavel else ''})"
+                + (f" valores: {c.valores_validos()}" if c.valores else "")
+                + (f" valores existentes: {' | '.join(ctx.valores_conhecidos[nome][c.nome])}" if c.nome in ctx.valores_conhecidos.get(nome, {}) else "")
                 for c in ent.campos.values()
             )
             linhas.append(f"- {nome}: {campos}")
@@ -140,11 +145,23 @@ def analisar(pergunta: str, ctx: Contexto) -> PlanoConsulta:
             plano = PlanoConsulta.model_validate(_extrair_json(c.texto))
             validar_plano(plano, ctx.cap)
             _conferir_disponibilidade(plano, ctx)
+            _conferir_valores(plano, ctx)
             return plano
         except (ValueError, ValidationError, PlanoInvalido) as erro:
             ultimo = "; ".join(erro.problemas) if isinstance(erro, PlanoInvalido) else str(erro).replace("\n", " ")
             usuario = f"{pergunta}\n\nSua resposta anterior foi recusada pelo validador: {ultimo}\nCorrija e responda só com o JSON."
     raise PerguntaNaoEntendida(ultimo)
+
+
+def _conferir_valores(plano: PlanoConsulta, ctx: Contexto) -> None:
+    """Filtro de igualdade em campo com lista de valores existentes: o valor tem de estar na lista."""
+    conhecidos = ctx.valores_conhecidos.get(plano.entidade or "", {})
+    problemas = []
+    for chave, valor in plano.filtros.items():
+        if chave in conhecidos and not any(_sem_acento(str(valor)) == _sem_acento(v) for v in conhecidos[chave]):
+            problemas.append(f"o valor {valor!r} não existe em {chave}; use um destes: {' | '.join(conhecidos[chave])}")
+    if problemas:
+        raise PlanoInvalido(problemas)
 
 
 def _conferir_disponibilidade(plano: PlanoConsulta, ctx: Contexto) -> None:
@@ -168,7 +185,7 @@ def evidencia_sql(r: ResultadoSQL, numero: int) -> Evidencia:
     for l in r.linhas[:MAX_LINHAS_NA_EVIDENCIA]:
         linhas.append("; ".join(f"{k}={_valor(v)}" for k, v in l.items()))
     chave = hashlib.sha256((r.sql + json.dumps(r.parametros, default=str)).encode()).hexdigest()[:10]
-    return Evidencia(numero, f"sql:{r.entidade}:{chave}", "base_estruturada", f"Consulta à base de {r.entidade}s: {r.descricao}", "\n".join(linhas))
+    return Evidencia(numero, f"sql:{r.entidade}:{chave}", "base_estruturada", f"Consulta à base estruturada ({r.entidade}): {r.descricao}", "\n".join(linhas))
 
 
 def evidencias_documentos(resultados: list, primeiro: int) -> list[Evidencia]:
@@ -305,6 +322,9 @@ def responder(pergunta: str, ctx: Contexto) -> RAGResponse:
     except PerguntaNaoEntendida:
         return _recusa("pergunta_nao_entendida", "Não consegui transformar a pergunta em uma consulta que eu saiba fazer. Tente reformular, citando o órgão, o período ou o tipo de contratação.", ctx)
 
+    if plano.rota is Rota.FORA_DO_ESCOPO:
+        return _recusa("fora_do_escopo", "Não consigo responder a isso com as bases que tenho.\n" + _resposta_catalogo(ctx), ctx, [Rota.FORA_DO_ESCOPO])
+
     if plano.rota is Rota.CATALOGO:
         return RAGResponse(answer=_resposta_catalogo(ctx), rotas=[Rota.CATALOGO], cobertura=ctx.cobertura, trace_id=ctx.logger.query_id)
 
@@ -328,6 +348,28 @@ def responder(pergunta: str, ctx: Contexto) -> RAGResponse:
 # --------------------------------------------------------------------------- montagem do ambiente real
 
 
+def listar_valores_existentes(banco: Path, cap: Capacidades, limite: int = 40) -> dict[str, dict[str, list[str]]]:
+    """Valores distintos dos campos marcados com `listar_valores`, se forem poucos (até `limite`)."""
+    achados: dict[str, dict[str, list[str]]] = {}
+    conexao = sqlite3.connect(f"file:{banco.as_posix()}?mode=ro", uri=True)
+    try:
+        for nome, ent in cap.entidades.items():
+            for campo in ent.campos.values():
+                if not campo.listar_valores or campo.expr:
+                    continue
+                try:
+                    linhas = conexao.execute(
+                        f"SELECT DISTINCT {campo.nome} FROM {ent.tabela} WHERE {campo.nome} IS NOT NULL ORDER BY 1 LIMIT {limite + 1}"
+                    ).fetchall()
+                except sqlite3.OperationalError:  # tabela ou coluna que este banco não tem
+                    continue
+                if 0 < len(linhas) <= limite:
+                    achados.setdefault(nome, {})[campo.nome] = [str(l[0]) for l in linhas]
+    finally:
+        conexao.close()
+    return achados
+
+
 def carregar_contexto(config: Settings, pastas: Pastas) -> Contexto:
     logger = PipelineLogger(config.log_dir)
     cap = capacidades_do_cenario(pastas.cenario_id)
@@ -343,7 +385,8 @@ def carregar_contexto(config: Settings, pastas: Pastas) -> Contexto:
         finally:
             c.close()
         p = rel["periodo_de_publicacao"]
-        cobertura = f"contratações e contratos publicados de {p['de']} a {p['ate']} (versão {rel['versao']})"
+        rotulo = cap.catalogo.get("cobertura", "dados publicados")
+        cobertura = f"{rotulo} de {p['de']} a {p['ate']} (versão {rel['versao']})"
     indices: dict[str, IndiceCarregado] = {}
     embedder = None
     pasta_indices = pastas.dados / "index" / pastas.cenario_id
@@ -352,7 +395,8 @@ def carregar_contexto(config: Settings, pastas: Pastas) -> Contexto:
         for pasta in sorted(p for p in pasta_indices.iterdir() if (p / "estado_indexacao.json").exists()):
             indices[pasta.name] = carregar_indice(pasta, embedder.identity)
     return Contexto(llm=criar_llm(config), logger=logger, cap=cap, banco=banco, indices=indices, embedder=embedder,
-                    cobertura=cobertura, bases=sorted(indices))
+                    cobertura=cobertura, bases=sorted(indices),
+                    valores_conhecidos=listar_valores_existentes(banco, cap) if banco is not None else {})
 
 
 def formatar(resposta: RAGResponse) -> str:

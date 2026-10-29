@@ -10,10 +10,12 @@ dicas_do_analisador:
   - "Os mais citados: operação listar com campo_agregacao citacoes."
 
 regras_de_resposta:
+  - "FAPERJ e a Fundação Carlos Chagas Filho de Amparo à Pesquisa do Estado do Rio de Janeiro são o mesmo financiador; CNPq é o Conselho Nacional de Desenvolvimento Científico e Tecnológico; CAPES é a Coordenação de Aperfeiçoamento de Pessoal de Nível Superior. Se a evidência traz o nome por extenso, responda com o número dela."
   - "Informe sempre que os números vêm de uma amostra dos artigos mais citados, e não de toda a produção."
   - "Não avalie a qualidade de um pesquisador. Apresente publicações, citações e financiamento como dados."
 
 catalogo:
+  cobertura: artigos publicados
   estruturada: "artigos de instituições do RJ de 2020 a 2024 (os mais citados de cada ano), com instituições, financiadores, citações e resumos"
   normativa: "editais de fomento e normas de ética em pesquisa"
   aviso: "Não revelo a identidade de revisores, não avalio a qualidade de pesquisadores e não informo e-mails pessoais."
@@ -48,16 +50,16 @@ entidades:
       - { nome: titulo, tipo: texto }
       - { nome: ano, tipo: inteiro, agrupavel: true }
       - { nome: data_publicacao, tipo: data }
-      - { nome: tipo, tipo: categoria, agrupavel: true }
-      - { nome: idioma, tipo: categoria, agrupavel: true }
+      - { nome: tipo, tipo: categoria, agrupavel: true, listar_valores: true }
+      - { nome: idioma, tipo: categoria, agrupavel: true, listar_valores: true }
       - { nome: periodico, tipo: categoria, agrupavel: true }
       - { nome: acesso_aberto, tipo: inteiro, agrupavel: true }
-      - { nome: status_acesso, tipo: categoria, agrupavel: true }
+      - { nome: status_acesso, tipo: categoria, agrupavel: true, listar_valores: true }
       - { nome: citacoes, tipo: inteiro, agregavel: true }
       - { nome: fwci, tipo: valor, agregavel: true }
       - { nome: n_autores, tipo: inteiro, agregavel: true }
       - { nome: n_instituicoes, tipo: inteiro, agregavel: true }
-      - { nome: area, tipo: categoria, agrupavel: true }
+      - { nome: area, tipo: categoria, agrupavel: true, listar_valores: true }
       - { nome: topico_principal, tipo: categoria, agrupavel: true }
       - { nome: palavras_chave, tipo: texto }
       - { nome: financiadores, tipo: texto }
@@ -75,8 +77,8 @@ entidades:
       - { nome: instituicao_alvo, tipo: inteiro, agrupavel: true }
       - { nome: ano, tipo: inteiro, agrupavel: true }
       - { nome: titulo, tipo: texto }
-      - { nome: tipo, tipo: categoria, agrupavel: true }
-      - { nome: area, tipo: categoria, agrupavel: true }
+      - { nome: tipo, tipo: categoria, agrupavel: true, listar_valores: true }
+      - { nome: area, tipo: categoria, agrupavel: true, listar_valores: true }
       - { nome: acesso_aberto, tipo: inteiro, agrupavel: true }
       - { nome: citacoes, tipo: inteiro, agregavel: true }
   financiamento:
@@ -89,5 +91,5 @@ entidades:
       - { nome: financiador_nome, tipo: categoria, agrupavel: true }
       - { nome: ano, tipo: inteiro, agrupavel: true }
       - { nome: titulo, tipo: texto }
-      - { nome: area, tipo: categoria, agrupavel: true }
+      - { nome: area, tipo: categoria, agrupavel: true, listar_valores: true }
       - { nome: citacoes, tipo: inteiro, agregavel: true }
