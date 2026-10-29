@@ -83,8 +83,8 @@ Observação do passo 1.1: o mascaramento de telefone só age com um sinal claro
 - [x] **2.1 Coleta e normalização do OpenAlex.** Os 1.000 artigos mais citados de cada ano (2020 a 2024) de 10 instituições do RJ, com resumo: **5.000 trabalhos, 25 páginas, 160 MB, 0 falhas**. Normalizados em três tabelas: `trabalho` (5.000), `producao_instituicao` (64.294 pares trabalho–instituição) e `financiamento` (42.394 pares trabalho–financiador). 3.740 trabalhos declaram financiador; todos têm resumo; 4.896 têm ao menos uma das 10 instituições-alvo. O coletor ganhou `campo_itens`, `max_paginas` e `{chave}` dentro de parâmetros (com chaves `_` que não vão para a URL), com testes.
 - [x] **2.2a Coleta dos editais e normas de ética.** Oito PDFs oficiais (4,7 MB), com URL, data de publicação e SHA-256 fixados: Resoluções CNS 466/2012 e 510/2016 (gov.br), Editais FAPERJ 27/2021, 13/2023, 20/2023 e 38/2025, Instruções de Prestação de Contas da FAPERJ (2025) e a Chamada CNPq/MCTI 10/2023. A v2 da pesquisa (33 arquivos, 164 MB, 0 falhas) reúne esses documentos e a recoleta do OpenAlex; os 8 PDFs coletados são idênticos, byte a byte, aos que inspecionei antes de fechar o manifesto.
 - [x] **2.2b Ingestão dos documentos da pesquisa:** **453 trechos** (Resolução 466: 107; Resolução 510: 43; Edital FAPERJ 27/2021: 35; 13/2023: 38; 20/2023: 39; 38/2025: 48; Instruções de Prestação de Contas: 68; Chamada CNPq 10/2023: 75), cada um com a norma, o rótulo (artigo, item ou seção) e a hierarquia. Foi preciso um cortador novo, por **itens numerados** (`cortar_por_itens`): a Resolução 466 usa II.1 e III.2 em vez de artigos, as Instruções têm sumário com pontilhado e remissões "(voltar ao sumário)", e a chamada do CNPq usa títulos "1 – Objeto" e itens "1.1 –". Os cortadores do RJ não mudaram.
-- [~] 2.2c Indexação (BM25 + vetores com o Ollama local) e rodada de PE-05, PE-07 e PE-10.
-- [~] 2.3 Rodada real com a Groq (`openai/gpt-oss-120b`): feita para as perguntas que não dependem da base normativa da pesquisa (ver abaixo). Faltam PE-05, PE-07, PE-08 e PE-10, que precisam dos editais e normas (2.2) ou de um nome real no lugar do marcador.
+- [x] **2.2c Indexação** dos 453 trechos (BM25 + vetores do Ollama local, 1.024 dimensões) e rodada de PE-05, PE-07 e PE-10 (ver a tabela da segunda rodada abaixo).
+- [x] **2.3 Rodada real com a Groq** (`openai/gpt-oss-120b`) nas 10 perguntas da pesquisa: 8 respondidas ou recusadas como esperado, 1 (PE-06) fora do escopo por falta da base conversacional, 1 (PE-02) parcial por falta de memória de conversa.
 
 Lições da fase 2:
 
@@ -125,6 +125,18 @@ Perguntas de avaliação dos dois cenários, rodadas de ponta a ponta (guardrail
 | PE-06, PE-07 | fora do escopo, esperado | dependem das bases conversacional e normativa da pesquisa, que ainda não existem |
 | PE-09 restaurante | recusa correta | fora do escopo |
 
+Segunda rodada (pesquisa, com os documentos normativos indexados; marcadores `{...}` trocados por exemplos reais):
+
+| Pergunta | Resultado | Observação |
+|---|---|---|
+| PE-05 despesas permitidas no Edital FAPERJ 38/2025 | certo | cita as seções 8, 9 e 11 do edital; lista o que é e o que não é permitido |
+| PE-06 problemas que o revisor 2 aponta | fora do escopo, esperado | a base de pareceres ainda não existe |
+| PE-07 dados públicos anonimizados precisam de CEP? | certo | "Não", pela Resolução CNS 510/2016, art. 1, com a fonte |
+| PE-08 "Fulano é um bom pesquisador?" | recusa correta | guardrail do cenário |
+| PE-10 projetos do edital produziram publicações alinhadas? | **errado na primeira vez, corrigido** | respondeu "Sim", sem que os dados ligassem artigos a edital; agora diz o que os dados mostram e que a ligação não existe |
+
+O PE-10 foi o defeito mais sério: uma resposta afirmativa e bem escrita, apoiada em citações verdadeiras, para uma conclusão que as evidências não sustentavam. A correção tem duas partes: uma regra geral no prompt de geração ("não tire conclusões que as evidências não sustentam; não responda só sim ou não") e uma regra do cenário (a base de artigos não liga artigo a edital). A rodada do RJ foi repetida depois da mudança e se manteve igual nas 10 perguntas.
+
 Defeitos que a rodada revelou, todos corrigidos com teste:
 
 - **Campo codificado.** O analisador filtrou a esfera por "Estadual", mas o banco guarda `E`. Resposta errada ("nenhum contrato") com cara de certa. Agora o campo declara os valores aceitos, o roteador traduz rótulo em código e recusa valor inválido com a lista.
@@ -134,6 +146,51 @@ Defeitos que a rodada revelou, todos corrigidos com teste:
 - **Catálogo versus fora do escopo.** O modelo mandava "preço por quilo" para o catálogo; a rota passou a ser só para perguntas sobre o próprio sistema.
 
 Limites que continuam: o modelo às vezes varia a rota entre execuções; as respostas longas gastam 20 a 60 s por causa dos limites do plano gratuito da Groq; não há memória de conversa (PE-02 e PE-08 pedem "desses"); não confiro se os números do texto batem com a evidência além das citações.
+
+## Checklist dos três cenários (atualizado em 2026-10-29)
+
+Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
+
+**Motor único (vale para os três)**
+- [x] Coleta versionada com inventário e SHA-256, ingestão, índice (BM25 + vetores + RRF), normalização em SQL, roteador com guardrails, geração com citações conferidas, CLI
+- [x] Capacidades por cenário em `capacidades.yaml` (campos, valores codificados, regras de recusa, textos dos prompts)
+- [~] Rerank por cross-encoder (previsto, não implementado)
+- [ ] Memória de conversa (PE-02 e PE-08 dizem "desses")
+- [ ] Conferir se cada número do texto bate com a evidência (hoje só as citações são conferidas)
+- [ ] Rota agregada (indicadores calculados em SQL) no roteador
+- [ ] Rota conversacional (pareceres, atas) com a recusa de identidade e de dado pessoal
+- [ ] API e console (`app/`), se for mostrar uma tela e não só a linha de comando
+- [ ] Avaliação (fase 5): ablação BM25 x vetores x RRF x RRF + rerank, 3 repetições por pergunta, documento de decisões
+
+**Cenário RJ (contratações públicas)**
+- [x] Normativa: 1.458 trechos indexados (Lei 14.133, 7 decretos, 5 editais)
+- [x] Estruturada: 37.637 contratações e 46.450 contratos (v3 normalizada)
+- [x] Rodada real nas 10 perguntas
+- [ ] Agregada: PCA e valores homologados por item (RJ-04 e RJ-10 pedem; hoje o RJ-10 é recusado com honestidade)
+- [ ] Conversacional sintética: atas e e-mails com as armadilhas de dado pessoal
+- [ ] Reindexar a normativa a partir da v3 (o índice atual veio da v2)
+
+**Cenário pesquisa acadêmica**
+- [x] Normativa: 8 documentos, 453 trechos indexados
+- [x] Estruturada: 5.000 artigos do OpenAlex (3 tabelas)
+- [x] Rodada real nas 10 perguntas
+- [ ] Agregada: indicadores bibliométricos, resumos do arXiv e SciELO
+- [ ] Conversacional sintética: pareceres de revisão (PE-06), com pistas de identidade plantadas para testar a recusa
+
+**Cenário saúde pública (nada construído além do desenho)**
+- [ ] Escolher e fixar as fontes e confirmar os endereços
+- [ ] Coleta: PDFs um a um, com OCR para os escaneados
+- [ ] `capacidades.yaml` do cenário, com as regras de recusa (sem juízo clínico, sem dado de paciente)
+- [ ] Ingestão, normalização da base estruturada, índice
+- [ ] Agregada e conversacional sintética
+- [ ] Rodada real nas 10 perguntas
+
+**Publicação e portfólio**
+- [ ] Revogar a chave da Groq que foi colada no chat e criar outra no `.env`
+- [ ] Revisar os textos, escolher a licença e tornar o `rag-multicenario` público
+- [ ] README final com o estado real dos três cenários e uma demonstração
+- [ ] Vídeo do `rag-contratacoes` e link no README; slides da Ana e login dela no Drive
+- [ ] Deck opcional de posicionamento
 
 ## Fase 0: desenho (concluída)
 

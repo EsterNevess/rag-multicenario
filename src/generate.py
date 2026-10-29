@@ -232,6 +232,8 @@ def sistema_geracao(cap: Capacidades) -> str:
         "Cite a evidência com [n] logo depois de cada afirmação, por exemplo \"Foram 896 dispensas [1].\" Nunca cite um número que não existe.",
         "Use apenas fatos e números das evidências. Não complete com conhecimento próprio. Se a evidência não basta, diga o que falta.",
         *cap.regras_de_resposta,
+        "Não tire conclusões que as evidências não sustentam (causa, mérito, alinhamento, relação entre dois conjuntos de dados). "
+        "Se a pergunta pede isso, diga o que os dados mostram e o que eles não mostram. Não responda apenas \"sim\" ou \"não\" nesses casos.",
         "Se a evidência avisar que a lista foi cortada, diga que há mais resultados.",
         "Responda em português, direto, em até cerca de 8 linhas.",
     ]

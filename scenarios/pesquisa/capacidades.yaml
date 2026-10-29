@@ -10,6 +10,7 @@ dicas_do_analisador:
   - "Os mais citados: operação listar com campo_agregacao citacoes."
 
 regras_de_resposta:
+  - "A base de artigos não liga um artigo a um edital ou chamada específica: só informa os financiadores declarados em cada artigo. Nunca afirme que os projetos de um edital produziram certas publicações, nem que elas estão alinhadas ao objetivo do edital; diga que essa ligação não está nos dados."
   - "FAPERJ e a Fundação Carlos Chagas Filho de Amparo à Pesquisa do Estado do Rio de Janeiro são o mesmo financiador; CNPq é o Conselho Nacional de Desenvolvimento Científico e Tecnológico; CAPES é a Coordenação de Aperfeiçoamento de Pessoal de Nível Superior. Se a evidência traz o nome por extenso, responda com o número dela."
   - "Informe sempre que os números vêm de uma amostra dos artigos mais citados, e não de toda a produção."
   - "Não avalie a qualidade de um pesquisador. Apresente publicações, citações e financiamento como dados."

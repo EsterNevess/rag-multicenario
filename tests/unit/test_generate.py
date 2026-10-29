@@ -361,3 +361,11 @@ def test_plano_com_valor_que_nao_existe_no_banco_volta_ao_modelo_com_a_lista(tmp
     )
     r = responder("Quantos concursos?", ctx)
     assert not r.is_refusal and "Inexigibilidade" in ctx.llm.chamadas[1][1]
+
+
+def test_prompt_de_geracao_proibe_conclusao_que_a_evidencia_nao_sustenta():
+    from src.generate import sistema_geracao
+
+    for cenario in ("rj", "pesquisa"):
+        assert "Não tire conclusões que as evidências não sustentam" in sistema_geracao(capacidades_do_cenario(cenario))
+    assert "não liga um artigo a um edital" in sistema_geracao(capacidades_do_cenario("pesquisa"))
