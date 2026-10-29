@@ -9,24 +9,55 @@ description: "Pesquisa acadêmica: editais de fomento, normas de ética, metadad
 bases:
   - base_id: editais_normas_normativo
     natureza: normativa
-    fonte: "Editais de fomento (FAPERJ, CNPq) e normas de ética em pesquisa (Conselho Nacional de Saúde / CONEP)"
+    fonte: "Editais de fomento (FAPERJ, CNPq) e normas de ética em pesquisa (Conselho Nacional de Saúde)"
     acesso:
       tipo: http_pdf
-      portais:
-        faperj: "https://www.faperj.br"
-        cnpq: "https://www.gov.br/cnpq"
-        cns: "https://conselho.saude.gov.br"
-      normas_alvo:
-        - "Resolução CNS 466/2012 (a confirmar na fase 2)"
-        - "Resolução CNS 510/2016 (a confirmar na fase 2)"
-      urls: []                       # a definir na fase 2: poucos editais de anos diferentes + as normas de ética
-    selecao_deterministica: true     # lista fixa de URLs com SHA-256
-    volume_alvo: "cerca de 15 documentos"
+      rate_limit_seg: 2.0
+      # Endereços conferidos em 2026-10-28 (status, tipo e tamanho). Os endereços antigos do CNS
+      # (conselho.saude.gov.br/resolucoes/...) foram desativados e redirecionam para a página inicial.
+      urls:
+        - url: "https://www.gov.br/conselho-nacional-de-saude/pt-br/atos-normativos/resolucoes/2012/resolucao-no-466.pdf"
+          rotulo: "Resolução CNS 466/2012 (pesquisa com seres humanos)"
+          doc_type: norma_etica
+          data_publicacao: "2013-06-13"    # publicação no DOU; a resolução é de 12/12/2012
+        - url: "https://www.gov.br/conselho-nacional-de-saude/pt-br/atos-normativos/resolucoes/2016/resolucao-no-510.pdf"
+          rotulo: "Resolução CNS 510/2016 (ciências humanas e sociais)"
+          doc_type: norma_etica
+          data_publicacao: "2016-05-24"    # publicação no DOU; a resolução é de 07/04/2016
+        - url: "https://siteantigo.faperj.br/downloads/Edital_FAPERJ_N%C2%BA_27_2021___Aux%C3%ADlio_B%C3%A1sico_%C3%A0_Pesquisa_(APQ_1)_em_ICTs_Sediadas_no_Estado_do_Rio_de_Janeiro.pdf"
+          rotulo: "Edital FAPERJ 27/2021: Auxílio Básico à Pesquisa (APQ1)"
+          doc_type: edital
+          data_publicacao: "2021-08-19"
+        - url: "https://www.faperj.br/rp/downloads/Edital_FAPERJ_N%C2%BA_13_2023___Aux%C3%ADlio_B%C3%A1sico_%C3%A0_Pesquisa_(APQ1).pdf"
+          rotulo: "Edital FAPERJ 13/2023: Auxílio Básico à Pesquisa (APQ1)"
+          doc_type: edital
+          data_publicacao: "2023-08-03"
+        - url: "https://www.faperj.br/rp/downloads/Edital_FAPERJ_N%C2%BA_20_2023___Programa_Cientista_do_Nosso_Estado.pdf"
+          rotulo: "Edital FAPERJ 20/2023: Programa Cientista do Nosso Estado"
+          doc_type: edital
+          data_publicacao: "2023-12-14"
+        - url: "https://www.faperj.br/rp/downloads/Edital_FAPERJ_N%C2%B0_38_2025_Programa_de_Apoio_a_Projetos_Cientificos_e_Tecnol%C3%B3gicos_em_Ciencias_Agrarias_no_Estado_do_RJ.pdf"
+          rotulo: "Edital FAPERJ 38/2025: Projetos em Ciências Agrárias (AGRO)"
+          doc_type: edital
+          data_publicacao: "2025-12-04"
+        - url: "https://faperj.br/rp/downloads/Instrucoes-Prestacao-Contas-2025.pdf"
+          rotulo: "FAPERJ: Instruções para Prestação de Contas (2025)"
+          doc_type: instrucao
+          data_publicacao: null            # o documento não traz data de publicação
+        - url: "http://efomento.cnpq.br/efomento/documentoPublico.do?metodo=visualizar&protocolo=7222512882593567"
+          rotulo: "Chamada CNPq/MCTI 10/2023: Universal"
+          doc_type: edital
+          data_publicacao: "2023-06-21"
+      observacoes:
+        - "A chamada do CNPq vem do sistema oficial de fomento (HTTP, sem nome de arquivo); a página oficial em gov.br aponta para o mesmo PDF. O SHA-256 gravado no inventário detecta qualquer mudança."
+        - "O Edital FAPERJ 05/2025, cogitado antes, retornou 404 e ficou de fora."
+    selecao_deterministica: true     # lista fixa de URLs com SHA-256 gravado no inventário
+    volume_alvo: 8
     formato: pdf
     licenca: "Documentos públicos de órgãos oficiais"
     sensitivity_default: publico
     campo_vigencia: data_publicacao
-    chunking_sugerido: "Um chunk por item ou cláusula do edital, guardando número da chamada, ano e objetivo"
+    chunking_sugerido: "Um chunk por item ou cláusula do edital, guardando número da chamada, ano e objetivo; as resoluções por artigo"
     metadados_extras: [instituicao, numero_chamada, ano, objetivo, data_publicacao]
 
   - base_id: openalex_estruturado
@@ -66,6 +97,8 @@ bases:
 
   - base_id: indicadores_agregado
     natureza: agregada
+    coletar: false
+    motivo_nao_coletada: "fase 4: bases agregadas ainda não desenhadas em detalhe"
     fonte: "Indicadores bibliométricos derivados do OpenAlex; abstracts e textos de arXiv e SciELO"
     acesso:
       tipo: rest_api
@@ -84,6 +117,8 @@ bases:
 
   - base_id: pareceres_conversacional
     natureza: conversacional
+    coletar: false
+    motivo_nao_coletada: "fase 4: base sintética, gerada por script próprio"
     fonte: "Pareceres de revisão por pares e correspondência editorial sintéticos"
     acesso:
       tipo: sintetico
