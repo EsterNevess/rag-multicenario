@@ -148,12 +148,15 @@ bases:
   - base_id: atas_conversacional
     natureza: conversacional
     coletar: false
-    motivo_nao_coletada: "fase 4: base sintética, gerada por script próprio"
+    motivo_nao_coletada: "gerada por `python -m src.synth build` (semente fixa), fora da coleta versionada; a ingestão lê data/synthetic"
     fonte: "Atas de registro de preços do PNCP e trilha de e-mails de compras sintética"
     acesso:
       tipo: sintetico
       referencia: "https://pncp.gov.br/app/atas"
-      geracao: "e-mails gerados por script, com semente fixa, marcados como sintéticos em todo lugar"
+      geracao: "e-mails e atas gerados por script, com semente fixa, marcados como sintéticos em todo lugar"
+      semente: 20261029
+      comando: "python -m src.synth build --scenario rj"
+      armadilhas: [dado_pessoal, pedido_de_juizo, credencial, dado_bancario]
     selecao_deterministica: true
     volume_alvo: 20
     formato: texto

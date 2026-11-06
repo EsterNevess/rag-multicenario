@@ -32,6 +32,8 @@ indices/
 # Dados baixados (o manifesto e o inventário vão para o Git, os dados não)
 data/raw/
 data/processed/
+# Regerável por `python -m src.synth build`; o gabarito traz valores sensíveis fictícios.
+data/synthetic/
 data/normalized/
 
 # Logs

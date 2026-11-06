@@ -77,6 +77,18 @@ class RegraDeEntrada:
 
 
 @dataclass(frozen=True)
+class RegraDeSaida:
+    """Se a resposta final casar com um padrão, ela é bloqueada e vira uma recusa com a mensagem da regra."""
+
+    categoria: str
+    mensagem: str
+    padroes: tuple[str, ...]
+
+
+NIVEIS_DE_SENSIBILIDADE = ("publico", "interno", "restrito")
+
+
+@dataclass(frozen=True)
 class Capacidades:
     cenario: str
     descricao: str  # "contratações públicas do Estado do Rio de Janeiro"
@@ -85,6 +97,10 @@ class Capacidades:
     dicas_do_analisador: tuple[str, ...] = ()
     regras_de_resposta: tuple[str, ...] = ()
     catalogo: dict[str, str] = field(default_factory=dict)  # chave: estruturada | normativa | aviso
+    # Níveis de sensibilidade que a busca de documentos pode devolver. Por padrão só o público.
+    niveis_consultaveis: tuple[str, ...] = ("publico",)
+    regras_de_saida: tuple[RegraDeSaida, ...] = ()
+    redacoes_na_ingestao: tuple[dict[str, Any], ...] = ()  # brutas; src.redacao as compila
 
 
 def _campo(bruto: dict[str, Any], onde: str) -> Campo:
@@ -148,7 +164,33 @@ def interpretar(dados: dict[str, Any]) -> Capacidades:
             regras.append(RegraDeEntrada(r["categoria"], r["mensagem"], padroes))
         except (KeyError, TypeError, re.error) as erro:
             raise CapacidadesInvalidas(f"regra de entrada inválida ({erro})") from erro
+    niveis = tuple(dados.get("niveis_consultaveis") or ("publico",))
+    invalidos = [n for n in niveis if n not in NIVEIS_DE_SENSIBILIDADE]
+    if invalidos:
+        raise CapacidadesInvalidas(f"niveis_consultaveis: {invalidos} (use {NIVEIS_DE_SENSIBILIDADE})")
+    saida = []
+    for r in dados.get("regras_de_saida") or []:
+        try:
+            padroes = tuple(r["padroes"])
+            for p in padroes:
+                re.compile(p)
+            saida.append(RegraDeSaida(r["categoria"], r["mensagem"], padroes))
+        except (KeyError, TypeError, re.error) as erro:
+            raise CapacidadesInvalidas(f"regra de saída inválida ({erro})") from erro
+    redacoes = []
+    for r in dados.get("redacoes_na_ingestao") or []:
+        try:
+            if not r["categoria"] or not r["padroes"]:
+                raise KeyError("categoria e padroes são obrigatórios")
+            for p in r["padroes"]:
+                re.compile(p)
+        except (KeyError, TypeError, re.error) as erro:
+            raise CapacidadesInvalidas(f"redação na ingestão inválida ({erro})") from erro
+        redacoes.append(dict(r))
     return Capacidades(
+        niveis_consultaveis=niveis,
+        regras_de_saida=tuple(saida),
+        redacoes_na_ingestao=tuple(redacoes),
         cenario=dados["cenario"],
         descricao=dados.get("descricao", dados["cenario"]),
         entidades=entidades,

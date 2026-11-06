@@ -39,7 +39,10 @@ from src.fetch_corpus import (
     pastas_do_cenario,
     versoes_existentes,
 )
+from src.capacidades import carregar_capacidades
 from src.pii import mascarar_dados_pessoais
+from src.redacao import compilar as compilar_redacoes
+from src.redacao import redigir
 from src.schema import Chunk, ChunkMetadata, Natureza, Sensibilidade
 
 MAX_CHARS = 1800
@@ -393,6 +396,7 @@ class Documento:
     data_publicacao: str | None
     origem: str
     altera: str | None = None
+    extras: dict[str, Any] = field(default_factory=dict)  # metadados próprios da base (remetente_fake, manuscrito_id...)
 
 
 def _stem(origem: str, arquivo: Path) -> str:
@@ -402,10 +406,33 @@ def _stem(origem: str, arquivo: Path) -> str:
     return re.sub(r"[^a-z0-9]+", "-", arquivo.stem.lower()).strip("-")
 
 
+CHAVES_DO_INDICE_SINTETICO = {"arquivo", "doc_type", "titulo", "data"}
+
+
+def _descobrir_sinteticos(base_id: str, pastas: Pastas) -> list[Documento]:
+    """Documentos de uma base sintética (gerada por `src.synth`). Lê só `_indice.json`, nunca `_gabarito.json`."""
+    pasta = pastas.dados / "synthetic" / pastas.cenario_id / base_id
+    indice = pasta / "_indice.json"
+    if not indice.is_file():
+        raise FileNotFoundError(f"a base sintética {base_id} não foi gerada. Rode: python -m src.synth build --scenario {pastas.cenario_id}")
+    docs: list[Documento] = []
+    for item in json.loads(indice.read_text(encoding="utf-8")):
+        faltam = CHAVES_DO_INDICE_SINTETICO - set(item)
+        if faltam:
+            raise ValueError(f"{indice.name}: item sem {sorted(faltam)}: {item.get('arquivo')}")
+        extras = {k: v for k, v in item.items() if k not in CHAVES_DO_INDICE_SINTETICO}
+        caminho = pasta / item["arquivo"]
+        docs.append(Documento(base_id, caminho, _stem("", caminho), item["titulo"], item["doc_type"], item["data"],
+                              f"sintetico:{pastas.cenario_id}/{base_id}/{item['arquivo']}", None, extras))
+    return docs
+
+
 def descobrir_documentos(manifesto: dict[str, Any], base_id: str, pastas: Pastas, versao: str) -> list[Documento]:
     """Casa cada item do manifesto com o arquivo coletado, usando o registro da coleta."""
     base = next(b for b in manifesto["bases"] if b["base_id"] == base_id)
     acesso = base["acesso"]
+    if acesso.get("tipo") == "sintetico":
+        return _descobrir_sinteticos(base_id, pastas)
     registros = RegistroDaVersao(pastas.versao(versao)).ler()
     origens_locais_path = pastas.versao(versao) / "_origens_locais.json"
     origens_locais = json.loads(origens_locais_path.read_text(encoding="utf-8")) if origens_locais_path.exists() else {}
@@ -448,13 +475,20 @@ def texto_do_documento(doc: Documento) -> tuple[str, dict[str, Any]]:
     if sufixo in (".html", ".htm"):
         texto, riscados = texto_de_html(doc.caminho.read_bytes())
         return texto, {"trechos_riscados_ignorados": riscados}
+    if sufixo == ".txt":
+        return doc.caminho.read_text(encoding="utf-8"), {}
     if sufixo == ".pdf" or doc.caminho.read_bytes()[:5] == b"%PDF-":  # sem extensão confiável, o conteúdo decide
         return texto_de_pdf(doc.caminho), {}
     raise ValueError(f"formato não suportado: {doc.caminho.name}")
 
 
+TIPOS_CONVERSACIONAIS = {"email", "ata", "parecer", "correspondencia_editorial"}
+
+
 def cortar_documento(doc: Documento, texto: str) -> list[Secao]:
     """Escolhe o cortador pelo tipo do documento; normas de ética sem artigos (como a Resolução 466) caem nos itens."""
+    if doc.doc_type in TIPOS_CONVERSACIONAIS:
+        return [Secao(doc.norma, "doc", texto.strip())]
     if doc.doc_type == "edital":
         secoes = cortar_por_secoes(texto)
         return secoes if len(secoes) > 1 else cortar_por_itens(texto)  # chamada com títulos "1 – Objeto"
@@ -495,6 +529,7 @@ def montar_chunks(
                 extras["artigo"] = secao.artigo
             if doc.altera:
                 extras["altera"] = doc.altera
+            extras.update(doc.extras)
             metadata = ChunkMetadata(
                 source_file=doc.caminho.name,
                 doc_type=doc.doc_type,
@@ -524,11 +559,21 @@ def ingerir(manifesto_path: Path, versao: str, base_id: str, pastas: Pastas) -> 
     if not documentos:
         raise FileNotFoundError(f"nenhum documento coletado para {base_id} na versão {versao}")
 
+    try:  # cenário sem capacidades.yaml (ainda não construído) simplesmente não tem redações
+        redacoes = compilar_redacoes(list(carregar_capacidades(pastas.cenario_id).redacoes_na_ingestao))
+    except FileNotFoundError:
+        redacoes = ()
+    redigidos: Counter[str] = Counter()
+
     todos: list[Chunk] = []
     por_documento = []
     avisos: list[str] = []
     for doc in documentos:
         texto, info = texto_do_documento(doc)
+        texto, feitas = redigir(texto, doc.doc_type, redacoes)
+        redigidos.update(feitas)
+        if feitas:
+            info = {**info, "frases_redigidas": sum(feitas.values())}
         if doc.doc_type == "decreto":
             lida = data_do_cabecalho(texto)
             if lida and doc.data_publicacao and lida != doc.data_publicacao:
@@ -571,6 +616,7 @@ def ingerir(manifesto_path: Path, versao: str, base_id: str, pastas: Pastas) -> 
         "base_id": base_id,
         "total_chunks": len(todos),
         "chunks_com_dado_pessoal": sum(d["chunks_com_dado_pessoal"] for d in por_documento),
+        "frases_redigidas_por_categoria": dict(redigidos),
         "sha256_do_jsonl": hashlib.sha256(conteudo.encode("utf-8")).hexdigest(),
         "documentos": por_documento,
         "avisos": avisos,

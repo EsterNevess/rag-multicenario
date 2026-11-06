@@ -119,13 +119,16 @@ bases:
   - base_id: pareceres_conversacional
     natureza: conversacional
     coletar: false
-    motivo_nao_coletada: "fase 4: base sintética, gerada por script próprio"
+    motivo_nao_coletada: "gerada por `python -m src.synth build` (semente fixa), fora da coleta versionada; a ingestão lê data/synthetic"
     fonte: "Pareceres de revisão por pares e correspondência editorial sintéticos"
     acesso:
       tipo: sintetico
       geracao: "gerados por script com semente fixa; marcados como sintéticos em todo lugar"
+      semente: 20261029
+      comando: "python -m src.synth build --scenario pesquisa"
+      armadilhas: [pista_de_identidade, pedido_de_identidade, dado_pessoal]
     selecao_deterministica: true
-    volume_alvo: 20
+    volume_alvo: 21
     formato: texto
     licenca: "Conteúdo sintético"
     sensitivity_default: restrito

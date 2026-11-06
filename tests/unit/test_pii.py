@@ -110,3 +110,40 @@ def test_dominio_institucional_declarado_pelo_corpus_mantem_o_email():
 
 def test_dominio_declarado_nao_libera_dominio_parecido():
     assert "faperj.br" not in mascarar_dados_pessoais("a@naofaperj.br b@faperj.br.falso.com", ("faperj.br",))
+
+
+# ----------------------------------------------------------------- credencial e dado bancário colados no texto
+
+
+@pytest.mark.parametrize("texto,visivel", [
+    ("Segue o acesso. A senha do sistema é Abc123!x e vale até sexta.", "A senha do sistema é [CREDENCIAL]"),
+    ("login: joao / senha: 12345678", "senha: [CREDENCIAL]"),
+    ("Token de acesso = ghp_abcdef123456 não compartilhe", "Token de acesso = [CREDENCIAL]"),
+    ("a chave de acesso é XYZ-99", "chave de acesso é [CREDENCIAL]"),
+    ("API key: sk-teste-000", "API key: [CREDENCIAL]"),
+])
+def test_credencial_colada_no_texto_e_mascarada(texto, visivel):
+    saida = mascarar_dados_pessoais(texto)
+    assert visivel in saida
+    for segredo in ("Abc123!x", "12345678", "ghp_abcdef123456", "XYZ-99", "sk-teste-000"):
+        assert segredo not in saida
+
+
+@pytest.mark.parametrize("texto", [
+    "Depositar na agência 1234-5, conta corrente 56789-0, em nome da empresa.",
+    "Ag. 0001 c/c 123456-7",
+    "Chave Pix: 12.345.678/0001-90",
+])
+def test_dado_bancario_e_mascarado(texto):
+    saida = mascarar_dados_pessoais(texto)
+    assert "[DADO BANCÁRIO]" in saida and "56789" not in saida and "123456-7" not in saida and "0001-90" not in saida
+
+
+@pytest.mark.parametrize("texto", [
+    "A senha de acesso ao SEI deve ser solicitada ao suporte.",       # fala da senha, não traz uma
+    "Troque a senha periodicamente.",
+    "O agente de contratação informou o prazo de 2026.",
+    "O token é um conceito de segurança.",
+])
+def test_menção_a_senha_sem_valor_nao_e_alterada(texto):
+    assert mascarar_dados_pessoais(texto) == texto

@@ -36,7 +36,21 @@ _TELEFONE = re.compile(
     r"|(?i:\b(?:tel(?:efone)?|fone|cel(?:ular)?|whats(?:app)?|contato)\b)\D{0,15}(?<!\d)\d{4}-\d{4}(?!\d)"
 )
 
+# Credencial colada em texto ("a senha do sistema é 12345", "token: abc"): o valor nunca deve chegar ao índice.
+_CREDENCIAL = re.compile(
+    r"(?i)\b(senha|password|passwd|token|chave\s+de\s+acesso|api[\s-]?key)\b"
+    r"((?:\s+(?:de\s+acesso|do\s+sistema|provis[óo]ria|tempor[áa]ria|inicial|de\s+rede))*)"
+    r"(\s*[:=]\s*|\s+(?:é|eh)\s+(?=\S*[\d!@#$%&*_-]))\S+"
+)
+# Dado bancário de fornecedor: agência e conta, ou chave Pix.
+_CONTA_BANCARIA = re.compile(
+    r"(?i)\bag(?:[êe]ncia|\.)?\s*:?\s*\d{3,5}(?:-\d)?[\s,;]*(?:c/?c|conta(?:\s+corrente)?)\s*:?\s*\d{4,12}(?:-\d)?"
+)
+_PIX = re.compile(r"(?i)\bchave\s+pix\b\s*(?:é|eh|:|=)?\s*\S+")
+
 MARCA_CPF = "[CPF]"
+MARCA_CREDENCIAL = "[CREDENCIAL]"
+MARCA_BANCARIO = "[DADO BANCÁRIO]"
 MARCA_EMAIL = "[EMAIL]"
 MARCA_TELEFONE = "[TELEFONE]"
 
@@ -70,6 +84,9 @@ def mascarar_dados_pessoais(texto: str, dominios_institucionais: tuple[str, ...]
     texto = _CPF_FORMATADO.sub(MARCA_CPF, texto)
     texto = _CPF_SOLTO.sub(lambda m: MARCA_CPF if cpf_valido(m.group()) else m.group(), texto)
     texto = _TELEFONE.sub(MARCA_TELEFONE, texto)
+    texto = _CREDENCIAL.sub(lambda m: f"{m.group(1)}{m.group(2)}{m.group(3)}{MARCA_CREDENCIAL}", texto)
+    texto = _CONTA_BANCARIA.sub(MARCA_BANCARIO, texto)
+    texto = _PIX.sub(MARCA_BANCARIO, texto)
     return texto
 
 
