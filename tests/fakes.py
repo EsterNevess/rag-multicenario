@@ -38,3 +38,22 @@ class EmbedderPalavras:
 
     def embed_consulta(self, textos: list[str]) -> np.ndarray:
         return np.array([self._vetor(t) for t in textos])
+
+
+class LLMRoteirizado:
+    """Modelo de linguagem falso: devolve as respostas em ordem e guarda o que recebeu."""
+
+    modelo = "fake-llm"
+
+    def __init__(self, *respostas: str):
+        self.respostas = list(respostas)
+        self.chamadas: list[tuple[str, str, bool]] = []
+
+    def completar(self, sistema, usuario, *, json=False):
+        from src.llm import Completacao
+        from src.obs import Tokens
+
+        self.chamadas.append((sistema, usuario, json))
+        if not self.respostas:
+            raise AssertionError("o modelo foi chamado mais vezes do que o previsto")
+        return Completacao(self.respostas.pop(0), Tokens(10, 5), self.modelo)

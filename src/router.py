@@ -105,6 +105,15 @@ def avaliar_pergunta(pergunta: str, cap: Capacidades | None = None) -> Decisao:
     return Decisao(True)
 
 
+def avaliar_resposta(texto: str, cap: Capacidades | None = None) -> Decisao:
+    """Última barreira: a resposta pronta não pode casar com uma regra de saída do cenário (por exemplo, revelar um revisor)."""
+    comparavel = _sem_acento(unicodedata.normalize("NFKC", texto))
+    for regra in _capacidades(cap).regras_de_saida:
+        if any(re.search(p, comparavel) for p in regra.padroes):
+            return Decisao(False, regra.categoria, regra.mensagem)
+    return Decisao(True)
+
+
 # --------------------------------------------------------------------------- tabela de capacidades
 
 

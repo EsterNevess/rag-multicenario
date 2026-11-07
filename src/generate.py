@@ -27,7 +27,7 @@ from src.llm import LLM, LLMIndisponivel, criar_llm
 from src.obs import PipelineLogger, Stage, Tokens
 from src.pii import mascarar_dados_pessoais
 from src.retrieve import buscar_por_bases
-from src.router import _sem_acento, PlanoInvalido, ResultadoSQL, avaliar_pergunta, consultar, localizar_banco, validar_plano
+from src.router import _sem_acento, PlanoInvalido, avaliar_resposta, ResultadoSQL, avaliar_pergunta, consultar, localizar_banco, validar_plano
 from src.schema import Fonte, Natureza, PlanoConsulta, RAGResponse, Rota
 
 MAX_LINHAS_NA_EVIDENCIA = 25
@@ -57,14 +57,20 @@ class Contexto:
     tokens: Tokens = field(default_factory=Tokens)
     # entidade -> campo -> valores que existem no banco, para os campos com `listar_valores`
     valores_conhecidos: dict[str, dict[str, list[str]]] = field(default_factory=dict)
+    natureza_das_bases: dict[str, Natureza] = field(default_factory=dict)  # base_id -> natureza; sem informação, normativa
+
+    def natureza_da_base(self, base_id: str) -> Natureza:
+        return self.natureza_das_bases.get(base_id, Natureza.NORMATIVA)
 
     @property
     def naturezas(self) -> list[Natureza]:
         n = []
         if self.banco is not None:
             n.append(Natureza.ESTRUTURADA)
-        if self.indices:
-            n.append(Natureza.NORMATIVA)
+        presentes = {self.natureza_da_base(b) for b in self.indices}
+        for natureza in (Natureza.NORMATIVA, Natureza.CONVERSACIONAL):
+            if natureza in presentes:
+                n.append(natureza)
         return n
 
 
@@ -85,10 +91,16 @@ def montar_prompt_analise(ctx: Contexto) -> str:
     rotas = []
     if Natureza.ESTRUTURADA in ctx.naturezas:
         rotas.append("- \"estruturada\": números, contagens, somas, listas e rankings de contratações e contratos (tabelas abaixo).")
+    textuais = []
     if Natureza.NORMATIVA in ctx.naturezas:
-        rotas.append("- \"documentos\": o que dizem os documentos de texto (normas, editais). Exige \"consulta_semantica\".")
-    if len(ctx.naturezas) == 2:
-        rotas.append("- \"hibrida\": a pergunta mistura dados e norma. Use naturezas [\"estruturada\", \"normativa\"], a entidade, os filtros e a consulta_semantica.")
+        textuais.append("naturezas [\"normativa\"] para o que dizem normas e editais")
+    if Natureza.CONVERSACIONAL in ctx.naturezas:
+        textuais.append("naturezas [\"conversacional\"] para o que dizem e-mails, atas e pareceres (documentos de comunicação, sintéticos)")
+    if textuais:
+        rotas.append("- \"documentos\": o que dizem os documentos de texto. Use " + "; ".join(textuais) + ". Exige \"consulta_semantica\".")
+    if len(ctx.naturezas) >= 2:
+        nomes = " e ".join(f"\"{n.value}\"" for n in ctx.naturezas)
+        rotas.append(f"- \"hibrida\": a pergunta mistura tipos de evidência. Use naturezas com pelo menos duas de {nomes}, a entidade (se houver dados), os filtros e a consulta_semantica.")
     rotas.append("- \"catalogo\": SOMENTE quando a pessoa pergunta sobre o próprio sistema (o que ele sabe, que bases e que período existem).")
     rotas.append("- \"fora_do_escopo\": a pergunta é sobre outro assunto, ou pede um dado que as tabelas não têm (por exemplo, um preço por quilo de um item).")
     linhas += ["Rotas disponíveis:", *rotas, "Se a pergunta tem duas partes, uma sobre o que a norma diz (direitos, regras, prazos) e outra sobre dados (quantas, quais, quanto), use \"hibrida\".", ""]
@@ -112,7 +124,7 @@ def montar_prompt_analise(ctx: Contexto) -> str:
         ]
     linhas += [
         "",
-        "Formato (somente JSON, sem comentários): {\"rota\": ..., \"naturezas\": [\"estruturada\"|\"normativa\"], \"entidade\": ou null,",
+        "Formato (somente JSON, sem comentários): {\"rota\": ..., \"naturezas\": [\"estruturada\"|\"normativa\"|\"conversacional\"], \"entidade\": ou null,",
         "\"filtros\": {}, \"operacoes\": [], \"campo_agregacao\": ou null, \"agrupar_por\": [], \"limite\": ou null, \"consulta_semantica\": ou null}",
         "Nunca escreva SQL. Use só os campos listados. Se a pergunta não puder ser respondida com essas rotas, use \"catalogo\".",
     ]
@@ -165,7 +177,7 @@ def _conferir_valores(plano: PlanoConsulta, ctx: Contexto) -> None:
 
 
 def _conferir_disponibilidade(plano: PlanoConsulta, ctx: Contexto) -> None:
-    faltam = [n for n in plano.naturezas if n in (Natureza.ESTRUTURADA, Natureza.NORMATIVA) and n not in ctx.naturezas]
+    faltam = [n for n in plano.naturezas if n in (Natureza.ESTRUTURADA, Natureza.NORMATIVA, Natureza.CONVERSACIONAL) and n not in ctx.naturezas]
     if faltam:
         raise PlanoInvalido([f"a base {n.value} não está carregada neste ambiente" for n in faltam])
 
@@ -193,6 +205,8 @@ def evidencias_documentos(resultados: list, primeiro: int) -> list[Evidencia]:
     for i, r in enumerate(resultados):
         m = r.metadata
         rotulo = " — ".join(x for x in (m.get("norma"), m.get("rotulo")) if x) or m.get("source_file", r.chunk_id)
+        if m.get("sintetico"):
+            rotulo = f"{m.get('norma') or rotulo} (documento sintético de {m.get('data_publicacao') or 's/d'})"
         saida.append(Evidencia(primeiro + i, r.chunk_id, m.get("base_id", "?"), rotulo, r.texto[:MAX_CARACTERES_DO_TRECHO]))
     return saida
 
@@ -215,13 +229,15 @@ def coletar(plano: PlanoConsulta, pergunta: str, ctx: Contexto) -> tuple[list[Ev
         evidencias.append(evidencia_sql(r, len(evidencias) + 1))
     if usa_docs:
         consulta = plano.consulta_semantica or pergunta
+        alvo = {n for n in plano.naturezas if n in (Natureza.NORMATIVA, Natureza.CONVERSACIONAL)} or {Natureza.NORMATIVA}
+        indices = {b: i for b, i in ctx.indices.items() if ctx.natureza_da_base(b) in alvo}
         achados = buscar_por_bases(
-            ctx.indices, ctx.embedder, consulta, k=5,
-            filtros={"vigente_em": ctx.hoje, "sensitivity": ["publico"]}, logger=ctx.logger,
-        )
+            indices, ctx.embedder, consulta, k=5,
+            filtros={"vigente_em": ctx.hoje, "sensitivity": list(ctx.cap.niveis_consultaveis)}, logger=ctx.logger,
+        ) if indices else []
         evidencias += evidencias_documentos(achados, len(evidencias) + 1)
         if not achados:
-            avisos.append("Nenhum trecho de norma foi encontrado para a pergunta.")
+            avisos.append("Nenhum trecho de documento foi encontrado para a pergunta.")
     return evidencias, avisos
 
 
@@ -301,7 +317,9 @@ def _resposta_catalogo(ctx: Contexto) -> str:
     if Natureza.ESTRUTURADA in ctx.naturezas and cat.get("estruturada"):
         partes.append(f"- {cat['estruturada']};")
     if Natureza.NORMATIVA in ctx.naturezas and cat.get("normativa"):
-        partes.append(f"- {cat['normativa']}.")
+        partes.append(f"- {cat['normativa']};")
+    if Natureza.CONVERSACIONAL in ctx.naturezas and cat.get("conversacional"):
+        partes.append(f"- {cat['conversacional']}.")
     if ctx.cobertura:
         partes.append(f"Cobertura: {ctx.cobertura}")
     if cat.get("aviso"):
@@ -338,6 +356,11 @@ def responder(pergunta: str, ctx: Contexto) -> RAGResponse:
     if gerado is None:
         return _recusa("sem_fonte_verificavel", "Não consegui escrever uma resposta com fontes verificáveis. Tente reformular a pergunta.", ctx, [plano.rota])
     texto, usadas = gerado
+    with ctx.logger.etapa(Stage.VALIDACAO, "guarda de saída") as v:
+        saida = avaliar_resposta(texto, ctx.cap)
+        v.output = "liberada" if saida.permitida else f"bloqueada: {saida.categoria}"
+    if not saida.permitida:
+        return _recusa(saida.categoria or "saida_bloqueada", saida.mensagem or "A resposta foi bloqueada.", ctx, [plano.rota])
     return RAGResponse(
         answer=texto,
         sources_used=[Fonte(numero=e.numero, chunk_id=e.chunk_id, base_id=e.base_id, rotulo=e.rotulo) for e in usadas],
@@ -372,6 +395,17 @@ def listar_valores_existentes(banco: Path, cap: Capacidades, limite: int = 40) -
     return achados
 
 
+def _naturezas_do_manifesto(pastas: Pastas, indices: dict[str, IndiceCarregado]) -> dict[str, Natureza]:
+    """base_id -> natureza, lida do manifesto do cenário (uma base sem manifesto é tratada como normativa)."""
+    caminho = pastas.cenario / "corpus_manifest.yaml"
+    if not caminho.is_file():
+        return {}
+    import yaml
+
+    bases = (yaml.safe_load(caminho.read_text(encoding="utf-8")) or {}).get("bases") or []
+    return {b["base_id"]: Natureza(b["natureza"]) for b in bases if b.get("base_id") in indices and b.get("natureza")}
+
+
 def carregar_contexto(config: Settings, pastas: Pastas) -> Contexto:
     logger = PipelineLogger(config.log_dir)
     cap = capacidades_do_cenario(pastas.cenario_id)
@@ -396,8 +430,9 @@ def carregar_contexto(config: Settings, pastas: Pastas) -> Contexto:
         embedder = criar_embedder(config)
         for pasta in sorted(p for p in pasta_indices.iterdir() if (p / "estado_indexacao.json").exists()):
             indices[pasta.name] = carregar_indice(pasta, embedder.identity)
+    naturezas = _naturezas_do_manifesto(pastas, indices)
     return Contexto(llm=criar_llm(config), logger=logger, cap=cap, banco=banco, indices=indices, embedder=embedder,
-                    cobertura=cobertura, bases=sorted(indices),
+                    cobertura=cobertura, bases=sorted(indices), natureza_das_bases=naturezas,
                     valores_conhecidos=listar_valores_existentes(banco, cap) if banco is not None else {})
 
 

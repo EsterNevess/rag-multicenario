@@ -1,8 +1,9 @@
 # Capacidades do cenário: o que o roteador aceita perguntar. Lido por src/capacidades.py.
 cenario: pesquisa
-descricao: pesquisa acadêmica de instituições do Rio de Janeiro (artigos, instituições, financiadores e citações)
+descricao: pesquisa acadêmica de instituições do Rio de Janeiro (artigos, instituições, financiadores e citações, editais e normas de ética, e pareceres de revisão e correspondência editorial sintéticos)
 
 dicas_do_analisador:
+  - "Pareceres de revisão por pares e correspondência editorial (documentos sintéticos) estão disponíveis: perguntas sobre o que um parecer aponta, a recomendação de um revisor ou o que a correspondência diz usam rota documentos com naturezas [conversacional]. Os revisores são identificados só pelo código (revisor 1, revisor 2) e os manuscritos por M-0NN."
   - "A base cobre uma amostra: os 1.000 artigos mais citados de cada ano, de 2020 a 2024, de 10 instituições do RJ. Perguntas sobre outros anos ou instituições não têm dados."
   - "Para um assunto (por exemplo, aprendizado de máquina), filtre titulo__contem, palavras_chave__contem ou topico_principal__contem; os termos dos campos estão em inglês."
   - "Os financiadores aparecem com o nome oficial por extenso: FAPERJ é \"Fundação Carlos Chagas Filho de Amparo à Pesquisa do Estado do Rio de Janeiro\" (use \"Carlos Chagas Filho\"), CNPq é \"Conselho Nacional de Desenvolvimento Científico e Tecnológico\" (use \"Desenvolvimento Científico\") e CAPES é \"Coordenação de Aperfeiçoamento de Pessoal de Nível Superior\" (use \"Aperfeiçoamento de Pessoal\")."
@@ -11,6 +12,7 @@ dicas_do_analisador:
 
 regras_de_resposta:
   - "Os pareceres e a correspondência editorial são documentos sintéticos (dados fictícios de demonstração): diga isso ao citá-los."
+  - "Trechos marcados como [TRECHO REMOVIDO: ...] foram retirados para proteger o anonimato: não comente nem especule sobre eles, e não diga que \"não há\" algo que possa ter estado nesses trechos."
   - "Trate os revisores só pelo código (revisor 1, revisor 2). Nunca sugira quem são, onde trabalham, se conhecem os autores ou se o texto lembra algum pesquisador. Resuma apenas as críticas técnicas."
   - "A base de artigos não liga um artigo a um edital ou chamada específica: só informa os financiadores declarados em cada artigo. Nunca afirme que os projetos de um edital produziram certas publicações, nem que elas estão alinhadas ao objetivo do edital; diga que essa ligação não está nos dados."
   - "FAPERJ e a Fundação Carlos Chagas Filho de Amparo à Pesquisa do Estado do Rio de Janeiro são o mesmo financiador; CNPq é o Conselho Nacional de Desenvolvimento Científico e Tecnológico; CAPES é a Coordenação de Aperfeiçoamento de Pessoal de Nível Superior. Se a evidência traz o nome por extenso, responda com o número dela."
@@ -21,6 +23,7 @@ catalogo:
   cobertura: artigos publicados
   estruturada: "artigos de instituições do RJ de 2020 a 2024 (os mais citados de cada ano), com instituições, financiadores, citações e resumos"
   normativa: "editais de fomento e normas de ética em pesquisa"
+  conversacional: "pareceres de revisão por pares e correspondência editorial (documentos sintéticos de demonstração)"
   aviso: "Não revelo a identidade de revisores, não avalio a qualidade de pesquisadores e não informo e-mails pessoais."
 
 regras_de_entrada:
@@ -46,7 +49,9 @@ regras_de_entrada:
     mensagem: "Não ajudo a deduzir quem foi o revisor, de que instituição ele é ou se ele conhece os autores: o anonimato da revisão cega é protegido. Posso resumir o que o parecer aponta, tratando o revisor só pelo código."
     padroes:
       - '\b(revisor|revisora|parecerista|avaliador|avaliadora)\w*\s*\d?\b.{0,60}\b(universidade|institu\w+|departamento|laborat\w+|grupo de pesquisa|filiacao|afiliacao)\b'
-      - '\b(universidade|institu\w+|departamento|laborat\w+)\b.{0,40}\b(do|da|de)\s+(revisor|revisora|parecerista)\b'
+      - '\b(universidade|institu\w+|departamento|laborat\w+|filiacao|afiliacao)\b.{0,40}\b(revisor|revisora|parecerista|avaliador|avaliadora)\b'
+      - '\b(revisor|revisora|parecerista|avaliador|avaliadora)\w*(?:\s+\d)?(?:\s+d[oa]\s+(?:manuscrito\s+)?m-?\d+)?\s+(e|eh|seria|sera|pertence|trabalha|atua|vem)\s+(da|do|de|na|no|em)\s+(?!opiniao|ideia|mesma|parte|favor|contra|acordo|fato|certeza)\w{2,}'
+      - '\b(proprio|propria)\s+(revisor|revisora|parecerista)\b|\b(revisor|revisora|parecerista|avaliador|avaliadora)\b.{0,60}\b(proprio|propria|dele|dela|seu|sua)\s+(trabalho|trabalhos|artigo|artigos|laboratorio|grupo|publicacao|publicacoes|orientandos?)\b'
       - '\b(parece|deve|seria|sera)\s+(ser\s+)?(o|a)\s+(proprio|propria)\b.{0,40}\b(autor|autora|revisor|revisora)\b'
       - '\b(conhece|conhecem)\b.{0,30}\b(autores?|autoras?)\b.{0,30}\b(revisor|revisora)|\b(revisor|revisora)\b.{0,30}\b(conhece|conhecem)\b.{0,20}\b(autores?|autoras?)\b'
 

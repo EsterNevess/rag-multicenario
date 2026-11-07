@@ -1,7 +1,8 @@
 # Capacidades do cenário: o que o roteador aceita perguntar. Lido por src/capacidades.py.
 cenario: rj
-descricao: contratações públicas do Estado do Rio de Janeiro
-dicas_do_analisador: []
+descricao: contratações públicas do Estado do Rio de Janeiro (contratações, contratos, normas, e atas e e-mails de compras sintéticos)
+dicas_do_analisador:
+- "Atas e e-mails de compras (documentos sintéticos, de uso interno) estão disponíveis: perguntas sobre o que um e-mail ou uma ata diz usam rota documentos com naturezas [conversacional]. Dados numéricos de contratações e contratos continuam na rota estruturada."
 regras_de_resposta:
 - Escreva valores em reais como R$ 1.234,56 e cite o identificador PNCP quando listar contratações ou contratos.
 - Não afirme que um contrato ou compra é legal, ilegal, fraudulento ou superfaturado. Apresente os dados e o que a norma diz.
@@ -11,6 +12,7 @@ catalogo:
   cobertura: contratações e contratos publicados
   estruturada: contratações e contratos públicos do RJ (valores, órgãos, fornecedores, modalidades)
   normativa: a Lei 14.133/2021, decretos estaduais e editais de licitação do RJ
+  conversacional: atas e e-mails de compras (documentos sintéticos de demonstração)
   aviso: Não faço juízo sobre a legalidade de contratações específicas nem informo dados pessoais.
 regras_de_entrada:
 - categoria: juizo_de_legalidade
