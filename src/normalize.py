@@ -349,6 +349,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.scenario == "pesquisa":
             from src.normalize_openalex import normalizar as normalizar_cenario
+        elif args.scenario == "saude":
+            from src.normalize_saude import normalizar as normalizar_cenario
         else:
             normalizar_cenario = normalizar
         r = normalizar_cenario(manifesto, versao, pastas)
@@ -362,6 +364,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  em mais de uma fonte: {r['presentes_em_mais_de_uma_fonte']} | com conteúdo diferente: {r['com_conteudo_diferente_entre_fontes']}")
         print(f"  CPF de fornecedor mascarado: {r['fornecedores_pessoa_fisica_mascarados']}")
         print(f"  contratos com a contratação encontrada: {r['contratos_com_contratacao_encontrada']['percentual']}%")
+    elif args.scenario == "saude":
+        print(f"  medicamentos distintos: {r['medicamentos_distintos']} | linhas sem código ATC: {r['linhas_sem_codigo_atc']} | sem forma: {r['linhas_sem_forma']}")
     else:
         print(f"  sem instituição na resposta da API: {r['trabalhos_sem_instituicao_na_resposta']} | com financiador: {r['trabalhos_com_financiador']} | com resumo: {r['trabalhos_com_resumo']}")
     return 0
