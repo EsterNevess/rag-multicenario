@@ -38,6 +38,7 @@ class Campo:
     expr: str | None = None  # expressão SQL quando o campo é calculado
     valores: dict[str, str] | None = None  # campo codificado: código -> rótulo (por exemplo, E -> Estadual)
     listar_valores: bool = False  # mostrar ao analisador os valores que existem no banco (campos de poucos valores)
+    apelidos: dict[str, str] | None = None  # apelido ou sigla -> nome oficial que está no banco (FAPERJ -> Fundação Carlos Chagas Filho...)
 
     @property
     def sql(self) -> str:
@@ -52,6 +53,15 @@ class Campo:
             if procurado in (_simples(codigo), _simples(rotulo)):
                 return codigo
         return None
+
+    def canonico(self, valor: Any) -> Any:
+        """Troca um apelido pelo nome oficial gravado no banco; o que não é apelido passa sem mudar."""
+        if self.apelidos and isinstance(valor, str):
+            procurado = _simples(valor)
+            for apelido, oficial in self.apelidos.items():
+                if procurado == _simples(apelido):
+                    return oficial
+        return valor
 
     def valores_validos(self) -> str:
         return ", ".join(f"{c} ({r})" for c, r in (self.valores or {}).items())
@@ -101,10 +111,19 @@ class Capacidades:
     niveis_consultaveis: tuple[str, ...] = ("publico",)
     regras_de_saida: tuple[RegraDeSaida, ...] = ()
     redacoes_na_ingestao: tuple[dict[str, Any], ...] = ()  # brutas; src.redacao as compila
+    catalogo_de_indicadores: Any = None  # src.indicadores.Catalogo, quando o cenário tem indicadores.yaml
+
+    def entidades_agregadas(self) -> dict[str, Entidade]:
+        """Cada indicador como uma entidade consultável (a tabela ind_<id> da base agregada)."""
+        if self.catalogo_de_indicadores is None:
+            return {}
+        from src.indicadores import entidades_agregadas
+
+        return entidades_agregadas(self.catalogo_de_indicadores, self)
 
 
 def _campo(bruto: dict[str, Any], onde: str) -> Campo:
-    desconhecidas = set(bruto) - {"nome", "tipo", "filtravel", "agregavel", "agrupavel", "expr", "valores", "listar_valores"}
+    desconhecidas = set(bruto) - {"nome", "tipo", "filtravel", "agregavel", "agrupavel", "expr", "valores", "listar_valores", "apelidos"}
     if desconhecidas:
         raise CapacidadesInvalidas(f"{onde}: chaves desconhecidas {sorted(desconhecidas)}")
     nome, tipo = bruto.get("nome"), bruto.get("tipo")
@@ -115,12 +134,16 @@ def _campo(bruto: dict[str, Any], onde: str) -> Campo:
     expr = bruto.get("expr")
     if expr is not None and not _EXPR_PERMITIDA.match(str(expr)):
         raise CapacidadesInvalidas(f"{onde}/{nome}: expressão não permitida: {expr!r}")
+    apelidos = bruto.get("apelidos")
+    if apelidos is not None and (not isinstance(apelidos, dict) or not apelidos or tipo != "categoria" or bruto.get("valores")):
+        raise CapacidadesInvalidas(f"{onde}/{nome}: `apelidos` é um dicionário apelido -> nome oficial e só vale para campo categoria sem `valores`")
     valores = bruto.get("valores")
     if valores is not None and (not isinstance(valores, dict) or not valores or tipo != "categoria"):
         raise CapacidadesInvalidas(f"{onde}/{nome}: `valores` é um dicionário código -> rótulo e só vale para campo categoria")
     return Campo(
         valores={str(k): str(v) for k, v in valores.items()} if valores else None,
         listar_valores=bool(bruto.get("listar_valores", False)),
+        apelidos={str(k): str(v) for k, v in apelidos.items()} if apelidos else None,
         nome=nome,
         tipo=tipo,
         filtravel=bool(bruto.get("filtravel", True)),
@@ -205,7 +228,15 @@ def carregar_capacidades(cenario_id: str, raiz: Path | None = None) -> Capacidad
     arquivo = (raiz or RAIZ) / "scenarios" / cenario_id / "capacidades.yaml"
     if not arquivo.is_file():
         raise FileNotFoundError(f"o cenário {cenario_id!r} não tem {arquivo.name} (esperado em {arquivo})")
-    return interpretar(yaml.safe_load(arquivo.read_text(encoding="utf-8")))
+    cap = interpretar(yaml.safe_load(arquivo.read_text(encoding="utf-8")))
+    indicadores = arquivo.with_name("indicadores.yaml")
+    if indicadores.is_file():
+        from dataclasses import replace
+
+        from src.indicadores import interpretar_indicadores
+
+        cap = replace(cap, catalogo_de_indicadores=interpretar_indicadores(yaml.safe_load(indicadores.read_text(encoding="utf-8")), cap))
+    return cap
 
 
 @lru_cache(maxsize=None)

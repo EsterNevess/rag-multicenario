@@ -1,0 +1,108 @@
+# Indicadores da base agregada da pesquisa. Lido por src/indicadores.py; calculado por `python -m src.indicadores build --scenario pesquisa`.
+# Todos valem para a AMOSTRA: os 1.000 artigos mais citados de cada ano (2020 a 2024) de 10 instituições do RJ.
+
+indicadores:
+  trabalhos_por_ano:
+    nome: Artigos da amostra por ano
+    descricao: Quantos artigos da amostra foram publicados em cada ano.
+    unidade: contagem
+    origem: trabalho
+    dimensoes: [ano]
+    metrica: contagem
+    definicao: Número de artigos da amostra por ano de publicação.
+    palavras_chave: [artigos da amostra, quantos artigos, artigos por ano]   # sem acento e em minúsculas
+    exemplos:
+      - pergunta: "Quantos artigos a amostra traz de cada ano?"
+        filtros: {}
+    ressalvas:
+      - A amostra tem 1.000 artigos por ano por construção; o número não mede a produção científica do estado.
+
+  citacoes_medias_por_ano:
+    nome: Citações médias por ano
+    descricao: Média de citações dos artigos da amostra, por ano de publicação.
+    unidade: media
+    origem: trabalho
+    dimensoes: [ano]
+    metrica: media
+    campo: citacoes
+    definicao: Média aritmética do número de citações dos artigos da amostra, por ano de publicação.
+    palavras_chave: [citacoes medias, media de citacoes, citacoes em media]   # sem acento e em minúsculas
+    exemplos:
+      - pergunta: "Quantas citações um artigo de 2021 recebeu em média?"
+        filtros: {ano: 2021}
+    ressalvas:
+      - São os artigos mais citados de cada ano, então a média é muito mais alta do que seria para a produção inteira.
+      - Artigos mais antigos tiveram mais tempo para ser citados.
+
+  proporcao_acesso_aberto_por_ano:
+    nome: Proporção de artigos em acesso aberto
+    descricao: Que parcela dos artigos da amostra está em acesso aberto, por ano.
+    unidade: proporcao
+    origem: trabalho
+    dimensoes: [ano]
+    metrica: razao
+    numerador:
+      - {campo: acesso_aberto, igual: 1}
+    definicao: Artigos marcados como acesso aberto pelo OpenAlex (qualquer modalidade) divididos pelos artigos da amostra do mesmo ano.
+    palavras_chave: [acesso aberto]   # sem acento e em minúsculas
+    exemplos:
+      - pergunta: "Que percentual dos artigos de 2022 é de acesso aberto?"
+        filtros: {ano: 2022}
+    ressalvas:
+      - A classificação de acesso aberto é a do OpenAlex e muda com o tempo.
+
+  proporcao_com_financiador_por_ano:
+    nome: Proporção de artigos com financiador declarado
+    descricao: Que parcela dos artigos da amostra declara pelo menos um financiador, por ano.
+    unidade: proporcao
+    origem: trabalho
+    dimensoes: [ano]
+    metrica: razao
+    numerador:
+      - {campo: financiadores, nao_nulo: true}
+    definicao: Artigos com pelo menos um financiador registrado no OpenAlex divididos pelos artigos da amostra do mesmo ano.
+    palavras_chave: [com financiador, financiador declarado, informa quem financiou]   # sem acento e em minúsculas
+    exemplos:
+      - pergunta: "Que parte dos artigos de 2024 informa quem financiou a pesquisa?"
+        filtros: {ano: 2024}
+    ressalvas:
+      - Artigo sem financiador registrado não quer dizer artigo sem financiamento, porque o OpenAlex só traz o que foi declarado.
+
+  trabalhos_por_financiador_e_ano:
+    nome: Artigos por financiador e ano
+    descricao: Quantos artigos da amostra declaram cada financiador, por ano.
+    unidade: contagem
+    origem: financiamento
+    dimensoes: [ano, financiador_nome]
+    metrica: contagem
+    definicao: Número de pares artigo-financiador da amostra, por ano. Cada artigo conta uma vez para cada financiador que declara.
+    palavras_chave: [mencionam a faperj, citam o cnpq, citam a capes, financiados pela, financiadas pela, declaram financiamento]   # sem acento e em minúsculas
+    exemplos:
+      - pergunta: "Quantos artigos de 2021 citam o CNPq como financiador?"
+        filtros: {ano: 2021, financiador_nome: 'Conselho Nacional de Desenvolvimento Científico e Tecnológico'}
+    ressalvas:
+      - Um artigo com vários financiadores aparece em várias linhas; não some as linhas para obter o total de artigos.
+      - A FAPERJ aparece como "Fundação Carlos Chagas Filho de Amparo à Pesquisa do Estado do Rio de Janeiro".
+
+  producao_por_instituicao_do_rj_e_ano:
+    nome: Artigos por instituição do RJ e ano
+    descricao: Quantos artigos da amostra têm autoria de cada uma das 10 instituições do RJ, por ano.
+    unidade: contagem
+    origem: producao_instituicao
+    dimensoes: [ano, instituicao_nome]
+    metrica: contagem
+    filtro_fixo:
+      - {campo: instituicao_alvo, igual: 1}
+    definicao: Número de pares artigo-instituição da amostra para as 10 instituições do RJ selecionadas, por ano.
+    palavras_chave: [artigos da ufrj, artigos da uerj, artigos da uff, artigos da fiocruz, producao por instituicao, artigos por instituicao]   # sem acento e em minúsculas
+    exemplos:
+      - pergunta: "Quantos artigos a UERJ tem na amostra em 2023?"
+        filtros: {ano: 2023, instituicao_nome: 'Universidade do Estado do Rio de Janeiro'}
+    ressalvas:
+      - Um artigo em coautoria entre duas instituições aparece nas duas; não some as linhas para obter o total de artigos.
+      - Coautoras de fora do RJ (por exemplo, a USP) não entram.
+
+limites:
+  - A base é uma amostra dos artigos mais citados; não mede a produção científica total nem compara instituições em volume.
+  - Não há como ligar um artigo a um edital ou chamada específica; só se sabe o financiador declarado.
+  - Não calculo qualidade, impacto causal nem alinhamento de projetos ao objetivo de um edital.

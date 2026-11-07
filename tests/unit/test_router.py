@@ -121,9 +121,20 @@ def test_todos_os_problemas_sao_listados_de_uma_vez():
     assert len(e.value.problemas) == 2
 
 
-def test_rota_agregada_ainda_nao_existe():
-    with pytest.raises(PlanoInvalido, match="agregada"):
-        validar_plano(_plano(rota=Rota.AGREGADA, naturezas=[Natureza.AGREGADA]))
+def test_rota_agregada_exige_a_natureza_agregada_e_um_indicador_que_exista():
+    validar_plano(_plano(entidade="proporcao_contratacao_direta", rota=Rota.AGREGADA, naturezas=[Natureza.AGREGADA]))
+    with pytest.raises(PlanoInvalido, match="natureza agregada"):
+        validar_plano(_plano(entidade="proporcao_contratacao_direta", rota=Rota.AGREGADA, naturezas=[Natureza.ESTRUTURADA]))
+    with pytest.raises(PlanoInvalido, match="entidade desconhecida"):
+        validar_plano(_plano(entidade="contratacao", rota=Rota.AGREGADA, naturezas=[Natureza.AGREGADA]))  # tabela de dados não é indicador
+
+
+def test_cenario_sem_indicadores_recusa_a_rota_agregada():
+    from dataclasses import replace
+
+    sem = replace(capacidades_do_cenario("rj"), catalogo_de_indicadores=None)
+    with pytest.raises(PlanoInvalido, match="não tem base agregada"):
+        validar_plano(_plano(entidade="x", rota=Rota.AGREGADA, naturezas=[Natureza.AGREGADA]), sem)
 
 
 def test_rota_de_documentos_nao_precisa_de_entidade():

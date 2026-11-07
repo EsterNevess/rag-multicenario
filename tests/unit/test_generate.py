@@ -136,7 +136,7 @@ def test_plano_invalido_volta_ao_modelo_com_os_problemas_e_corrige(tmp_path, ban
 
 def test_plano_que_continua_invalido_vira_recusa_sem_executar_nada(tmp_path, banco):
     ruim = _plano_json(filtros={"campo_inventado": 1})
-    llm = LLMRoteirizado(ruim, "isso nem é json")
+    llm = LLMRoteirizado(ruim, "isso nem é json", ruim)  # três tentativas, todas inválidas
     r = responder("Quantas?", _ctx(tmp_path, llm, banco))
     assert r.is_refusal and r.refusal_reason == "pergunta_nao_entendida"
 

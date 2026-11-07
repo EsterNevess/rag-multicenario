@@ -27,13 +27,17 @@ from src.llm import LLM, LLMIndisponivel, criar_llm
 from src.obs import PipelineLogger, Stage, Tokens
 from src.pii import mascarar_dados_pessoais
 from src.retrieve import buscar_por_bases
-from src.router import _sem_acento, PlanoInvalido, avaliar_resposta, ResultadoSQL, avaliar_pergunta, consultar, localizar_banco, validar_plano
+from src.indicadores import conferir_atualizacao, ler_ficha, localizar_agregado
+from src.router import _sem_acento, PlanoInvalido, avaliar_resposta, usa_base_agregada, ResultadoSQL, avaliar_pergunta, consultar, localizar_banco, validar_plano
 from src.schema import Fonte, Natureza, PlanoConsulta, RAGResponse, Rota
 
 MAX_LINHAS_NA_EVIDENCIA = 25
 MAX_CARACTERES_DO_TRECHO = 1500
 MAX_CARACTERES_DO_VALOR = 200
-TENTATIVAS_DO_ANALISADOR = 2
+TENTATIVAS_DO_ANALISADOR = 3  # o plano pode errar duas vezes em sequência (por exemplo, a rota e depois um filtro) e ainda ser corrigido
+# Palavras que mostram que a pessoa quer um número calculado (e não uma lista de registros).
+INTENCAO_AGREGADA = ("proporcao", "percentual", "porcentagem", "quantas", "quantos", "media", "medio", "total", "soma", "evolu", "por mes", "cada mes",
+                     "por ano", "mensal", "quanto", "qual a parte", "que parte")
 _CITACAO = re.compile(r"\[(\d+(?:\s*,\s*\d+)*)\]")
 
 
@@ -49,6 +53,7 @@ class Contexto:
     logger: PipelineLogger
     cap: Capacidades
     banco: Path | None = None
+    banco_agregado: Path | None = None
     indices: dict[str, IndiceCarregado] = field(default_factory=dict)
     embedder: Any = None
     hoje: str = field(default_factory=lambda: date.today().isoformat())
@@ -67,6 +72,8 @@ class Contexto:
         n = []
         if self.banco is not None:
             n.append(Natureza.ESTRUTURADA)
+        if self.banco_agregado is not None and self.cap.catalogo_de_indicadores is not None:
+            n.append(Natureza.AGREGADA)
         presentes = {self.natureza_da_base(b) for b in self.indices}
         for natureza in (Natureza.NORMATIVA, Natureza.CONVERSACIONAL):
             if natureza in presentes:
@@ -91,6 +98,10 @@ def montar_prompt_analise(ctx: Contexto) -> str:
     rotas = []
     if Natureza.ESTRUTURADA in ctx.naturezas:
         rotas.append("- \"estruturada\": números, contagens, somas, listas e rankings de contratações e contratos (tabelas abaixo).")
+    if Natureza.AGREGADA in ctx.naturezas:
+        rotas.append("- \"agregada\": um indicador já calculado (proporção, média, total por ano ou por recorte). Use naturezas [\"agregada\"], "
+                     "entidade = o id do indicador, filtros nas dimensões dele e operações []. Quando existir um indicador para o que se pede (proporção, média, total por ano, por mês ou por recorte), "
+                     "use SEMPRE esta rota e não a \"estruturada\", mesmo que a pergunta cite também a definição legal: o indicador traz a definição, o recorte e as ressalvas.")
     textuais = []
     if Natureza.NORMATIVA in ctx.naturezas:
         textuais.append("naturezas [\"normativa\"] para o que dizem normas e editais")
@@ -100,10 +111,22 @@ def montar_prompt_analise(ctx: Contexto) -> str:
         rotas.append("- \"documentos\": o que dizem os documentos de texto. Use " + "; ".join(textuais) + ". Exige \"consulta_semantica\".")
     if len(ctx.naturezas) >= 2:
         nomes = " e ".join(f"\"{n.value}\"" for n in ctx.naturezas)
-        rotas.append(f"- \"hibrida\": a pergunta mistura tipos de evidência. Use naturezas com pelo menos duas de {nomes}, a entidade (se houver dados), os filtros e a consulta_semantica.")
+        rotas.append(f"- \"hibrida\": a pergunta mistura tipos de evidência. Use naturezas com pelo menos duas de {nomes}, a entidade (se houver dados: o id do indicador, quando existir um, ou a tabela de dados), os filtros e a consulta_semantica.")
     rotas.append("- \"catalogo\": SOMENTE quando a pessoa pergunta sobre o próprio sistema (o que ele sabe, que bases e que período existem).")
     rotas.append("- \"fora_do_escopo\": a pergunta é sobre outro assunto, ou pede um dado que as tabelas não têm (por exemplo, um preço por quilo de um item).")
     linhas += ["Rotas disponíveis:", *rotas, "Se a pergunta tem duas partes, uma sobre o que a norma diz (direitos, regras, prazos) e outra sobre dados (quantas, quais, quanto), use \"hibrida\".", ""]
+    if Natureza.AGREGADA in ctx.naturezas:
+        linhas.append("Indicadores calculados (id: nome; dimensões que aceitam filtro; unidade):")
+        for id_, ind in ctx.cap.catalogo_de_indicadores.indicadores.items():
+            valores = ctx.valores_conhecidos.get(id_, {})
+            extra = "".join(f" [valores de {d}: {' | '.join(v)}]" for d, v in valores.items())
+            linhas.append(f"- {id_}: {ind.nome}. {ind.descricao} Dimensões: {', '.join(ind.dimensoes)}; unidade: {ind.unidade}.{extra}")
+            for pergunta, filtros in ind.exemplos[:1]:
+                linhas.append(f"    exemplo: \"{pergunta}\" -> rota agregada, entidade {id_}, filtros {json.dumps(filtros, ensure_ascii=False)}")
+        limites = ctx.cap.catalogo_de_indicadores.limites
+        if limites:
+            linhas.append("O que NÃO se calcula (nesses casos use \"fora_do_escopo\"): " + " ".join(limites))
+        linhas.append("")
     if Natureza.ESTRUTURADA in ctx.naturezas:
         linhas.append("Entidades e campos (tipo; f=aceita filtro, s=aceita soma/média/mín/máx, g=aceita agrupar):")
         for nome, ent in ctx.cap.entidades.items():
@@ -124,7 +147,7 @@ def montar_prompt_analise(ctx: Contexto) -> str:
         ]
     linhas += [
         "",
-        "Formato (somente JSON, sem comentários): {\"rota\": ..., \"naturezas\": [\"estruturada\"|\"normativa\"|\"conversacional\"], \"entidade\": ou null,",
+        f"Formato (somente JSON, sem comentários): {{\"rota\": ..., \"naturezas\": [{'|'.join(chr(34) + n.value + chr(34) for n in ctx.naturezas) or chr(34) + chr(34)}], \"entidade\": ou null,",
         "\"filtros\": {}, \"operacoes\": [], \"campo_agregacao\": ou null, \"agrupar_por\": [], \"limite\": ou null, \"consulta_semantica\": ou null}",
         "Nunca escreva SQL. Use só os campos listados. Se a pergunta não puder ser respondida com essas rotas, use \"catalogo\".",
     ]
@@ -158,11 +181,49 @@ def analisar(pergunta: str, ctx: Contexto) -> PlanoConsulta:
             validar_plano(plano, ctx.cap)
             _conferir_disponibilidade(plano, ctx)
             _conferir_valores(plano, ctx)
+            if tentativa < TENTATIVAS_DO_ANALISADOR:  # na última tentativa o plano é aceito, para não travar a pergunta
+                _conferir_indicador(pergunta, plano, ctx)
             return plano
         except (ValueError, ValidationError, PlanoInvalido) as erro:
             ultimo = "; ".join(erro.problemas) if isinstance(erro, PlanoInvalido) else str(erro).replace("\n", " ")
+            if "existe um indicador pronto" not in ultimo:
+                ultimo += _dica_de_indicador(pergunta, ctx)
             usuario = f"{pergunta}\n\nSua resposta anterior foi recusada pelo validador: {ultimo}\nCorrija e responda só com o JSON."
     raise PerguntaNaoEntendida(ultimo)
+
+
+def indicadores_sugeridos(pergunta: str, ctx: Contexto) -> list[str]:
+    """Indicadores prontos cujo assunto a pergunta cita, quando ela pede um número calculado."""
+    catalogo = ctx.cap.catalogo_de_indicadores
+    if catalogo is None or ctx.banco_agregado is None:
+        return []
+    q = _sem_acento(pergunta)
+    if not any(c in q for c in INTENCAO_AGREGADA):
+        return []
+    return [i for i, ind in catalogo.indicadores.items() if any(k in q for k in ind.palavras_chave)]
+
+
+def _dica_de_indicador(pergunta: str, ctx: Contexto) -> str:
+    """O que dizer ao analisador quando existe um indicador para a pergunta: o id e um plano de exemplo pronto."""
+    sugeridos = indicadores_sugeridos(pergunta, ctx)
+    if not sugeridos:
+        return ""
+    catalogo = ctx.cap.catalogo_de_indicadores.indicadores
+    exemplo = next(((i, f) for i in sugeridos for _, f in catalogo[i].exemplos[:1]), None)
+    texto = (f" Existe um indicador pronto para esta pergunta: {', '.join(sugeridos)}. Use a rota agregada, com naturezas [\"agregada\"] e entidade igual ao id "
+             "do indicador: ele traz a definição, o recorte e as ressalvas. Não use uma contagem sobre a tabela de dados.")
+    if exemplo:
+        plano_pronto = {"rota": "agregada", "naturezas": ["agregada"], "entidade": exemplo[0], "filtros": exemplo[1], "operacoes": [],
+                        "campo_agregacao": None, "agrupar_por": [], "limite": None, "consulta_semantica": None}
+        texto += f" Plano de exemplo, em que você só ajusta os filtros (use apenas dimensões do indicador): {json.dumps(plano_pronto, ensure_ascii=False)}"
+    return texto
+
+
+def _conferir_indicador(pergunta: str, plano: PlanoConsulta, ctx: Contexto) -> None:
+    """Se existe um indicador para o que se pede, o plano tem de usá-lo (ele traz definição, recorte e ressalvas)."""
+    sugeridos = indicadores_sugeridos(pergunta, ctx)
+    if sugeridos and not (plano.entidade in sugeridos and usa_base_agregada(plano, ctx.cap)):
+        raise PlanoInvalido([_dica_de_indicador(pergunta, ctx).strip().replace("Existe um indicador pronto", "existe um indicador pronto", 1)])
 
 
 def _conferir_valores(plano: PlanoConsulta, ctx: Contexto) -> None:
@@ -177,7 +238,7 @@ def _conferir_valores(plano: PlanoConsulta, ctx: Contexto) -> None:
 
 
 def _conferir_disponibilidade(plano: PlanoConsulta, ctx: Contexto) -> None:
-    faltam = [n for n in plano.naturezas if n in (Natureza.ESTRUTURADA, Natureza.NORMATIVA, Natureza.CONVERSACIONAL) and n not in ctx.naturezas]
+    faltam = [n for n in plano.naturezas if n in (Natureza.ESTRUTURADA, Natureza.AGREGADA, Natureza.NORMATIVA, Natureza.CONVERSACIONAL) and n not in ctx.naturezas]
     if faltam:
         raise PlanoInvalido([f"a base {n.value} não está carregada neste ambiente" for n in faltam])
 
@@ -200,6 +261,28 @@ def evidencia_sql(r: ResultadoSQL, numero: int) -> Evidencia:
     return Evidencia(numero, f"sql:{r.entidade}:{chave}", "base_estruturada", f"Consulta à base estruturada ({r.entidade}): {r.descricao}", "\n".join(linhas))
 
 
+def evidencia_agregada(r: ResultadoSQL, ficha: dict[str, Any], numero: int) -> Evidencia:
+    """Um indicador chega ao modelo com a definição, o recorte e as ressalvas, e não só com o número."""
+    unidade = {"proporcao": "proporção, como fração entre 0 e 1 (0,5 = 50%); numerador e denominador são as contagens usadas",
+               "reais": "reais", "media_reais": "média em reais", "contagem": "contagem", "media": "média"}.get(ficha["unidade"], ficha["unidade"])
+    base = ficha["calculado_sobre"]
+    periodo = base.get("periodo_de_publicacao") or {}
+    linhas = [f"Indicador: {ficha['nome']}.", f"Definição: {ficha['definicao']}", f"Unidade: {unidade}.",
+              f"Recorte: por {', '.join(ficha['dimensoes'])}"
+              + (f"; sempre restrito a: {'; '.join(ficha['filtro_fixo'])}" if ficha["filtro_fixo"] else "")
+              + f". Calculado sobre a base {ficha['versao']}"
+              + (f", com publicações de {periodo['de']} a {periodo['ate']}." if periodo.get("de") else ".")]
+    if ficha["ressalvas"]:
+        linhas.append("Ressalvas: " + " ".join(ficha["ressalvas"]))
+    linhas.append(f"{len(r.linhas)} linha(s) retornada(s) para: {r.descricao}.")
+    for a in r.avisos:
+        linhas.append(f"ATENÇÃO: {a}")
+    for l in r.linhas[:MAX_LINHAS_NA_EVIDENCIA]:
+        linhas.append("; ".join(f"{k}={_valor(v)}" for k, v in l.items()))
+    chave = hashlib.sha256((r.sql + json.dumps(r.parametros, default=str)).encode()).hexdigest()[:10]
+    return Evidencia(numero, f"ind:{ficha['id']}:{chave}", "base_agregada", f"Indicador: {ficha['nome']} (base agregada {ficha['versao']})", "\n".join(linhas))
+
+
 def evidencias_documentos(resultados: list, primeiro: int) -> list[Evidencia]:
     saida = []
     for i, r in enumerate(resultados):
@@ -215,9 +298,20 @@ def coletar(plano: PlanoConsulta, pergunta: str, ctx: Contexto) -> tuple[list[Ev
     """Executa as partes do plano. Devolve as evidências e avisos sobre o que não deu para consultar."""
     evidencias: list[Evidencia] = []
     avisos: list[str] = []
-    usa_sql = plano.rota in (Rota.ESTRUTURADA, Rota.HIBRIDA) and plano.entidade and ctx.banco
+    usa_agregada = bool(plano.entidade) and ctx.banco_agregado is not None and usa_base_agregada(plano, ctx.cap)
+    usa_sql = plano.rota in (Rota.ESTRUTURADA, Rota.HIBRIDA) and plano.entidade and ctx.banco and not usa_agregada
     usa_docs = plano.rota in (Rota.DOCUMENTOS, Rota.HIBRIDA) and ctx.indices
 
+    if usa_agregada:
+        with ctx.logger.etapa(Stage.ROTEAMENTO, plano.model_dump_json()) as e:
+            try:
+                r = consultar(plano, ctx.banco_agregado, ctx.cap)
+                ficha = ler_ficha(ctx.banco_agregado, plano.entidade)
+            except sqlite3.Error as erro:
+                raise RuntimeError(f"A base agregada não pôde ser consultada: {erro}") from erro
+            e.output = f"{len(r.linhas)} linhas (indicador {plano.entidade})"
+            e.extra = {"sql": r.sql, "parametros": [str(p) for p in r.parametros], "indicador": plano.entidade}
+        evidencias.append(evidencia_agregada(r, ficha, len(evidencias) + 1))
     if usa_sql:
         with ctx.logger.etapa(Stage.ROTEAMENTO, plano.model_dump_json()) as e:
             try:
@@ -248,6 +342,7 @@ def sistema_geracao(cap: Capacidades) -> str:
         "Cite a evidência com [n] logo depois de cada afirmação, por exemplo \"Foram 896 dispensas [1].\" Nunca cite um número que não existe.",
         "Use apenas fatos e números das evidências. Não complete com conhecimento próprio. Se a evidência não basta, diga o que falta.",
         *cap.regras_de_resposta,
+        "Se a consulta não devolveu registros e a evidência avisa que o filtro pode não ter casado, diga isso; nunca afirme que \"não há\" ou que \"nenhum\" registro existe.",
         "Não tire conclusões que as evidências não sustentam (causa, mérito, alinhamento, relação entre dois conjuntos de dados). "
         "Se a pergunta pede isso, diga o que os dados mostram e o que eles não mostram. Não responda apenas \"sim\" ou \"não\" nesses casos.",
         "Se a evidência avisar que a lista foi cortada, diga que há mais resultados.",
@@ -322,6 +417,11 @@ def _resposta_catalogo(ctx: Contexto) -> str:
         partes.append(f"- {cat['conversacional']}.")
     if ctx.cobertura:
         partes.append(f"Cobertura: {ctx.cobertura}")
+    if Natureza.AGREGADA in ctx.naturezas:
+        ind = ctx.cap.catalogo_de_indicadores
+        partes.append("Indicadores prontos: " + "; ".join(i.nome for i in ind.indicadores.values()) + ".")
+        if ind.limites:
+            partes.append("O que não calculo: " + " ".join(ind.limites))
     if cat.get("aviso"):
         partes.append(cat["aviso"])
     return "\n".join(partes)
@@ -373,12 +473,12 @@ def responder(pergunta: str, ctx: Contexto) -> RAGResponse:
 # --------------------------------------------------------------------------- montagem do ambiente real
 
 
-def listar_valores_existentes(banco: Path, cap: Capacidades, limite: int = 40) -> dict[str, dict[str, list[str]]]:
+def listar_valores_existentes(banco: Path, cap: Capacidades, limite: int = 40, entidades: dict | None = None) -> dict[str, dict[str, list[str]]]:
     """Valores distintos dos campos marcados com `listar_valores`, se forem poucos (até `limite`)."""
     achados: dict[str, dict[str, list[str]]] = {}
     conexao = sqlite3.connect(f"file:{banco.as_posix()}?mode=ro", uri=True)
     try:
-        for nome, ent in cap.entidades.items():
+        for nome, ent in (entidades if entidades is not None else cap.entidades).items():
             for campo in ent.campos.values():
                 if not campo.listar_valores or campo.expr:
                     continue
@@ -431,9 +531,18 @@ def carregar_contexto(config: Settings, pastas: Pastas) -> Contexto:
         for pasta in sorted(p for p in pasta_indices.iterdir() if (p / "estado_indexacao.json").exists()):
             indices[pasta.name] = carregar_indice(pasta, embedder.identity)
     naturezas = _naturezas_do_manifesto(pastas, indices)
-    return Contexto(llm=criar_llm(config), logger=logger, cap=cap, banco=banco, indices=indices, embedder=embedder,
-                    cobertura=cobertura, bases=sorted(indices), natureza_das_bases=naturezas,
-                    valores_conhecidos=listar_valores_existentes(banco, cap) if banco is not None else {})
+    banco_agregado = None
+    if cap.catalogo_de_indicadores is not None:
+        try:
+            banco_agregado = localizar_agregado(pastas)
+            conferir_atualizacao(banco_agregado, pastas.cenario_id)
+        except FileNotFoundError:
+            banco_agregado = None
+    valores = listar_valores_existentes(banco, cap) if banco is not None else {}
+    if banco_agregado is not None:
+        valores.update(listar_valores_existentes(banco_agregado, cap, entidades=cap.entidades_agregadas()))
+    return Contexto(llm=criar_llm(config), logger=logger, cap=cap, banco=banco, banco_agregado=banco_agregado, indices=indices, embedder=embedder,
+                    cobertura=cobertura, bases=sorted(indices), natureza_das_bases=naturezas, valores_conhecidos=valores)
 
 
 def formatar(resposta: RAGResponse) -> str:

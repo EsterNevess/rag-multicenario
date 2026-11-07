@@ -4,7 +4,7 @@ Plataforma de **Adaptive RAG** com um motor único e três cenários configuráv
 
 O ponto central do projeto: o sistema decide **que tipo de evidência** responde à pergunta antes de buscar. Não roteia por palavra-chave. Três perguntas com quase o mesmo vocabulário podem ir para três bases diferentes.
 
-> **Estado atual: motor pronto com dois cenários coletados; falta a rodada real com um modelo.** Do motor existem a configuração, os esquemas, o mascaramento de dados pessoais, os logs estruturados, a coleta versionada, a ingestão em trechos, a indexação, a busca (BM25, vetores e fusão RRF), a normalização da base estruturada em SQL, o roteador com guardrails e a geração de respostas com fontes numeradas, tudo com testes (460). Um mesmo motor atende dois cenários: o que muda de um para outro está em `scenarios/<id>/` (manifesto do corpus e `capacidades.yaml`). Ainda não foi feita a rodada completa com um modelo de verdade: ela depende de uma chave de API e de normalizar a coleta v3. A tabela abaixo mostra o estado real de cada cenário e é atualizada no fim de cada fase.
+> **Estado atual: motor pronto com dois cenários coletados; falta a rodada real com um modelo.** Do motor existem a configuração, os esquemas, o mascaramento de dados pessoais, os logs estruturados, a coleta versionada, a ingestão em trechos, a indexação, a busca (BM25, vetores e fusão RRF), a normalização da base estruturada em SQL, o roteador com guardrails e a geração de respostas com fontes numeradas, tudo com testes (530). Um mesmo motor atende dois cenários: o que muda de um para outro está em `scenarios/<id>/` (manifesto do corpus e `capacidades.yaml`). Ainda não foi feita a rodada completa com um modelo de verdade: ela depende de uma chave de API e de normalizar a coleta v3. A tabela abaixo mostra o estado real de cada cenário e é atualizada no fim de cada fase.
 
 ## Estado dos cenários
 
@@ -23,6 +23,7 @@ python -m src.fetch_corpus update --scenario rj --snapshot-db caminho/do/app.db 
 python -m src.ingest --scenario rj          # normas em trechos
 python -m src.index build --scenario rj     # índice de busca (precisa do Ollama para os vetores)
 python -m src.normalize --scenario rj       # contratações e contratos em tabelas SQL
+python -m src.indicadores build --scenario rj   # indicadores calculados em SQL (base agregada)
 python -m src.generate --scenario rj "Quantas contratações por dispensa foram publicadas em janeiro de 2026?"
 ```
 

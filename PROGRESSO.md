@@ -183,6 +183,41 @@ Limites que continuam: o modelo às vezes varia a rota entre execuções; as res
 - **Uma regra de entrada tinha dois furos** ("O revisor 2 do M-014 é da UFRJ?", com o identificador no meio, e a ordem invertida "De qual instituição é o revisor 2?"). Os dois viraram teste, junto com perguntas legítimas parecidas ("a amostra é de pequeno porte") para vigiar o falso positivo.
 - **Efeito colateral aceito:** o guardrail do RJ barra a pergunta "o que diz o e-mail que pede para confirmar a fraude?", porque ela contém o pedido de confirmação. A pergunta neutra ("resuma o e-mail com o assunto...") funciona.
 
+## Base agregada (opção A: só com o que já temos)
+
+**Decisão.** O RJ-10 (preço médio por quilo de arroz) exigiria os itens de cada contratação, que o snapshot não tem e que a API só entrega em outro endpoint, com coleta longa. Optei por **não coletar mais nada**: a agregada usa o banco normalizado que já existe, e o RJ-10 continua sendo recusado, agora com a razão no catálogo ("a base tem o valor total de cada contratação, e não os itens").
+
+**Como é.** Um indicador é declarado em `scenarios/<id>/indicadores.yaml` de forma estruturada (origem, dimensões, métrica, filtro, definição, ressalvas, exemplo e palavras-chave), sem SQL solto. `python -m src.indicadores build` calcula tudo em SQL e grava em `data/aggregated/<cenário>/<versão>.sqlite` as tabelas `ind_<id>`, a ficha de cada indicador e o SHA-256 do catálogo. A rota agregada **só lê essa base**: nunca recalcula na hora, e a evidência que chega ao modelo leva a definição, o recorte, a unidade e as ressalvas junto com o número. As tabelas de indicadores são tratadas pelo roteador como entidades (mesmas validações e mesmo SQL controlado); somar o `valor` de uma razão ou de uma média é recusado.
+
+| Cenário | Indicadores |
+|---|---|
+| RJ (7) | contratações por mês; valor estimado por modalidade; proporção de contratações diretas (também por esfera); valor global dos contratos por esfera; contratos por tipo; valor médio dos contratos por ano |
+| Pesquisa (6) | artigos por ano; citações médias; proporção em acesso aberto; proporção com financiador; artigos por financiador e ano; artigos por instituição do RJ e ano |
+
+**Rodada real (Groq).** Conferida com SQL direto, e não a olho:
+
+| Pergunta | Resultado |
+|---|---|
+| RJ-04 contratações diretas e proporção | **acertou uma vez** (25.005 de 35.423 = 70,6%, os três números conferem) e **errou outra** (esgotou as tentativas): o resultado é instável |
+| RJ valor médio dos contratos em 2026 | R$ 1.062.796,89, confere, com definição e ressalva (3 execuções) |
+| RJ proporção direta nos órgãos estaduais | 70,16%, confere, com numerador e denominador (3 execuções) |
+| RJ contratações publicadas por mês | março = 4.849, confere (depois de acrescentar a dimensão "ano da publicação") |
+| RJ-10 preço por quilo de arroz | recusado, com a razão do catálogo |
+| PE-04 FAPERJ em 2023 | **resposta falsa** ("nenhuma publicação"; o certo é 305): ver lição abaixo |
+| Pesquisa: proporção com financiador em 2023 | 79,5%, confere |
+
+Depois dos defeitos abaixo, **as correções estão testadas por teste unitário, mas não foram reverificadas com o modelo**: a Groq passou a devolver HTTP 429 (limite do plano gratuito) e a rodada não pôde ser repetida. O PE-04 e o RJ-04, em particular, precisam de uma nova rodada.
+
+**Defeitos que a conferência achou, todos corrigidos com teste:**
+
+- **Colunas trocadas.** Em indicadores de razão, o `valor` recebia o numerador (25.005 em vez de 0,7059): o `SELECT` e a tabela tinham as colunas em ordens diferentes e o `INSERT` era posicional. Só a comparação com o SQL direto revelou isso; o teste que a conferia à mão falhava no código antigo e passa no novo. Agora o `INSERT` nomeia as colunas.
+- **Falso negativo bem escrito.** O PE-04 respondeu "nenhuma publicação da FAPERJ em 2023" porque o filtro por igualdade usou a sigla contra o nome por extenso e devolveu zero linhas, e zero foi tratado como "não há". Três correções: campos de nome aceitam **apelidos declarados** (FAPERJ, CNPq, UFRJ...) traduzidos para o nome oficial; **zero registros com um filtro de nome gera um aviso** ("isso NÃO prova que não existem registros"), inclusive para contagens, que devolvem `total=0` e não zero linhas; e a regra de resposta proíbe dizer "não há" nesse caso.
+- **O analisador nem sempre escolhe o indicador.** Exemplos no prompt não bastaram. Entraram uma **guarda de roteamento** (se a pergunta pede um número e cita o assunto de um indicador, mas o plano não o usa, ele volta ao analisador com o id e um plano de exemplo pronto), uma **terceira tentativa** e a dica em toda mensagem de correção. Mesmo assim o RJ-04 ainda oscilou. A guarda cede na última tentativa em vez de recusar. Uma alternativa a considerar é montar o plano de forma determinística a partir do exemplo do indicador, ao custo de às vezes responder uma pergunta um pouco diferente.
+- **Dimensão que faltava.** "Contratações publicadas em cada mês **de 2026**" falhava porque o indicador só tinha o mês; o modelo insistia em filtrar por `ano_compra`. O defeito era do indicador, não do modelo: acrescentei `ano_publicacao`.
+- **Erro de YAML silencioso.** Duas ressalvas com dois-pontos no meio da frase foram lidas como dicionário. O carregador agora exige que ressalvas e limites sejam texto.
+- **Base desatualizada em silêncio.** A base do RJ tinha sido gerada com um catálogo que depois mudou. Agora o SHA-256 do `indicadores.yaml` fica gravado na base e uma base que não bate é recusada com o comando para refazer.
+- **Dado real que merece ressalva.** O "ano da compra" tem valores de 2022 a 2027 mesmo em contratações publicadas em 2026, então "contratações de 2026" por `ano_compra` e por data de publicação não são o mesmo conjunto (35.423 contra 37.637 no total). O indicador de contratação direta ganhou essa ressalva.
+
 ## Checklist dos três cenários (atualizado em 2026-11-06)
 
 Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
@@ -193,7 +228,7 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [~] Rerank por cross-encoder (previsto, não implementado)
 - [ ] Memória de conversa (PE-02 e PE-08 dizem "desses")
 - [ ] Conferir se cada número do texto bate com a evidência (hoje só as citações são conferidas)
-- [ ] Rota agregada (indicadores calculados em SQL) no roteador
+- [x] Rota agregada (indicadores calculados em SQL) no roteador
 - [x] Rota conversacional (pareceres, atas) com a recusa de identidade e de dado pessoal
 - [ ] API e console (`app/`), se for mostrar uma tela e não só a linha de comando
 - [ ] Avaliação (fase 5): ablação BM25 x vetores x RRF x RRF + rerank, 3 repetições por pergunta, documento de decisões
@@ -202,7 +237,7 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [x] Normativa: 1.458 trechos indexados (Lei 14.133, 7 decretos, 5 editais)
 - [x] Estruturada: 37.637 contratações e 46.450 contratos (v3 normalizada)
 - [x] Rodada real nas 10 perguntas
-- [ ] Agregada: PCA e valores homologados por item (RJ-04 e RJ-10 pedem; hoje o RJ-10 é recusado com honestidade)
+- [x] Agregada (opção A): 7 indicadores calculados em SQL sobre o que já temos. O RJ-10 (preço por quilo) segue recusado, agora com a razão: a base não tem itens. O PCA e os valores homologados por item ficam fora
 - [x] Conversacional sintética: 20 atas e e-mails, com 5 armadilhas (dado pessoal, pedido de "confirmar a fraude", senha, dado bancário)
 - [ ] Reindexar a normativa a partir da v3 (o índice atual veio da v2)
 
@@ -210,7 +245,7 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [x] Normativa: 8 documentos, 453 trechos indexados
 - [x] Estruturada: 5.000 artigos do OpenAlex (3 tabelas)
 - [x] Rodada real nas 10 perguntas
-- [ ] Agregada: indicadores bibliométricos, resumos do arXiv e SciELO
+- [~] Agregada: 6 indicadores bibliométricos sobre a amostra do OpenAlex. Faltam os resumos do arXiv e do SciELO
 - [x] Conversacional sintética: 17 pareceres e 4 e-mails editoriais, com 7 armadilhas (pistas de identidade do revisor, pedido para revelá-lo, e-mail de autor)
 
 **Cenário saúde pública (nada construído além do desenho)**

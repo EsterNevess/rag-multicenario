@@ -4,6 +4,7 @@ descricao: contratações públicas do Estado do Rio de Janeiro (contratações,
 dicas_do_analisador:
 - "Atas e e-mails de compras (documentos sintéticos, de uso interno) estão disponíveis: perguntas sobre o que um e-mail ou uma ata diz usam rota documentos com naturezas [conversacional]. Dados numéricos de contratações e contratos continuam na rota estruturada."
 regras_de_resposta:
+- Ao responder com um indicador, diga a definição usada e o recorte (ano, amostra ou período), cite o número exato e as ressalvas que mudam a leitura. Proporções vêm como fração (0,7059 = 70,6%): escreva em porcentagem.
 - Escreva valores em reais como R$ 1.234,56 e cite o identificador PNCP quando listar contratações ou contratos.
 - Não afirme que um contrato ou compra é legal, ilegal, fraudulento ou superfaturado. Apresente os dados e o que a norma diz.
 - Os e-mails e atas são documentos sintéticos (dados fictícios de demonstração): diga isso ao citá-los.
@@ -91,6 +92,10 @@ entidades:
       filtravel: false
       agrupavel: true
       expr: substr(data_publicacao, 1, 7)
+    - nome: ano_publicacao
+      tipo: categoria
+      agrupavel: true
+      expr: substr(data_publicacao, 1, 4)
   contrato:
     tabela: contrato
     exibir:

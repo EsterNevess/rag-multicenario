@@ -35,6 +35,7 @@ data/processed/
 # Regerável por `python -m src.synth build`; o gabarito traz valores sensíveis fictícios.
 data/synthetic/
 data/normalized/
+data/aggregated/
 
 # Logs
 logs/

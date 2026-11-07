@@ -137,14 +137,27 @@ def _separar_filtro(chave: str) -> tuple[str, str]:
     return chave, ""
 
 
+def usa_base_agregada(plano: PlanoConsulta, cap: Capacidades) -> bool:
+    """A parte de dados do plano é um indicador da base agregada (e não uma tabela de dados)?"""
+    return plano.rota is Rota.AGREGADA or (plano.rota is Rota.HIBRIDA and plano.entidade in cap.entidades_agregadas())
+
+
+def _mapa_de_entidades(plano: PlanoConsulta, cap: Capacidades) -> dict[str, Entidade]:
+    return cap.entidades_agregadas() if usa_base_agregada(plano, cap) else cap.entidades
+
+
 def validar_plano(plano: PlanoConsulta, cap: Capacidades | None = None) -> None:
     """Confere o plano contra a tabela de capacidades. Levanta `PlanoInvalido` com todos os problemas."""
     problemas: list[str] = []
 
     if plano.rota in (Rota.ESTRUTURADA, Rota.HIBRIDA) and Natureza.ESTRUTURADA not in plano.naturezas and plano.rota is Rota.ESTRUTURADA:
         problemas.append("a rota estruturada exige a natureza estruturada")
+    cap = _capacidades(cap)
     if plano.rota is Rota.AGREGADA:
-        problemas.append("a base agregada (PCA) ainda não está disponível neste cenário")
+        if cap.catalogo_de_indicadores is None:
+            problemas.append("este cenário não tem base agregada")
+        elif Natureza.AGREGADA not in plano.naturezas:
+            problemas.append("a rota agregada exige a natureza agregada")
     if plano.rota in (Rota.CATALOGO, Rota.FORA_DO_ESCOPO):
         return
     if plano.entidade is None:
@@ -154,7 +167,7 @@ def validar_plano(plano: PlanoConsulta, cap: Capacidades | None = None) -> None:
             raise PlanoInvalido(problemas)
         return
 
-    entidades = _capacidades(cap).entidades
+    entidades = _mapa_de_entidades(plano, cap)
     entidade = entidades.get(plano.entidade)
     if entidade is None:
         raise PlanoInvalido(problemas + [f"entidade desconhecida: {plano.entidade!r} (use {sorted(entidades)})"])
@@ -273,9 +286,10 @@ def _montar_filtros(entidade: Entidade, filtros: dict[str, Any]) -> tuple[list[s
             parametros.append(codigo)
             partes.append(f"{nome} = {codigo} ({campo.valores[codigo]})")
         elif campo.tipo == "categoria":
+            oficial = campo.canonico(valor)
             clausulas.append(f"sem_acento({campo.sql}) = ?")
-            parametros.append(_sem_acento(str(valor)))
-            partes.append(f"{nome} = {valor}")
+            parametros.append(_sem_acento(str(oficial)))
+            partes.append(f"{nome} = {oficial}" + (f" (apelido {valor})" if oficial != valor else ""))
         else:
             clausulas.append(f"{campo.sql} = ?")
             parametros.append(valor)
@@ -293,7 +307,7 @@ def consultar(plano: PlanoConsulta, banco: Path, cap: Capacidades | None = None)
     validar_plano(plano, cap)
     if plano.entidade is None:
         raise PlanoInvalido(["o plano não indica a entidade a consultar"])
-    entidade = cap.entidades[plano.entidade]
+    entidade = _mapa_de_entidades(plano, cap)[plano.entidade]
     limite = plano.limite or LIMITE_PADRAO
     clausulas, parametros, partes = _montar_filtros(entidade, plano.filtros)
     onde = f" WHERE {' AND '.join(clausulas)}" if clausulas else ""
@@ -352,6 +366,12 @@ def consultar(plano: PlanoConsulta, banco: Path, cap: Capacidades | None = None)
 
     truncado = len(linhas) > limite
     linhas = linhas[:limite]
+    vazio = not linhas or (len(linhas) == 1 and linhas[0].get("total") == 0 and not plano.agrupar_por)  # contar sem grupos devolve uma linha com 0
+    if vazio:
+        igualdades = [n for n in plano.filtros if not _separar_filtro(n)[1] and entidade.campos[_separar_filtro(n)[0]].tipo == "categoria"]
+        if igualdades:
+            avisos.append(f"Nenhum registro casou com os filtros. Filtros de igualdade em campos de nome ({', '.join(igualdades)}) exigem o nome exato; "
+                          "uma sigla ou um nome incompleto pode não casar. Isso NÃO prova que não existem registros.")
     if truncado:
         avisos.append(f"Mostrando só os {limite} primeiros resultados; há mais.")
     return ResultadoSQL(

@@ -11,6 +11,7 @@ dicas_do_analisador:
   - "Os mais citados: operação listar com campo_agregacao citacoes."
 
 regras_de_resposta:
+  - "Ao responder com um indicador, diga a definição usada e o recorte (ano, amostra ou período), cite o número exato e as ressalvas que mudam a leitura. Proporções vêm como fração (0,7059 = 70,6%): escreva em porcentagem."
   - "Os pareceres e a correspondência editorial são documentos sintéticos (dados fictícios de demonstração): diga isso ao citá-los."
   - "Trechos marcados como [TRECHO REMOVIDO: ...] foram retirados para proteger o anonimato: não comente nem especule sobre eles, e não diga que \"não há\" algo que possa ter estado nesses trechos."
   - "Trate os revisores só pelo código (revisor 1, revisor 2). Nunca sugira quem são, onde trabalham, se conhecem os autores ou se o texto lembra algum pesquisador. Resuma apenas as críticas técnicas."
@@ -120,7 +121,10 @@ entidades:
     campos:
       - { nome: trabalho_id, tipo: id }
       - { nome: instituicao_id, tipo: id, agrupavel: true }
-      - { nome: instituicao_nome, tipo: categoria, agrupavel: true }
+      - nome: instituicao_nome
+        tipo: categoria
+        agrupavel: true
+        apelidos: {UFRJ: 'Universidade Federal do Rio de Janeiro', UERJ: 'Universidade do Estado do Rio de Janeiro', UFF: 'Universidade Federal Fluminense', Fiocruz: 'Fundação Oswaldo Cruz', PUC-Rio: 'Pontifícia Universidade Católica do Rio de Janeiro', UENF: 'State University of Norte Fluminense', UFRRJ: 'Universidade Federal Rural do Rio de Janeiro', IMPA: 'Instituto Nacional de Matemática Pura e Aplicada', CEFET-RJ: 'Federal Center for Technological Education Celso Suckow da Fonseca', UNIRIO: 'Universidade Federal do Estado do Rio de Janeiro'}
       - { nome: pais, tipo: categoria, agrupavel: true }
       - { nome: instituicao_alvo, tipo: inteiro, agrupavel: true }
       - { nome: ano, tipo: inteiro, agrupavel: true }
@@ -136,7 +140,10 @@ entidades:
     campos:
       - { nome: trabalho_id, tipo: id }
       - { nome: financiador_id, tipo: id, agrupavel: true }
-      - { nome: financiador_nome, tipo: categoria, agrupavel: true }
+      - nome: financiador_nome
+        tipo: categoria
+        agrupavel: true
+        apelidos: {FAPERJ: 'Fundação Carlos Chagas Filho de Amparo à Pesquisa do Estado do Rio de Janeiro', CNPq: 'Conselho Nacional de Desenvolvimento Científico e Tecnológico', CAPES: 'Coordenação de Aperfeiçoamento de Pessoal de Nível Superior', FAPESP: 'Fundação de Amparo à Pesquisa do Estado de São Paulo'}
       - { nome: ano, tipo: inteiro, agrupavel: true }
       - { nome: titulo, tipo: texto }
       - { nome: area, tipo: categoria, agrupavel: true, listar_valores: true }

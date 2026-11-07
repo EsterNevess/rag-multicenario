@@ -1,0 +1,129 @@
+# Indicadores da base agregada do RJ. Lido por src/indicadores.py; calculado por `python -m src.indicadores build --scenario rj`.
+# Cada indicador é calculado em SQL sobre o banco normalizado e gravado com a definição e as ressalvas.
+
+indicadores:
+  contratacoes_por_mes:
+    nome: Contratações publicadas por mês
+    descricao: Quantas contratações foram publicadas a cada mês.
+    unidade: contagem
+    origem: contratacao
+    dimensoes: [ano_publicacao, mes_publicacao]
+    metrica: contagem
+    definicao: Número de contratações (compras) publicadas no PNCP por órgãos do RJ, por ano e mês da data de publicação.
+    palavras_chave: [contratacoes publicadas, publicadas por mes, publicadas em cada mes, evolucao das contratacoes, contratacoes ao longo do ano]   # sem acento e em minúsculas
+    exemplos:
+      - pergunta: "Como evoluiu o número de contratações publicadas ao longo de 2026?"
+        filtros: {ano_publicacao: "2026"}
+    ressalvas:
+      - A base cobre de janeiro a agosto de 2026 (snapshot do PNCP, com a amostra da API de janeiro).
+      - O ano e o mês são os da publicação, e não os da compra (que podem ser anteriores).
+
+  valor_estimado_por_modalidade:
+    nome: Valor estimado por modalidade
+    descricao: Soma do valor total estimado das contratações, por ano de compra e modalidade.
+    unidade: reais
+    origem: contratacao
+    dimensoes: [ano_compra, modalidade_nome]
+    metrica: soma
+    campo: valor_total_estimado
+    definicao: Soma do valor total estimado (não o homologado) das contratações, por ano da compra e modalidade de contratação.
+    palavras_chave: [valor estimado, estimado por modalidade, estimativa por modalidade]   # sem acento e em minúsculas
+    exemplos:
+      - pergunta: "Quanto foi estimado para as contratações por pregão eletrônico em 2026?"
+        filtros: {ano_compra: 2026, modalidade_nome: 'Pregão - Eletrônico'}
+    ressalvas:
+      - É o valor estimado na publicação, não o valor efetivamente contratado.
+      - Contratações sem valor estimado ficam fora da soma (a coluna n conta só as que têm valor).
+
+  proporcao_contratacao_direta:
+    nome: Proporção de contratações diretas
+    descricao: Que parcela das contratações do ano foi feita por dispensa ou inexigibilidade.
+    unidade: proporcao
+    origem: contratacao
+    dimensoes: [ano_compra]
+    metrica: razao
+    numerador:
+      - {campo: modalidade_nome, em: [Dispensa, Inexigibilidade]}
+    definicao: >-
+      Contratação direta é a feita por Dispensa ou por Inexigibilidade de licitação (Lei 14.133/2021, arts. 74 e 75).
+      A proporção é o número de contratações diretas dividido pelo total de contratações do mesmo ano da compra, de todas as modalidades.
+    palavras_chave: [contratacao direta, contratacoes diretas, dispensa e inexigibilidade, sem licitacao]   # sem acento e em minúsculas
+    exemplos:
+      - pergunta: "Que parte das compras do ano foi feita sem licitação, por dispensa ou inexigibilidade?"
+        filtros: {ano_compra: 2026}
+    ressalvas:
+      - A modalidade "Inaplicabilidade da Licitação" não é contada como contratação direta.
+      - É uma proporção de contratações (quantidade), não de valor.
+      - O ano é o da compra, não o da publicação; há contratações publicadas em 2026 com ano de compra anterior (2022 a 2025) e até 2027.
+
+  proporcao_contratacao_direta_por_esfera:
+    nome: Proporção de contratações diretas por esfera
+    descricao: A proporção de contratações diretas do ano, separada por esfera do órgão (federal, estadual, municipal).
+    unidade: proporcao
+    origem: contratacao
+    dimensoes: [ano_compra, esfera_id]
+    metrica: razao
+    numerador:
+      - {campo: modalidade_nome, em: [Dispensa, Inexigibilidade]}
+    definicao: Mesma definição de contratação direta de proporcao_contratacao_direta, calculada separadamente para cada esfera do órgão.
+    palavras_chave: [contratacao direta, contratacoes diretas, dispensa e inexigibilidade, sem licitacao]   # sem acento e em minúsculas
+    exemplos:
+      - pergunta: "Qual o percentual de contratação direta nos órgãos federais em 2026?"
+        filtros: {ano_compra: 2026, esfera_id: F}
+    ressalvas:
+      - Os órgãos federais com unidade no RJ entram na esfera federal.
+
+  valor_global_contratos_por_esfera:
+    nome: Valor global dos contratos por esfera
+    descricao: Soma do valor global dos contratos assinados, por ano e esfera do órgão.
+    unidade: reais
+    origem: contrato
+    dimensoes: [ano_contrato, esfera_id]
+    metrica: soma
+    campo: valor_global
+    definicao: Soma do valor global dos contratos (o valor total previsto no contrato), por ano do contrato e esfera do órgão contratante.
+    palavras_chave: [valor global, valor dos contratos por esfera, contratado por orgaos]   # sem acento e em minúsculas
+    exemplos:
+      - pergunta: "Quanto os órgãos municipais contrataram em 2026, em valor global?"
+        filtros: {ano_contrato: 2026, esfera_id: M}
+    ressalvas:
+      - Poucos contratos de valor muito alto podem dominar a soma.
+      - Valor global é o previsto, não o efetivamente pago.
+
+  contratos_por_tipo:
+    nome: Contratos por tipo
+    descricao: Quantos contratos existem de cada tipo (empenho, contrato, termo de adesão...).
+    unidade: contagem
+    origem: contrato
+    dimensoes: [ano_contrato, tipo_contrato_nome]
+    metrica: contagem
+    definicao: Número de contratos por ano do contrato e tipo de contrato.
+    palavras_chave: [tipo de contrato, tipos de contrato, contratos por tipo]   # sem acento e em minúsculas
+    exemplos:
+      - pergunta: "Quantos contratos de cada tipo foram assinados em 2026?"
+        filtros: {ano_contrato: 2026}
+    ressalvas:
+      - Empenhos e contratos formais são contados juntos, cada um no seu tipo.
+
+  valor_medio_contrato_por_ano:
+    nome: Valor médio dos contratos por ano
+    descricao: Valor global médio dos contratos de cada ano.
+    unidade: media_reais
+    origem: contrato
+    dimensoes: [ano_contrato]
+    metrica: media
+    campo: valor_global
+    definicao: Média aritmética do valor global dos contratos do ano.
+    palavras_chave: [valor medio dos contratos, valor medio de contrato, media dos contratos]   # sem acento e em minúsculas
+    exemplos:
+      - pergunta: "Qual o valor médio dos contratos em 2025?"
+        filtros: {ano_contrato: 2025}
+    ressalvas:
+      - A média é muito sensível a contratos de valor extremo; a mediana seria mais representativa, e não é calculada.
+
+limites:
+  - >-
+    Preço unitário ou por quilo de um item (por exemplo, arroz): a base tem o valor total de cada contratação, e não os itens
+    (unidade, quantidade e valor unitário), então esse preço não pode ser calculado.
+  - O Plano de Contratações Anual (PCA) e os valores homologados por item não foram coletados.
+  - A base cobre as contratações publicadas de 2026-01-01 a 2026-08-31.
