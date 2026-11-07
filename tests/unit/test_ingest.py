@@ -493,3 +493,65 @@ def test_pdf_sem_extensao_e_reconhecido_pelo_conteudo(tmp_path):
     caminho.write_bytes(pdf.tobytes())
     texto, _ = texto_do_documento(Documento("b", caminho, "x", "Norma", "edital", None, "http://x"))
     assert "Texto do edital" in texto
+
+
+# ----------------------------------------------------------------- PDF de duas colunas
+
+
+def _pdf_de(tmp_path, desenhar):
+    import pymupdf
+
+    doc = pymupdf.open()
+    desenhar(doc.new_page())
+    caminho = tmp_path / "x.pdf"
+    doc.save(caminho)
+    doc.close()
+    return caminho
+
+
+def test_pagina_de_duas_colunas_le_a_esquerda_inteira_e_depois_a_direita(tmp_path):
+    from src.ingest import texto_de_pdf
+
+    def desenhar(pagina):
+        for i in range(24):
+            pagina.insert_text((50, 80 + i * 16), f"esq{i:02d} um dois tres quatro cinco seis", fontsize=9)
+            pagina.insert_text((330, 80 + i * 16), f"dir{i:02d} sete oito nove dez onze doze", fontsize=9)
+
+    palavras = texto_de_pdf(_pdf_de(tmp_path, desenhar)).split()
+    marcadores = [w for w in palavras if w.startswith(("esq", "dir"))]
+    assert marcadores == [f"esq{i:02d}" for i in range(24)] + [f"dir{i:02d}" for i in range(24)]
+
+
+def test_linha_que_atravessa_as_duas_colunas_nao_mistura_o_texto_de_uma_com_o_da_outra(tmp_path):
+    """O defeito original: o texto saía como 'processo de educação ... seja realiza- ... indispensáveis'."""
+    from src.ingest import texto_de_pdf
+
+    def desenhar(pagina):
+        for i in range(20):
+            pagina.insert_text((50, 80 + i * 16), f"A{i:02d} aaaa bbbb cccc dddd eeee ffff", fontsize=9)
+            pagina.insert_text((330, 80 + i * 16), f"B{i:02d} gggg hhhh iiii jjjj kkkk llll", fontsize=9)
+
+    linhas = texto_de_pdf(_pdf_de(tmp_path, desenhar)).splitlines()
+    assert not any("A" in l.split()[0] and "B" in l for l in linhas if l.split())  # nenhuma linha tem texto das duas colunas
+    assert linhas[0].startswith("A00") and any(l.startswith("B00") for l in linhas)
+
+
+def test_pagina_de_coluna_unica_nao_e_reordenada(tmp_path):
+    from src.ingest import texto_de_pdf
+
+    def desenhar(pagina):
+        for i in range(30):
+            pagina.insert_text((50, 60 + i * 16), f"linha{i:02d} um dois tres quatro cinco seis sete oito nove dez onze doze treze", fontsize=9)
+
+    marcadores = [w for w in texto_de_pdf(_pdf_de(tmp_path, desenhar)).split() if w.startswith("linha")]
+    assert marcadores == [f"linha{i:02d}" for i in range(30)]
+
+
+def test_pagina_curta_nao_entra_no_caminho_de_colunas(tmp_path):
+    from src.ingest import texto_de_pdf
+
+    def desenhar(pagina):
+        pagina.insert_text((50, 80), "Esquerda um dois", fontsize=9)
+        pagina.insert_text((330, 80), "Direita tres quatro", fontsize=9)
+
+    assert "Esquerda" in texto_de_pdf(_pdf_de(tmp_path, desenhar))

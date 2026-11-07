@@ -139,11 +139,60 @@ _CABECALHO_NAVEGADOR = re.compile(
 )
 
 
+def _linhas(palavras: list[tuple]) -> list[str]:
+    """Junta palavras na mesma altura (tolerância de 3 pontos) em linhas, da esquerda para a direita."""
+    linhas: list[list[tuple]] = []
+    for w in sorted(palavras, key=lambda w: (w[1], w[0])):
+        if linhas and abs(linhas[-1][0][1] - w[1]) <= 3:
+            linhas[-1].append(w)
+        else:
+            linhas.append([w])
+    return [" ".join(x[4] for x in sorted(l, key=lambda x: x[0])) for l in linhas]
+
+
+def _vao_entre_colunas(palavras: list[tuple], largura: float) -> float | None:
+    """Posição horizontal do vão entre duas colunas, se a página tiver duas; senão, None.
+
+    O vão é a posição, perto do meio, que menos palavras atravessam. Em duas colunas quase nenhuma palavra cruza o
+    vão; em coluna única, cada linha tem uma palavra que cruza qualquer posição. Isso funciona mesmo quando uma
+    tabela larga preenche a faixa do meio em parte da página.
+    """
+    melhor: tuple[int, float] | None = None
+    x = 0.40 * largura
+    while x <= 0.60 * largura:
+        cruzam = sum(1 for w in palavras if w[0] < x < w[2])
+        if melhor is None or cruzam < melhor[0] or (cruzam == melhor[0] and abs(x - largura / 2) < abs(melhor[1] - largura / 2)):
+            melhor = (cruzam, x)
+        x += 2
+    assert melhor is not None
+    return melhor[1] if melhor[0] <= 0.02 * len(palavras) else None
+
+
+def _texto_da_pagina(pagina: "pymupdf.Page") -> str:
+    """Texto de uma página; em página de duas colunas, lê a coluna da esquerda inteira e depois a da direita.
+
+    Em alguns PDFs cada linha de texto atravessa as duas colunas, e `sort=True` (que ordena só pela altura) as
+    intercala: "processo de educação ... seja realiza- ... indispensáveis". Aqui as palavras são separadas pelo vão
+    vertical entre as colunas e as linhas de cada lado são refeitas. Uma página de coluna única não entra nesse caminho.
+    """
+    palavras = pagina.get_text("words")
+    if len(palavras) < 80:
+        return pagina.get_text(sort=True)
+    vao = _vao_entre_colunas(palavras, pagina.rect.width)
+    if vao is None:
+        return pagina.get_text(sort=True)
+    esquerda = [w for w in palavras if (w[0] + w[2]) / 2 < vao]
+    direita = [w for w in palavras if (w[0] + w[2]) / 2 >= vao]
+    if min(len(esquerda), len(direita)) < 0.25 * len(palavras):  # vão de margem ou de tabela, não de coluna
+        return pagina.get_text(sort=True)
+    return "\n".join([*_linhas(esquerda), *_linhas(direita)]) + "\n"
+
+
 def texto_de_pdf(caminho: Path) -> str:
     with pymupdf.open(caminho) as documento:
-        # sort=True ordena os blocos pela posição na página. Sem isso, o PDF de um decreto entrega o
-        # rótulo "Art. 5º" separado do texto do artigo, e os dois acabam em lugares diferentes.
-        paginas = [pagina.get_text(sort=True) for pagina in documento]
+        # Ordena os blocos pela posição na página. Sem isso, o PDF de um decreto entrega o rótulo "Art. 5º" separado
+        # do texto do artigo, e os dois acabam em lugares diferentes. Páginas de duas colunas têm tratamento próprio.
+        paginas = [_texto_da_pagina(pagina) for pagina in documento]
     paginas = _limpar_repetidos(paginas)
     saida = []
     for pagina in paginas:
@@ -316,6 +365,8 @@ _REMISSAO = re.compile(r"\s*\(voltar ao sumário\)\s*$", re.IGNORECASE)
 _SECAO_EM_MAIUSCULAS = re.compile(r"^(?:[IVX]+|\d{1,2})\s*[-–.]?\s+[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][A-ZÁÀÂÃÉÊÍÓÔÕÚÇ0-9 ,;:/()'\-–]{4,}$")
 _SECAO_COM_TRAVESSAO = re.compile(r"^\d{1,2}\s*[-–]\s+[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][^.:;]{2,70}$")
 _SUMARIO = re.compile(r"\.{4,}|…{2,}")
+# Cabeçalho ou rodapé de página que traz o número ("50   MINISTÉRIO DA SAÚDE", "PROTOCOLO CLÍNICO ... 12"): não é título de seção.
+_CABECALHO_DE_PAGINA = re.compile(r"^\s*(?:\d{1,3}\s+(?:MINIST[ÉE]RIO|PROTOCOLO CL[ÍI]NICO|SECRETARIA)\b|(?:MINIST[ÉE]RIO DA SA[ÚU]DE|PROTOCOLO CL[ÍI]NICO E DIRETRIZES)[^\n]{0,90}\s\d{1,3}\s*$|\d{1,3}\s*$)")
 
 
 def _juntar_itens(texto: str) -> list[str]:
@@ -324,7 +375,7 @@ def _juntar_itens(texto: str) -> list[str]:
     fechado = False  # título de seção não recebe a linha seguinte
     for linha in texto.splitlines():
         linha = _REMISSAO.sub("", linha.strip())
-        if not linha or _SUMARIO.search(linha):  # sumário com pontilhado: ruído que duplicaria os títulos
+        if not linha or _SUMARIO.search(linha) or _CABECALHO_DE_PAGINA.match(linha):  # sumário e cabeçalho de página: ruído
             continue
         titulo = bool(_SECAO_EM_MAIUSCULAS.match(linha) or _SECAO_COM_TRAVESSAO.match(linha))
         if not paragrafos or fechado or titulo or _INICIO_DE_ITEM.match(linha):
@@ -407,6 +458,7 @@ def _stem(origem: str, arquivo: Path) -> str:
 
 
 CHAVES_DO_INDICE_SINTETICO = {"arquivo", "doc_type", "titulo", "data"}
+EXTRAS_DO_MANIFESTO = ("doenca", "versao", "data_vigencia_fim")  # metadados que um item de `urls` pode trazer para os seus trechos
 
 
 def _descobrir_sinteticos(base_id: str, pastas: Pastas) -> list[Documento]:
@@ -446,6 +498,7 @@ def descobrir_documentos(manifesto: dict[str, Any], base_id: str, pastas: Pastas
             docs.append(Documento(
                 base_id, caminho, _stem(meta["url"], caminho), meta.get("rotulo") or caminho.stem,
                 meta.get("doc_type", "documento"), meta.get("data_publicacao"), meta["url"],
+                extras={k: meta[k] for k in EXTRAS_DO_MANIFESTO if k in meta},
             ))
     for item in (acesso.get("arquivos_locais") or {}).get("arquivos", []):
         r = registros.get(f"local:{item['arquivo']}")
@@ -485,6 +538,17 @@ def texto_do_documento(doc: Documento) -> tuple[str, dict[str, Any]]:
 TIPOS_CONVERSACIONAIS = {"email", "ata", "parecer", "correspondencia_editorial"}
 
 
+def descartar_secoes(secoes: list[Secao], padroes: list[re.Pattern[str]]) -> tuple[list[Secao], list[Secao]]:
+    """Separa as seções que o manifesto manda ignorar (casam pelo título ou por alguma seção acima delas)."""
+    if not padroes:
+        return secoes, []
+    mantidas, descartadas = [], []
+    for s in secoes:
+        titulos = [s.rotulo, *s.hierarquia]
+        (descartadas if any(p.search(t) for p in padroes for t in titulos) else mantidas).append(s)
+    return mantidas, descartadas
+
+
 def cortar_documento(doc: Documento, texto: str) -> list[Secao]:
     """Escolhe o cortador pelo tipo do documento; normas de ética sem artigos (como a Resolução 466) caem nos itens."""
     if doc.doc_type in TIPOS_CONVERSACIONAIS:
@@ -492,7 +556,7 @@ def cortar_documento(doc: Documento, texto: str) -> list[Secao]:
     if doc.doc_type == "edital":
         secoes = cortar_por_secoes(texto)
         return secoes if len(secoes) > 1 else cortar_por_itens(texto)  # chamada com títulos "1 – Objeto"
-    if doc.doc_type == "instrucao":
+    if doc.doc_type in ("instrucao", "pcdt"):
         return cortar_por_itens(texto)
     secoes = cortar_por_artigos(texto)
     if doc.doc_type == "norma_etica" and sum(1 for s in secoes if s.artigo) < 3:
@@ -564,6 +628,7 @@ def ingerir(manifesto_path: Path, versao: str, base_id: str, pastas: Pastas) -> 
     except FileNotFoundError:
         redacoes = ()
     redigidos: Counter[str] = Counter()
+    ignorar = [re.compile(p) for p in base.get("ignorar_secoes") or []]
 
     todos: list[Chunk] = []
     por_documento = []
@@ -583,6 +648,9 @@ def ingerir(manifesto_path: Path, versao: str, base_id: str, pastas: Pastas) -> 
         if not doc.data_publicacao:
             avisos.append(f"{doc.caminho.name}: sem data de publicação (o metadado de vigência ficará vazio)")
         secoes = cortar_documento(doc, texto)
+        secoes, descartadas = descartar_secoes(secoes, ignorar)
+        if descartadas:
+            info = {**info, "secoes_descartadas": len(descartadas), "chars_descartados": sum(len(s.texto) for s in descartadas)}
         chunks, pessoais = montar_chunks(doc, secoes, sensibilidade, natureza, tuple(base.get("dominios_institucionais") or ()))
         if not chunks:
             avisos.append(f"{doc.caminho.name}: nenhum trecho gerado")

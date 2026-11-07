@@ -1,72 +1,133 @@
 scenario_id: saude
-version: "rascunho-0"
-status: planejado
-description: "Saúde pública: protocolos clínicos do SUS, medicamentos essenciais e indicadores"
+version: "2026-11-06"
+status: em_andamento
+description: "Saúde pública: protocolos clínicos do SUS (PCDT), medicamentos essenciais (RENAME) e registros de ouvidoria sintéticos"
 
-# Os portais abaixo são pontos de partida. As URLs exatas de cada PDF serão listadas e
-# conferidas na fase 3, uma a uma. Nada foi coletado ainda.
+# Endereços conferidos em 2026-11-06 (status, tipo de conteúdo e tamanho). Cada documento foi aberto e teve a portaria
+# e a data lidas do próprio texto. Não há download em lote: os PDFs são coletados um a um.
 
 bases:
   - base_id: pcdt_normativo
     natureza: normativa
-    fonte: "Protocolos Clínicos e Diretrizes Terapêuticas (PCDT), Conitec / Ministério da Saúde"
+    fonte: "Protocolos Clínicos e Diretrizes Terapêuticas (PCDT), Ministério da Saúde e Conitec"
     acesso:
       tipo: http_pdf
+      rate_limit_seg: 2.0
       portal: "https://www.gov.br/conitec"
-      urls: []                       # a definir na fase 3: 15 a 20 PCDT, incluindo pares versão antiga + vigente
+      urls:
+        # Diabetes mellitus tipo 1: uma versão no corpus.
+        - url: "https://www.gov.br/conitec/pt-br/midias/protocolos/publicacoes_ms/pcdt_diabetesmellitus_tipoi_isbn_19-08-2020.pdf/@@display-file/file"
+          rotulo: "PCDT Diabete Melito Tipo 1 (Portaria Conjunta SAES/SCTIE 17/2019)"
+          doc_type: pcdt
+          doenca: "Diabetes mellitus tipo 1"
+          versao: "Portaria Conjunta SAES/SCTIE 17/2019"
+          data_publicacao: "2019-11-12"    # data da portaria; a edição do PDF é de 2020
+        # Doença de Parkinson: uma versão no corpus.
+        - url: "https://www.gov.br/conitec/pt-br/midias/protocolos/pcdt_doenca_de_parkinson_2017-1.pdf/@@display-file/file"
+          rotulo: "PCDT Doença de Parkinson (Portaria Conjunta 10/2017)"
+          doc_type: pcdt
+          doenca: "Doença de Parkinson"
+          versao: "Portaria Conjunta 10/2017"
+          data_publicacao: "2017-11-09"    # publicação no DOU; a portaria é de 31/10/2017
+        # Artrite reumatoide: quatro versões, da mais antiga à vigente. Cada uma termina na véspera da publicação da seguinte.
+        - url: "https://www.gov.br/conitec/pt-br/midias/relatorios/2017/pcdt_ar_final.pdf/@@display-file/file"
+          rotulo: "PCDT Artrite Reumatoide (Portaria Conjunta 15/2017; Relatório Conitec 177, dezembro de 2017)"
+          doc_type: pcdt
+          doenca: "Artrite reumatoide"
+          versao: "Portaria Conjunta 15/2017"
+          data_publicacao: "2018-01-04"    # publicação no DOU (nº 3); a portaria é de 11/12/2017
+          data_vigencia_fim: "2019-11-04"
+        - url: "http://antigo-conitec.saude.gov.br/images/Relatorios/2020/Relatorio_PCDT_ArtriteReumatoide_460_2020.pdf"
+          rotulo: "PCDT Artrite Reumatoide (Portaria Conjunta 16/2019; Relatório Conitec 460, fevereiro de 2020)"
+          doc_type: pcdt
+          doenca: "Artrite reumatoide"
+          versao: "Portaria Conjunta 16/2019"
+          data_publicacao: "2019-11-05"    # data da portaria; a data de publicação no DOU não consta do texto lido
+          # A Portaria Conjunta 14/2020 (31/08/2020, DOU de 08/09/2020) ficou entre esta e a de 2021, mas só existe como página HTML
+          # e não está no corpus. A vigência termina na véspera da publicação dela; entre 2020-09-08 e 2021-09-09 não há versão no corpus.
+          data_vigencia_fim: "2020-09-07"
+        - url: "https://www.gov.br/conitec/pt-br/midias/protocolos/20211112_portaria_conjunta_16_pcdt_ar.pdf/@@display-file/file"
+          rotulo: "PCDT Artrite Reumatoide e Artrite Idiopática Juvenil (Portaria Conjunta SAES/SCTIE 16/2021)"
+          doc_type: pcdt
+          doenca: "Artrite reumatoide"
+          versao: "Portaria Conjunta SAES/SCTIE 16/2021"
+          data_publicacao: "2021-09-10"    # publicação no DOU (nº 172); a portaria é de 03/09/2021
+          data_vigencia_fim: "2026-01-18"
+        - url: "https://www.gov.br/saude/pt-br/assuntos/pcdt/a/artrite-reumatoide/@@download/file"
+          rotulo: "PCDT Artrite Reumatoide (Portaria Conjunta SAES/SCTIE 33/2026), versão vigente"
+          doc_type: pcdt
+          doenca: "Artrite reumatoide"
+          versao: "Portaria Conjunta SAES/SCTIE 33/2026"
+          data_publicacao: "2026-01-19"    # data da portaria
       observacoes:
-        - "Não há download em lote; os PDFs são coletados um a um."
-        - "Vários PDFs são escaneados ou mal estruturados: prever extração com OCR."
-    selecao_deterministica: true     # lista fixa de URLs com SHA-256
-    volume_alvo: "15 a 20 documentos, com ao menos 3 doenças em duas versões"
+        - "A listagem oficial de PCDT da Conitec é um painel dinâmico e não foi lida; os documentos foram achados por busca e conferidos um a um."
+        - "O PCDT vigente de Diabetes mellitus tipo 2 não foi localizado em PDF oficial confirmado (só a versão resumida de 2020, revogada), e fica de fora."
+        - "Um PCDT pode ter sido atualizado depois do documento coletado; o corpus é um recorte datado, não a lista oficial de vigentes."
+    selecao_deterministica: true
+    volume_alvo: 6
     formato: pdf
     licenca: "Documentos oficiais do Ministério da Saúde"
     sensitivity_default: publico
-    campo_vigencia: data_publicacao  # obrigatório: sem ele as versões se misturam
-    chunking_sugerido: "Um chunk por seção do protocolo (critérios de inclusão, tratamento, monitoramento), guardando doença, versão e data de vigência"
-    metadados_extras: [doenca, versao, data_publicacao, data_vigencia_fim, secao, portaria]
+    campo_vigencia: data_publicacao
+    chunking_sugerido: "Um chunk por seção do protocolo, guardando doença, versão (portaria), data de publicação e data de fim da vigência"
+    # Seções que não respondem a "o que o protocolo estabelece" e que ocupam a maior parte do texto: bibliografia, perfis de evidência e metodologia.
+    ignorar_secoes:
+      - "(?i)refer[êe]ncias"
+      - "(?i)perfis? de evid[êe]ncia"
+      - "(?i)metodologia"
+      - "(?i)declara[çc][ãa]o de conflito"
+    metadados_extras: [doenca, versao, data_publicacao, data_vigencia_fim, rotulo]
 
   - base_id: rename_estruturado
     natureza: estruturada
-    fonte: "RENAME (Relação Nacional de Medicamentos Essenciais) e bulário"
+    fonte: "RENAME 2024 (Relação Nacional de Medicamentos Essenciais), 2ª edição, Ministério da Saúde"
     acesso:
-      tipo: arquivo_local
-      portal: "https://www.gov.br/saude/pt-br"
-      bulario: "https://consultas.anvisa.gov.br/#/bulario/"
+      tipo: http_pdf
+      rate_limit_seg: 2.0
+      portal: "https://www.gov.br/saude/pt-br/composicao/sectics/rename"
+      urls:
+        - url: "https://www.gov.br/saude/pt-br/composicao/sectics/rename/publicacoes/relacao-nacional-de-medicamentos-essenciais-2024"
+          rotulo: "RENAME 2024 (Portaria GM/MS 6.324/2024), 2ª edição"
+          doc_type: rename
+          data_publicacao: "2024-12-26"
       observacoes:
-        - "Formato (tabela ou PDF) a confirmar na fase 3."
+        - "A RENAME é um PDF de tabelas (267 páginas); as linhas são extraídas das tabelas pelo normalizador, sem garantia de cobrir todas as formas de tabela do documento."
+        - "A edição 2024 passou a ser atualizada em tempo real no portal do Ministério; o PDF é um retrato de uma data."
     selecao_deterministica: true
-    volume_alvo: "a definir após a primeira coleta"
-    formato: [csv, pdf]
-    licenca: "Dados abertos do Ministério da Saúde e da ANVISA"
+    volume_alvo: 1
+    formato: pdf
+    licenca: "Documentos oficiais do Ministério da Saúde"
     sensitivity_default: publico
     campo_vigencia: ano_edicao
-    chunking_sugerido: "1 medicamento + apresentação = 1 registro"
-    metadados_extras: [medicamento, apresentacao, componente, indicacao, ano_edicao]
+    chunking_sugerido: "1 medicamento + apresentação = 1 linha em SQL"
+    metadados_extras: [medicamento, apresentacao, componente, anexo]
 
   - base_id: indicadores_agregado
     natureza: agregada
-    fonte: "DATASUS e dados abertos do SUS: dispensação, cobertura, internações"
+    coletar: false
+    motivo_nao_coletada: "decisão: os dados de internação e dispensação do SUS vêm em arquivos .dbc do FTP do DATASUS (sem CSV simples), e a agregada é calculada em SQL sobre o que já se coleta (RENAME e catálogo de PCDT)"
+    fonte: "Indicadores calculados sobre a RENAME e o catálogo de PCDT coletados"
     acesso:
-      tipo: arquivo_local
-      portal: "https://opendatasus.saude.gov.br"
-      observacoes:
-        - "Séries em CSV; escolher poucas séries ligadas às doenças dos protocolos coletados."
+      tipo: rest_api
     selecao_deterministica: true
     volume_alvo: "a definir"
-    formato: csv
-    licenca: "Dados abertos, com atribuição"
+    formato: json
+    licenca: "Derivado de documentos oficiais"
     sensitivity_default: publico
     campo_vigencia: ano
-    chunking_sugerido: "Séries em tabela SQL; cada número carrega período, unidade e recorte geográfico"
-    metadados_extras: [indicador, periodo, unidade, uf, fonte]
+    metadados_extras: [indicador, recorte]
 
   - base_id: ouvidoria_conversacional
     natureza: conversacional
+    coletar: false
+    motivo_nao_coletada: "gerada por `python -m src.synth build` (semente fixa), fora da coleta versionada; a ingestão lê data/synthetic"
     fonte: "Registros de atendimento e ouvidoria sintéticos"
     acesso:
       tipo: sintetico
       geracao: "gerados por script com semente fixa; marcados como sintéticos em todo lugar; nenhum dado pessoal real"
+      semente: 20261029
+      comando: "python -m src.synth build --scenario saude"
+      armadilhas: [dado_pessoal_e_clinico, pedido_de_dose_individual, pedido_de_interpretacao_de_exame]
     selecao_deterministica: true
     volume_alvo: 30
     formato: texto
