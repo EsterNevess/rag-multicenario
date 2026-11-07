@@ -114,6 +114,11 @@ def montar_prompt_analise(ctx: Contexto) -> str:
         rotas.append(f"- \"hibrida\": a pergunta mistura tipos de evidência. Use naturezas com pelo menos duas de {nomes}, a entidade (se houver dados: o id do indicador, quando existir um, ou a tabela de dados), os filtros e a consulta_semantica.")
     rotas.append("- \"catalogo\": SOMENTE quando a pessoa pergunta sobre o próprio sistema (o que ele sabe, que bases e que período existem).")
     rotas.append("- \"fora_do_escopo\": a pergunta é sobre outro assunto, ou pede um dado que as tabelas não têm (por exemplo, um preço por quilo de um item).")
+    if ctx.cap.filtros_de_documentos and (Natureza.NORMATIVA in ctx.naturezas or Natureza.CONVERSACIONAL in ctx.naturezas):
+        rotas.append("  Nas rotas \"documentos\" e \"hibrida\", \"filtros_documentos\" restringe os documentos: "
+                     + "; ".join(f"\"{n}\" ({d})" for n, d in ctx.cap.filtros_de_documentos.items())
+                     + ". \"vigente_em\" (AAAA-MM-DD) escolhe a versão que valia naquela data; sem ele vale só a versão em vigor hoje, e \"todas\" traz todas as versões "
+                     "(use para comparar versões ou para perguntar o que mudou).")
     linhas += ["Rotas disponíveis:", *rotas, "Se a pergunta tem duas partes, uma sobre o que a norma diz (direitos, regras, prazos) e outra sobre dados (quantas, quais, quanto), use \"hibrida\".", ""]
     if Natureza.AGREGADA in ctx.naturezas:
         linhas.append("Indicadores calculados (id: nome; dimensões que aceitam filtro; unidade):")
@@ -148,7 +153,7 @@ def montar_prompt_analise(ctx: Contexto) -> str:
     linhas += [
         "",
         f"Formato (somente JSON, sem comentários): {{\"rota\": ..., \"naturezas\": [{'|'.join(chr(34) + n.value + chr(34) for n in ctx.naturezas) or chr(34) + chr(34)}], \"entidade\": ou null,",
-        "\"filtros\": {}, \"operacoes\": [], \"campo_agregacao\": ou null, \"agrupar_por\": [], \"limite\": ou null, \"consulta_semantica\": ou null}",
+        "\"filtros\": {}, " + ("\"filtros_documentos\": {}, " if ctx.cap.filtros_de_documentos else "") + "\"operacoes\": [], \"campo_agregacao\": ou null, \"agrupar_por\": [], \"limite\": ou null, \"consulta_semantica\": ou null}",
         "Nunca escreva SQL. Use só os campos listados. Se a pergunta não puder ser respondida com essas rotas, use \"catalogo\".",
     ]
     return "\n".join(linhas)
@@ -290,6 +295,9 @@ def evidencias_documentos(resultados: list, primeiro: int) -> list[Evidencia]:
         rotulo = " — ".join(x for x in (m.get("norma"), m.get("rotulo")) if x) or m.get("source_file", r.chunk_id)
         if m.get("sintetico"):
             rotulo = f"{m.get('norma') or rotulo} (documento sintético de {m.get('data_publicacao') or 's/d'})"
+        elif m.get("versao") and m.get("data_publicacao"):  # versão de protocolo: a data decide qual vale
+            fim = m.get("data_vigencia_fim")
+            rotulo = f"{rotulo} [publicada em {m['data_publicacao']}; " + (f"vigência encerrada em {fim}" if fim else "sem data de fim de vigência no corpus") + "]"
         saida.append(Evidencia(primeiro + i, r.chunk_id, m.get("base_id", "?"), rotulo, r.texto[:MAX_CARACTERES_DO_TRECHO]))
     return saida
 
@@ -323,16 +331,33 @@ def coletar(plano: PlanoConsulta, pergunta: str, ctx: Contexto) -> tuple[list[Ev
         evidencias.append(evidencia_sql(r, len(evidencias) + 1))
     if usa_docs:
         consulta = plano.consulta_semantica or pergunta
+        filtros_docs = filtros_de_documentos(plano, ctx)
         alvo = {n for n in plano.naturezas if n in (Natureza.NORMATIVA, Natureza.CONVERSACIONAL)} or {Natureza.NORMATIVA}
         indices = {b: i for b, i in ctx.indices.items() if ctx.natureza_da_base(b) in alvo}
         achados = buscar_por_bases(
             indices, ctx.embedder, consulta, k=5,
-            filtros={"vigente_em": ctx.hoje, "sensitivity": list(ctx.cap.niveis_consultaveis)}, logger=ctx.logger,
+            filtros=filtros_docs, logger=ctx.logger,
         ) if indices else []
         evidencias += evidencias_documentos(achados, len(evidencias) + 1)
         if not achados:
             avisos.append("Nenhum trecho de documento foi encontrado para a pergunta.")
     return evidencias, avisos
+
+
+def filtros_de_documentos(plano: PlanoConsulta, ctx: Contexto) -> dict[str, Any]:
+    """Filtros da busca em documentos: o nível de sensibilidade, a vigência e os campos do cenário que o plano pede.
+
+    Sem `vigente_em` no plano vale a data de hoje, isto é, só a versão em vigor; "todas" tira o corte de vigência
+    (para comparar versões ou perguntar por uma anterior).
+    """
+    filtros: dict[str, Any] = {"sensitivity": list(ctx.cap.niveis_consultaveis)}
+    vigencia = plano.filtros_documentos.get("vigente_em", ctx.hoje)
+    if vigencia != "todas":
+        filtros["vigente_em"] = vigencia
+    for chave, valor in plano.filtros_documentos.items():
+        if chave != "vigente_em" and chave in ctx.cap.filtros_de_documentos:
+            filtros[f"{chave}__contem"] = valor
+    return filtros
 
 
 # --------------------------------------------------------------------------- geração e validação

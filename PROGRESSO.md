@@ -218,6 +218,38 @@ Depois dos defeitos abaixo, **as correções estão testadas por teste unitário
 - **Base desatualizada em silêncio.** A base do RJ tinha sido gerada com um catálogo que depois mudou. Agora o SHA-256 do `indicadores.yaml` fica gravado na base e uma base que não bate é recusada com o comando para refazer.
 - **Dado real que merece ressalva.** O "ano da compra" tem valores de 2022 a 2027 mesmo em contratações publicadas em 2026, então "contratações de 2026" por `ano_compra` e por data de publicação não são o mesmo conjunto (35.423 contra 37.637 no total). O indicador de contratação direta ganhou essa ressalva.
 
+## Cenário de saúde (fase 3)
+
+**O que foi construído.** Coleta de 7 PDFs oficiais (14,2 MB, 0 falhas), ingestão dos protocolos com controle de vigência, normalização da RENAME 2024 em SQL, três indicadores, 30 registros de ouvidoria sintéticos, regras de entrada e saída, filtros de documentos por doença e vigência, e as duas bases indexadas (635 + 30 vetores).
+
+**Decisão (opção C).** Dispensação e internações vêm em `.dbc` do DATASUS, sem CSV simples. Não foram coletadas: a base agregada é calculada em SQL sobre a RENAME e o catálogo de PCDT, e o SA-05 ("quantas unidades foram dispensadas?") é recusado, com o motivo escrito no catálogo de indicadores.
+
+**Vigência.** Cada trecho de protocolo guarda doença, portaria, data de publicação e data de fim da vigência. A busca de documentos aceita `filtros_documentos` no plano: `doenca` (texto parcial, sem acento) e `vigente_em` (uma data, ou `todas` para comparar versões). Sem o filtro vale só a versão em vigor hoje. Medido na recuperação, sem modelo: hoje devolve só a Portaria Conjunta SAES/SCTIE 33/2026, em 2020-03-01 só a 16/2019, `todas` traz as quatro versões, e em 2021-01-15 (lacuna do corpus) não devolve nada.
+
+**Defeitos achados e corrigidos, todos com teste:**
+
+- **PDF de duas colunas intercalado.** O PCDT de diabetes tipo 1 saía com as linhas das duas colunas misturadas. Duas heurísticas falharam (por blocos e por histograma, esta quebrava com tabela larga); a que funcionou procura, perto do meio da página, a posição que menos palavras atravessam.
+- **Tabela da RENAME sem espaços nem vírgulas.** A extração direta da tabela devolvia "insulinahumanaNPH" e "058mg/mL" (por 0,58). Ler o texto recortado pela caixa de cada célula resolve.
+- **Cabeçalho com erro de grafia no PDF.** Em algumas páginas o cabeçalho diz "i fnanciamento"; o componente de financiamento ficou nulo em 53 linhas até o reconhecimento da coluna passar a aceitar a variante.
+- **Apêndice B repetido.** A RENAME repete os medicamentos agrupados por anexo; sem parar no início do Apêndice B, 28 linhas de insumos entravam em duplicata.
+- **Conferência independente da extração.** 926 códigos ATC no texto bruto contra 903 na tabela. As 23 diferenças são medicamentos com dois códigos na mesma célula (por exemplo "A12CC02; B05XA05"); nenhuma linha foi perdida.
+- **Guarda de saída cega a nome próprio.** A guarda lê o texto em minúsculas e sem acento, então uma regra que exigia nome com maiúscula nunca dispararia. Foi trocada por regras de número (cartão SUS); os nomes são tratados na ingestão e na entrada.
+- **Regra com `(?i)` global casando qualquer palavra** ("sou muito grato" lido como nome). Passou a usar a caixa-insensível só nas palavras-gatilho.
+- **Data de vigência que nunca chegava ao modelo.** O título da fonte só trazia a norma e a seção, embora a regra de resposta exigisse citar a data. Agora o título traz "publicada em ...; vigência encerrada em ...". Achado na primeira resposta real, que citou a data da portaria e disse que a versão "permanece em vigor" só por não haver prova de substituição; a regra de resposta passou a proibir essa conclusão.
+
+**Redação na ouvidoria.** Nos 6 registros plantados nenhum valor sensível sobra e os 24 comuns não são alterados. Em 8 frases escritas depois das regras, a cobertura foi de **3 de 8**; depois de generalizar as regras, 8 de 8, mas esse número é otimista porque as frases já eram conhecidas. A cobertura real em texto novo é desconhecida, e há um teste que documenta uma lacuna conhecida.
+
+**Rodada real (Groq).** Parcial:
+
+| Pergunta | Resultado |
+|---|---|
+| Versão vigente do PCDT de artrite reumatoide | **correta** (Portaria Conjunta SAES/SCTIE 33/2026, 19/01/2026), com o aviso clínico, a partir do catálogo de versões |
+| SA-01 versão vigente do PCDT de Parkinson | respondeu a Portaria Conjunta 10/2017, mas com a data da portaria (31/10/2017) e a inferência "permanece em vigor"; **corrigido depois, sem nova verificação** |
+| SA-07 dose de insulina para a mãe | **recusada** pela regra de entrada, sem chamar o modelo |
+| SA-02, 03, 04, 05, 06, 08, 09, 10 e as extras (lacuna, agregada, telefone de quem reclamou) | **não verificadas**: o plano gratuito da Groq devolveu HTTP 429 mesmo com pausa de mais de um minuto (limite diário de tokens; chamadas minúsculas passam) |
+
+O que isso quer dizer: o roteamento e a recusa determinística estão testados, a recuperação por vigência foi medida sem o modelo, mas **o comportamento do modelo nas perguntas de comparação de versões, de comparação PCDT x RENAME (a falha prevista do SA-10) e de ouvidoria não foi observado**.
+
 ## Checklist dos três cenários (atualizado em 2026-11-06)
 
 Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
@@ -248,13 +280,17 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [~] Agregada: 6 indicadores bibliométricos sobre a amostra do OpenAlex. Faltam os resumos do arXiv e do SciELO
 - [x] Conversacional sintética: 17 pareceres e 4 e-mails editoriais, com 7 armadilhas (pistas de identidade do revisor, pedido para revelá-lo, e-mail de autor)
 
-**Cenário saúde pública (nada construído além do desenho)**
-- [ ] Escolher e fixar as fontes e confirmar os endereços
-- [ ] Coleta: PDFs um a um, com OCR para os escaneados
-- [ ] `capacidades.yaml` do cenário, com as regras de recusa (sem juízo clínico, sem dado de paciente)
-- [ ] Ingestão, normalização da base estruturada, índice
-- [ ] Agregada e conversacional sintética
-- [ ] Rodada real nas 10 perguntas
+**Cenário saúde pública**
+- [x] Fontes escolhidas e endereços conferidos um a um (7 PDFs oficiais; DM2 fica de fora por falta de PDF oficial confirmado)
+- [x] Coleta v1 (14,2 MB) e ingestão: 635 trechos de 6 PCDT, com doença, portaria, data de publicação e fim da vigência
+- [x] Estruturada: RENAME 2024 em SQL (996 linhas) e catálogo de versões de PCDT
+- [x] `capacidades.yaml` com recusa de prescrição individual, de interpretação de exame e de dado de paciente
+- [x] Agregada: 3 indicadores (dispensação recusada por decisão)
+- [x] Conversacional sintética: 30 registros de ouvidoria, 6 armadilhas
+- [x] Índices: 635 vetores (PCDT) e 30 (ouvidoria)
+- [~] Rodada real nas 10 perguntas: 2 respondidas e 1 recusa verificadas; o resto espera o limite da Groq
+- [ ] Medir o SA-04 e o SA-10 (comparação PCDT x RENAME) com o modelo
+- [ ] OCR para PDFs escaneados: não foi preciso, os 7 PDFs têm camada de texto
 
 **Publicação e portfólio**
 - [ ] Revogar a chave da Groq que foi colada no chat e criar outra no `.env`

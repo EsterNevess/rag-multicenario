@@ -89,6 +89,8 @@ class PlanoConsulta(BaseModel):
     naturezas: list[Natureza] = Field(default_factory=list)
     entidade: str | None = None
     filtros: dict[str, ValorFiltro] = Field(default_factory=dict)
+    # Filtros da busca em documentos (os campos que o cenário declara em `filtros_de_documentos`, e `vigente_em`).
+    filtros_documentos: dict[str, ValorFiltro] = Field(default_factory=dict)
     operacoes: list[Literal["listar", "contar", "somar", "media", "minimo", "maximo", "agrupar"]] = Field(
         default_factory=list
     )

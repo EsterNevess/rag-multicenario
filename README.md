@@ -4,17 +4,17 @@ Plataforma de **Adaptive RAG** com um motor único e três cenários configuráv
 
 O ponto central do projeto: o sistema decide **que tipo de evidência** responde à pergunta antes de buscar. Não roteia por palavra-chave. Três perguntas com quase o mesmo vocabulário podem ir para três bases diferentes.
 
-> **Estado atual: motor pronto com dois cenários coletados; falta a rodada real com um modelo.** Do motor existem a configuração, os esquemas, o mascaramento de dados pessoais, os logs estruturados, a coleta versionada, a ingestão em trechos, a indexação, a busca (BM25, vetores e fusão RRF), a normalização da base estruturada em SQL, o roteador com guardrails e a geração de respostas com fontes numeradas, tudo com testes (530). Um mesmo motor atende dois cenários: o que muda de um para outro está em `scenarios/<id>/` (manifesto do corpus e `capacidades.yaml`). Ainda não foi feita a rodada completa com um modelo de verdade: ela depende de uma chave de API e de normalizar a coleta v3. A tabela abaixo mostra o estado real de cada cenário e é atualizada no fim de cada fase.
+> **Estado atual: motor e três cenários construídos; a avaliação formal (fase 5) ainda não foi feita.** O motor tem configuração, esquemas, mascaramento de dados pessoais, logs estruturados, coleta versionada, ingestão em trechos, indexação (BM25, vetores e fusão RRF), normalização em SQL, bases agregadas de indicadores, bases conversacionais sintéticas, roteador com guardrails em camadas e geração de respostas com fontes numeradas e citações conferidas por código, tudo com testes (613). Um mesmo motor atende os três cenários: o que muda de um para outro está em `scenarios/<id>/` (manifesto do corpus, `capacidades.yaml` e `indicadores.yaml`). Foram feitas rodadas reais com um modelo de linguagem (Groq) nos cenários do RJ e da pesquisa, e uma rodada parcial na saúde (o plano gratuito da Groq esgotou o limite diário). O que foi e o que não foi verificado está em [PROGRESSO.md](PROGRESSO.md).
 
 ## Estado dos cenários
 
-| Cenário | Normativa | Estruturada | Agregada | Conversacional | Estado |
+| Cenário | Normativa | Estruturada | Agregada | Conversacional (sintética) | Estado |
 |---|---|---|---|---|---|
-| [Contratações públicas do RJ](scenarios/rj/README.md) | **coletada e indexada** (1.458 trechos) | **coletada e normalizada** (37 mil contratações, 46 mil contratos) | desenhada | desenhada (sintética) | **código pronto, falta a rodada real (fase 1)** |
-| [Saúde pública](scenarios/saude/README.md) | desenhada | desenhada | desenhada | desenhada (sintética) | planejado |
-| [Pesquisa acadêmica](scenarios/pesquisa/README.md) | desenhada | **coletada e normalizada** (5.000 artigos) | desenhada | desenhada (sintética) | **em andamento (fase 2)** |
+| [Contratações públicas do RJ](scenarios/rj/README.md) | **indexada** (1.458 trechos) | **normalizada** (37 mil contratações, 46 mil contratos) | 7 indicadores | 20 atas e e-mails, 5 armadilhas | **rodada real feita** (RJ-04 instável) |
+| [Saúde pública](scenarios/saude/README.md) | **indexada** (635 trechos de 6 PCDT de 3 doenças, com vigência por versão) | **RENAME 2024 normalizada** (996 linhas, 541 medicamentos) | 3 indicadores; dispensação recusada por decisão | 30 registros de ouvidoria, 6 armadilhas | **construído; rodada real parcial** |
+| [Pesquisa acadêmica](scenarios/pesquisa/README.md) | **indexada** (453 trechos) | **normalizada** (5.000 artigos) | 6 indicadores | 21 pareceres e e-mails, 7 armadilhas | **rodada real feita** |
 
-"Desenhada" quer dizer: fonte, forma de acesso e regras de sensibilidade estão no manifesto, e há perguntas de avaliação. **Dados até agora:** a base normativa do RJ (13 documentos, cortada em 1.458 trechos), as bases estruturadas do RJ (2026) e da pesquisa (OpenAlex, 2020 a 2024), todas com SHA-256 e inventário por versão.
+Todos os dados trazem SHA-256 e inventário por versão. Os documentos conversacionais são **sintéticos** (gerados por script com semente fixa, marcados como fictícios) e ficam fora do Git, assim como os dados coletados.
 
 ## Como rodar (cenário RJ)
 

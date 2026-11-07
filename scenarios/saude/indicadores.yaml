@@ -1,0 +1,58 @@
+# Indicadores da base agregada da saúde. Lido por src/indicadores.py; calculado por `python -m src.indicadores build --scenario saude`.
+# Todos são calculados em SQL sobre o que o corpus coleta: a RENAME 2024 e o catálogo das versões de protocolo (PCDT).
+# Dispensação, cobertura e internações não entram: vêm em arquivos .dbc do DATASUS, que o projeto decidiu não coletar.
+
+indicadores:
+  medicamentos_por_componente:
+    nome: Apresentações da RENAME por componente de financiamento
+    descricao: Quantas linhas (medicamento + concentração + forma) a RENAME 2024 traz em cada componente de financiamento da assistência farmacêutica.
+    unidade: contagem
+    origem: medicamento
+    dimensoes: [componente]
+    metrica: contagem
+    definicao: Número de linhas da RENAME 2024 (Apêndice A) por componente de financiamento, como está escrito no documento (Básico, Estratégico, Especializado e combinações).
+    palavras_chave: [por componente, componente basico, componente especializado, componente estrategico]   # sem acento e em minúsculas
+    exemplos:
+      - pergunta: "Quantas apresentações do componente Especializado a RENAME 2024 traz?"
+        filtros: {componente: Especializado}
+    ressalvas:
+      - A unidade é a linha da tabela (um medicamento em uma concentração e uma forma), e não o medicamento. Um mesmo medicamento aparece em várias linhas.
+      - Há linhas que combinam componentes (por exemplo, Básico e Especializado); elas são contadas à parte, não somadas aos componentes isolados.
+      - É a RENAME 2024 como publicada em dezembro de 2024; a relação é atualizada continuamente pelo Ministério.
+
+  medicamentos_por_grupo_atc:
+    nome: Apresentações da RENAME por grupo ATC
+    descricao: Quantas linhas (medicamento + concentração + forma) a RENAME 2024 traz em cada grupo anatômico da classificação ATC.
+    unidade: contagem
+    origem: medicamento
+    dimensoes: [grupo_atc]
+    metrica: contagem
+    definicao: Número de linhas da RENAME 2024 (Apêndice A) por grupo anatômico principal (A a V), segundo o título da seção em que a linha aparece.
+    palavras_chave: [grupo atc, classificacao atc, por grupo, grupo anatomico]   # sem acento e em minúsculas
+    exemplos:
+      - pergunta: "Quantas apresentações da RENAME 2024 são do grupo N (sistema nervoso)?"
+        filtros: {grupo_atc: N}
+    ressalvas:
+      - A unidade é a linha da tabela, e não o medicamento distinto.
+      - O grupo é o da seção do documento onde a linha aparece; alguns itens (como insumos) ficam no grupo V.
+
+  versoes_de_pcdt_por_doenca:
+    nome: Versões de PCDT por doença
+    descricao: Quantas versões de protocolo clínico o corpus tem para cada doença.
+    unidade: contagem
+    origem: pcdt_versao
+    dimensoes: [doenca]
+    metrica: contagem
+    definicao: Número de versões (portarias) de PCDT presentes no corpus para cada doença, incluindo as substituídas.
+    palavras_chave: [versoes do protocolo, versoes de pcdt, quantas versoes]   # sem acento e em minúsculas
+    exemplos:
+      - pergunta: "Quantas versões do PCDT de artrite reumatoide o corpus tem?"
+        filtros: {doenca: Artrite reumatoide}
+    ressalvas:
+      - O corpus é um recorte de três doenças; o número não é a quantidade de versões que o Ministério já publicou.
+      - Entre as versões da artrite reumatoide falta a Portaria Conjunta 14/2020, que não está no corpus.
+
+limites:
+  - Não há dados de dispensação, cobertura vacinal nem internações, porque o projeto não coleta os arquivos do DATASUS. Por isso não informo quantas unidades de um medicamento foram dispensadas num estado ou ano.
+  - Os indicadores descrevem a RENAME 2024 e o corpus de protocolos; não medem acesso real da população aos medicamentos nem falta de estoque.
+  - Não comparo medicamentos de um protocolo com a RENAME de forma agregada; essa comparação exige ler o protocolo e a RENAME.

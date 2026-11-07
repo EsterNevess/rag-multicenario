@@ -1,0 +1,135 @@
+# Capacidades do cenário: o que o roteador aceita perguntar. Lido por src/capacidades.py.
+cenario: saude
+descricao: saúde pública no SUS (protocolos clínicos e diretrizes terapêuticas, medicamentos essenciais da RENAME 2024 e registros de ouvidoria sintéticos)
+
+filtros_de_documentos:
+  doenca: "nome da doença do protocolo, em texto parcial: diabetes, parkinson, artrite"
+
+dicas_do_analisador:
+  - "Os protocolos (PCDT) estão em documentos normativos com rota documentos e naturezas [normativa]. Cada trecho traz a doença, a portaria (versão) e a data de publicação. Para um protocolo de uma doença, use filtros_documentos com doenca (por exemplo {\"doenca\": \"artrite\"})."
+  - "Por padrão a busca traz só a versão do protocolo em vigor hoje. Para perguntas sobre o que mudou entre versões, ou sobre uma versão anterior, use filtros_documentos {\"vigente_em\": \"todas\"}; para o que valia numa data, use {\"vigente_em\": \"AAAA-MM-DD\"}."
+  - "O corpus de protocolos cobre só: diabetes mellitus tipo 1, doença de Parkinson e artrite reumatoide (esta com quatro versões, de 2017 a 2026). Outras doenças não têm dados. Entre setembro de 2020 e setembro de 2021 o corpus não tem versão da artrite reumatoide."
+  - "A RENAME 2024 está na entidade medicamento (uma linha por medicamento + concentração + forma). O nome é a denominação comum brasileira (DCB) em minúsculas: use dcb__contem (por exemplo insulina). O componente de financiamento é Básico, Estratégico ou Especializado (há combinações). Atenção: a RENAME 2024 tem 541 medicamentos distintos em 996 linhas; para contar medicamentos distintos, conte pelo nome, não pelas linhas."
+  - "A entidade pcdt_versao lista as versões de protocolo do corpus, com data de publicação, fim da vigência e situação (vigente ou substituída). Use para perguntas sobre desde quando uma versão vale e qual a vigente."
+  - "Registros de ouvidoria (documentos sintéticos) estão disponíveis: perguntas sobre reclamações, falta de medicamento ou o que as pessoas relatam usam rota documentos com naturezas [conversacional]."
+  - "Uma pergunta que compara o que o protocolo cita com o que a RENAME lista (por exemplo, medicamentos de um PCDT que não estão na RENAME) mistura documentos e dados: use hibrida. Os nomes dos medicamentos no protocolo estão no texto e precisam ser comparados um a um; diga só o que a evidência permite."
+  - "Não há dados de dispensação, cobertura nem internações: o corpus não os coleta. Perguntas por quantidades dispensadas ou internadas usam fora_do_escopo."
+
+regras_de_resposta:
+  - "Ao citar um protocolo (PCDT), diga sempre a doença, a portaria (versão) e a data de publicação. Se houver mais de uma versão na evidência, diga qual vale hoje e qual foi substituída, com as datas."
+  - "Responda sobre o que o protocolo estabelece em termos gerais. Isso não é orientação clínica: termine lembrando que a conduta para cada pessoa depende de avaliação do profissional de saúde."
+  - "Nunca indique dose, troca, suspensão ou conduta para uma pessoa específica, mesmo que a evidência traga doses do protocolo: apresente a dose do protocolo como parte do texto do protocolo, para população em geral, e não como recomendação para quem pergunta."
+  - "Nunca interprete resultado de exame de uma pessoa."
+  - "O corpus é um recorte datado: o PCDT de uma doença pode ter sido atualizado depois da versão coletada, e a RENAME 2024 é um retrato de dezembro de 2024. Diga isso quando a vigência importar para a resposta."
+  - "Nunca afirme que uma versão \"permanece em vigor\" só porque a evidência não mostra substituição: diga que é a versão mais recente do corpus e que o protocolo pode ter sido atualizado depois. Use como início da vigência a data de publicação que vem no título da fonte, e não a data da portaria no texto, quando forem diferentes (diga as duas)."
+  - "A RENAME e os protocolos são documentos diferentes: um medicamento pode constar em um e não no outro. Só afirme divergência entre os dois quando as duas evidências estiverem na resposta; caso contrário diga o que falta."
+  - "Os registros de ouvidoria são documentos sintéticos (dados fictícios de demonstração): diga isso ao citá-los. Trechos marcados como [TRECHO REMOVIDO: ...] foram retirados para proteger dados pessoais ou clínicos: não comente nem especule sobre eles, e não diga que \"não há\" algo que possa ter estado nesses trechos."
+  - "Nunca informe nome, telefone, e-mail, cartão SUS ou diagnóstico de uma pessoa que aparece em registro de ouvidoria."
+
+catalogo:
+  cobertura: protocolos clínicos, medicamentos essenciais e registros de ouvidoria
+  estruturada: "RENAME 2024 (996 linhas de medicamento, 541 medicamentos distintos) e o catálogo das versões de protocolo do corpus"
+  normativa: "Protocolos Clínicos e Diretrizes Terapêuticas de diabetes mellitus tipo 1, doença de Parkinson e artrite reumatoide (quatro versões, de 2017 a 2026)"
+  conversacional: "registros de ouvidoria (documentos sintéticos de demonstração)"
+  aviso: "Não oriento dose, troca ou suspensão de medicamento para uma pessoa, não interpreto exames e não informo dados de pacientes. O que o protocolo estabelece, em termos gerais, eu explico."
+
+regras_de_entrada:
+  - categoria: prescricao_individual
+    mensagem: "Não oriento dose, troca, suspensão ou escolha de medicamento para uma pessoa: isso depende da avaliação de um profissional de saúde. Posso explicar o que o protocolo clínico estabelece em termos gerais."
+    padroes:
+      - '\b(minha|meu|nossa|nosso)\s+(mae|pai|filh[oa]|avo|avos|marido|esposa|mulher|irma[oa]?|tio|tia|neto|neta|bebe|crianca|companheir[oa]|parente)\b.{0,150}\b(dose|doses|dosagem|quanto\s+(tomar|usar|aplicar)|deve\s+(tomar|usar|aplicar)|pode\s+(tomar|usar|parar|trocar)|trocar|suspender|parar\s+de\s+(tomar|usar)|aumentar|diminuir|qual\s+(remedio|medicamento))'
+      - '\b(dose|doses|dosagem|trocar|suspender|aumentar|diminuir)\b.{0,100}\b(minha|meu|nossa|nosso)\s+(mae|pai|filh[oa]|avo|avos|marido|esposa|mulher|irma[oa]?|tio|tia|neto|neta|bebe|crianca|companheir[oa]|parente)\b'
+      - '\b(devo|posso|preciso)\s+(tomar|usar|aplicar|parar|trocar|suspender|aumentar|diminuir|reduzir)\b'
+      - '\bqual\s+(a\s+)?(dose|dosagem|quantidade)\b.{0,60}\b(eu|ele|ela|paciente)\s+(deve|devo|pode|posso|precisa|preciso)\b'
+      - '\b(para|pra)\s+mim\b.{0,60}\b(dose|remedio|medicamento|insulina)\b'
+      - '\bconfirm\w+\b.{0,40}\b(dose|dosagem)\b.{0,40}\b(paciente|dele|dela|meu|minha)\b'
+      - '\b(tenho|tem|sofre de)\s+\d{1,3}\s+anos\b.{0,100}\bqual\s+(dose|remedio|medicamento|tratamento)\b'
+  - categoria: interpretacao_de_exame
+    mensagem: "Não interpreto resultado de exame de uma pessoa: isso exige um profissional de saúde. Posso dizer quais exames de acompanhamento o protocolo prevê."
+    padroes:
+      - '\b(interpret\w+|analis\w+|avali\w+|explic\w+)\b.{0,40}\b(meu|minha|dele|dela|esse|este|o\s+meu)\b.{0,30}\b(exame|resultado|laudo|hemograma|glicemia|hba1c|tomografia|ressonancia)'
+      - '\b(meu|minha)\s+(exame|resultado|hemograma|glicemia|laudo|hba1c|hemoglobina)\b'
+      - '\b(o\s+que\s+significa|significa)\b.{0,40}\b(resultado|exame|laudo)\b.{0,30}\b(meu|minha|dele|dela)\b'
+  - categoria: dado_clinico_de_paciente
+    mensagem: "Não informo dados de pacientes (nome, contato, diagnóstico, exames ou medicamentos de uma pessoa). Posso resumir os registros de ouvidoria sem identificar ninguém."
+    padroes:
+      - '\b(qual|quais|me\s+(diga|informe|mostre|passe))\b.{0,50}\b(diagnostico|doenca|medicamentos?|exames?|telefone|contato|endereco|e-?mail|cartao\s+sus)\b.{0,40}\b(d[oa]s?|de)\s+(paciente|usuari[oa]|reclamante|manifestante|pessoa que reclamou)'
+      - '\b(telefone|e-?mail|contato|endereco|cartao\s+sus|nome)\b.{0,30}\b(d[oa]s?)\s+(paciente|reclamante|manifestante|usuari[oa])s?\b'
+      - '\bquem\s+(e|foi|sao|eram)\s+(o|a|os|as)\s+(paciente|reclamante|manifestante|pessoa)s?\b'
+      - '\b(prontuario|historico\s+clinico)\s+d[oa]s?\b'
+
+niveis_consultaveis: [publico, restrito]   # no demonstrativo, o usuário é tratado como analista autorizado
+
+regras_de_saida:
+  - categoria: dose_individual_na_resposta
+    mensagem: "A resposta foi bloqueada porque indicaria uma dose ou conduta para uma pessoa. Posso explicar o que o protocolo estabelece em termos gerais; a conduta de cada pessoa depende de um profissional de saúde."
+    padroes:
+      - '(?i)\b(sua|seu|dela|dele|voce|a senhora|o senhor)\b.{0,60}\b(deve|precisa|pode|tem que)\s+(tomar|usar|aplicar|utilizar|trocar|suspender|aumentar|reduzir)\b.{0,40}\d'
+      - '(?i)\b(recomendo|sugiro|indico)\b.{0,40}\b(que\s+)?(voce|sua|seu|ele|ela)\b.{0,40}\b(tome|use|aplique|troque|suspenda|aumente|reduza)\b'
+      - '(?i)\ba dose (ideal|correta|certa|adequada) (para|d[eoa]) (voce|sua|seu|ele|ela)\b'
+  - categoria: dado_de_paciente_na_resposta
+    mensagem: "A resposta foi bloqueada porque poderia revelar dado de um paciente. Posso resumir os registros sem identificar ninguém."
+    # A guarda de saída lê o texto em minúsculas e sem acento, então não distingue nome próprio: nomes de pacientes são
+    # barrados na ingestão (redacoes_na_ingestao) e na entrada, e aqui ficam só os números de identificação.
+    padroes:
+      - '\bcartao\s+(do\s+)?sus\b.{0,15}\d{3}'
+      - '\b\d{3}\s?\d{4}\s?\d{4}\s?\d{4}\b'
+
+redacoes_na_ingestao:
+  - categoria: identificacao_do_paciente
+    marca: "[TRECHO REMOVIDO: identifica o paciente]"
+    aplica_a: [ouvidoria]
+    padroes:
+      - '(?i)\b(meu nome e|me chamo|chamo-me)\b'
+      - '\b(?i:sou|fui)\s+(?:(?i:o|a)\s+)?[A-Z][a-z]+\s+[A-Z][a-z]+'
+      - '(?i)\bcartao\s+(do\s+)?sus\b'
+      - '(?i)\b(cns|cpf)\b\s*:?\s*\d'
+      - '\b(?i:paciente|pacientes)\s+[A-Z][a-z]+\s+[A-Z][a-z]+'
+      - '\b(?i:senhor|senhora|sr|sra|dona|doutor|doutora)\.?\s+[A-Z][a-z]+\s+(?:(?i:d[aeo]s?)\s+)?[A-Z][a-z]+'
+      - '\b(?i:aqui e|aqui fala|quem fala e)\s+(?:(?i:o|a)\s+)?[A-Z][a-z]+\s+[A-Z][a-z]+'
+      - '(?i)\b(moro|resido|moramos)\s+(na|no|em)\b'
+      - '\b(?i:meu|minha)\s+(?i:pai|mae|filho|filha|avo|marido|esposa|irmao|irma|tio|tia|neto|neta),\s+[A-Z][a-z]+\s+[A-Z][a-z]+'
+  - categoria: diagnostico_ou_exame_individual
+    marca: "[TRECHO REMOVIDO: dado clínico de uma pessoa]"
+    aplica_a: [ouvidoria]
+    padroes:
+      - '(?i)\b(tenho|tem|possuo|sofro de|sou portador|sou portadora)\s+(diabetes|parkinson|artrite|hipertensao|doenca|cancer|hiv)'
+      - '(?i)\b(diagnosticad[oa]|portador[a]?|portadora)\s+(com|de)\b'
+      - '(?i)\b(usa|usam|toma|tomo|uso|aplico|aplica|tomando|usando|aplicando)\b.{0,70}\b\d+[,.]?\d*\s*(ui|u|unidades|mg|mcg|ml|comprimidos?|gotas)\b'
+      - '(?i)\b(hba1c|hemoglobina glicada|glicemia|colesterol|creatinina|ureia|tsh|hemograma|pcr)\b.{0,50}\b\d+(?:[,.]\d+)?'
+      - '(?i)\b(esta|estou|esteve|ficou|ficaram|estao)\s+(internad[oa]s?|em tratamento|em quimioterapia|em hemodialise|acamad[oa]s?)\b'
+      - '(?i)\b(faz|fazem|faco|fazendo|fez)\s+(hemodialise|dialise|quimioterapia|radioterapia|fisioterapia)\b'
+      - '(?i)\bem tratamento (de|para|com)\b'
+      - '(?i)\b(exame|resultado|laudo)\b.{0,40}\b(deu|foi de|esta em|ficou em|mostrou)\b'
+      - '(?i)\bdoenca de parkinson\b.{0,20}\b(relata|relatou)\b'
+      - '(?i)\b(relata|relatou|disse|informou)\b.{0,40}\b(diabetes|parkinson|artrite)\b'
+
+entidades:
+  medicamento:
+    tabela: medicamento
+    exibir: [dcb, concentracao, forma, componente, atc, pagina]
+    ordem_padrao: dcb
+    campos:
+      - { nome: id, tipo: id }
+      - { nome: dcb, tipo: categoria, agrupavel: true }
+      - { nome: concentracao, tipo: texto }
+      - { nome: forma, tipo: categoria, agrupavel: true }
+      - { nome: componente, tipo: categoria, agrupavel: true, listar_valores: true }
+      - { nome: atc, tipo: categoria, agrupavel: true }
+      - { nome: aware, tipo: categoria, agrupavel: true, listar_valores: true }
+      - { nome: grupo_atc, tipo: categoria, agrupavel: true, listar_valores: true }
+      - { nome: grupo_atc_nome, tipo: categoria, agrupavel: true, listar_valores: true }
+      - { nome: pagina, tipo: inteiro }
+      - { nome: ano_edicao, tipo: inteiro, agrupavel: true }
+  pcdt_versao:
+    tabela: pcdt_versao
+    exibir: [doenca, versao, data_publicacao, data_vigencia_fim, situacao]
+    ordem_padrao: data_publicacao
+    campos:
+      - { nome: id, tipo: id }
+      - { nome: doenca, tipo: categoria, agrupavel: true, listar_valores: true }
+      - { nome: versao, tipo: categoria, agrupavel: true }
+      - { nome: rotulo, tipo: texto }
+      - { nome: data_publicacao, tipo: data }
+      - { nome: data_vigencia_fim, tipo: data }
+      - { nome: situacao, tipo: categoria, agrupavel: true, listar_valores: true }

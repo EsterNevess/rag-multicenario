@@ -535,7 +535,7 @@ def texto_do_documento(doc: Documento) -> tuple[str, dict[str, Any]]:
     raise ValueError(f"formato não suportado: {doc.caminho.name}")
 
 
-TIPOS_CONVERSACIONAIS = {"email", "ata", "parecer", "correspondencia_editorial"}
+TIPOS_CONVERSACIONAIS = {"email", "ata", "parecer", "correspondencia_editorial", "ouvidoria"}
 
 
 def descartar_secoes(secoes: list[Secao], padroes: list[re.Pattern[str]]) -> tuple[list[Secao], list[Secao]]:

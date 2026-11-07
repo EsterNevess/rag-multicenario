@@ -124,4 +124,4 @@ def test_valores_sensiveis_plantados_sao_mascarados_pela_ingestao(tmp_path):
 
 def test_cenario_sem_base_sintetica_da_erro_claro(tmp_path):
     with pytest.raises(ValueError, match="não tem base sintética"):
-        construir("saude", tmp_path / "x")
+        construir("inexistente", tmp_path / "x")

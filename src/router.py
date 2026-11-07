@@ -146,6 +146,21 @@ def _mapa_de_entidades(plano: PlanoConsulta, cap: Capacidades) -> dict[str, Enti
     return cap.entidades_agregadas() if usa_base_agregada(plano, cap) else cap.entidades
 
 
+def _problemas_dos_filtros_de_documentos(plano: PlanoConsulta, cap: Capacidades) -> list[str]:
+    """`vigente_em` é AAAA-MM-DD ou "todas"; os demais filtros têm de ser campos que o cenário declara, com texto."""
+    problemas = []
+    for chave, valor in plano.filtros_documentos.items():
+        if chave == "vigente_em":
+            if not (valor == "todas" or (isinstance(valor, str) and _DATA.match(valor))):
+                problemas.append(f"vigente_em exige uma data AAAA-MM-DD ou \"todas\", e veio {valor!r}")
+        elif chave not in cap.filtros_de_documentos:
+            validos = ["vigente_em", *cap.filtros_de_documentos]
+            problemas.append(f"filtro de documentos desconhecido: {chave!r} (use {validos})")
+        elif not isinstance(valor, str) or not valor.strip():
+            problemas.append(f"o filtro de documentos {chave!r} exige um texto")
+    return problemas
+
+
 def validar_plano(plano: PlanoConsulta, cap: Capacidades | None = None) -> None:
     """Confere o plano contra a tabela de capacidades. Levanta `PlanoInvalido` com todos os problemas."""
     problemas: list[str] = []
@@ -153,6 +168,8 @@ def validar_plano(plano: PlanoConsulta, cap: Capacidades | None = None) -> None:
     if plano.rota in (Rota.ESTRUTURADA, Rota.HIBRIDA) and Natureza.ESTRUTURADA not in plano.naturezas and plano.rota is Rota.ESTRUTURADA:
         problemas.append("a rota estruturada exige a natureza estruturada")
     cap = _capacidades(cap)
+    if plano.rota in (Rota.DOCUMENTOS, Rota.HIBRIDA):
+        problemas += _problemas_dos_filtros_de_documentos(plano, cap)
     if plano.rota is Rota.AGREGADA:
         if cap.catalogo_de_indicadores is None:
             problemas.append("este cenário não tem base agregada")

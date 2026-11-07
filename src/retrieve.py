@@ -20,6 +20,7 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
+import unicodedata
 from contextlib import nullcontext
 from dataclasses import dataclass, field
 from types import SimpleNamespace
@@ -77,6 +78,10 @@ def preparar_consulta_fts(texto: str) -> str | None:
     return " OR ".join(f'"{t}"' for t in unicos)
 
 
+def _sem_acento(texto: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFD", texto.lower()) if unicodedata.category(c) != "Mn")
+
+
 def casa_filtro(metadata: dict[str, Any], filtros: dict[str, Any] | None) -> bool:
     """Todos os filtros precisam casar (E). Um valor que é lista casa com qualquer item dela.
 
@@ -93,6 +98,11 @@ def casa_filtro(metadata: dict[str, Any], filtros: dict[str, Any] | None) -> boo
             if publicado and publicado > esperado:
                 return False
             if fim and fim < esperado:
+                return False
+            continue
+        if chave.endswith("__contem"):  # texto parcial, sem acento nem caixa
+            valor = metadata.get(chave[: -len("__contem")])
+            if not isinstance(valor, str) or _sem_acento(str(esperado)) not in _sem_acento(valor):
                 return False
             continue
         valor = metadata.get(chave)

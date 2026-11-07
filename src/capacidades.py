@@ -112,6 +112,8 @@ class Capacidades:
     regras_de_saida: tuple[RegraDeSaida, ...] = ()
     redacoes_na_ingestao: tuple[dict[str, Any], ...] = ()  # brutas; src.redacao as compila
     catalogo_de_indicadores: Any = None  # src.indicadores.Catalogo, quando o cenário tem indicadores.yaml
+    # Campos de metadado dos documentos que o analisador pode filtrar (nome -> o que significa). Texto parcial, sem acento.
+    filtros_de_documentos: dict[str, str] = field(default_factory=dict)
 
     def entidades_agregadas(self) -> dict[str, Entidade]:
         """Cada indicador como uma entidade consultável (a tabela ind_<id> da base agregada)."""
@@ -200,6 +202,9 @@ def interpretar(dados: dict[str, Any]) -> Capacidades:
             saida.append(RegraDeSaida(r["categoria"], r["mensagem"], padroes))
         except (KeyError, TypeError, re.error) as erro:
             raise CapacidadesInvalidas(f"regra de saída inválida ({erro})") from erro
+    filtros_docs = dados.get("filtros_de_documentos") or {}
+    if not isinstance(filtros_docs, dict) or not all(isinstance(k, str) and isinstance(v, str) for k, v in filtros_docs.items()):
+        raise CapacidadesInvalidas("filtros_de_documentos deve mapear nome -> descrição (texto)")
     redacoes = []
     for r in dados.get("redacoes_na_ingestao") or []:
         try:
@@ -221,6 +226,7 @@ def interpretar(dados: dict[str, Any]) -> Capacidades:
         dicas_do_analisador=tuple(dados.get("dicas_do_analisador") or ()),
         regras_de_resposta=tuple(dados.get("regras_de_resposta") or ()),
         catalogo=dict(dados.get("catalogo") or {}),
+        filtros_de_documentos=dict(filtros_docs),
     )
 
 
