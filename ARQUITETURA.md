@@ -1,6 +1,6 @@
 # Arquitetura
 
-Versão da fase 0. Este documento descreve o que será construído; o que já existe está em [PROGRESSO.md](PROGRESSO.md).
+Este documento descreve o **desenho**. Ele foi escrito na fase 0 e nem tudo foi implementado: o estágio `rerank` e a API e o console (`app/`) não existem. O que foi feito, o que falta e as medições estão em [PROGRESSO.md](PROGRESSO.md) e [AVALIACAO.md](AVALIACAO.md).
 
 ## Princípio
 
@@ -18,7 +18,7 @@ Cada estágio emite uma linha de log JSONL com o mesmo nome (campo `stage`).
 | 4 | `retrieval_bm25` | Busca lexical (SQLite FTS5), por base. |
 | 5 | `retrieval_denso` | Busca vetorial (FAISS), por base. |
 | 6 | `fusao_rrf` | Fusão das duas buscas por Reciprocal Rank Fusion, em código. |
-| 7 | `rerank` | Cross-encoder sobre os melhores candidatos. |
+| 7 | `rerank` | Cross-encoder sobre os melhores candidatos. **Previsto, não implementado.** |
 | 8 | `geracao` | A LLM redige a resposta só com as evidências recuperadas, com fontes numeradas. |
 | 9 | `validacao` | Confere citações, cobertura, dado pessoal e recusas. |
 | 10 | `feedback` | Registra a avaliação do usuário. |
@@ -56,7 +56,7 @@ Estas decisões vêm de problemas observados no projeto em equipe `rag-contratac
 | `src/ingest.py` | Chunking, metadados, classificação de sensibilidade e mascaramento. |
 | `src/index.py` | Embeddings com cache em disco e índices persistidos (carregar, nunca reindexar). |
 | `src/router.py` | Analisador, validação do plano e escolha da rota. |
-| `src/retrieve.py` | BM25, FAISS, RRF, filtros e rerank. |
+| `src/retrieve.py` | BM25, FAISS, RRF e filtros (o rerank não foi implementado). |
 | `src/generate.py` | Síntese com citações e guardrails de saída. |
 | `src/schema.py` | Modelos Pydantic (plano, resposta, chunk). |
 | `src/obs.py` | Logs estruturados e contagem de tokens por estágio. |

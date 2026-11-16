@@ -27,6 +27,8 @@ python -m src.indicadores build --scenario rj   # indicadores calculados em SQL 
 python -m src.generate --scenario rj "Quantas contratações por dispensa foram publicadas em janeiro de 2026?"
 ```
 
+O cenário de saúde usa os mesmos comandos com `--scenario saude`, mais as bases sintéticas (`python -m src.synth build --scenario saude`, e o mesmo para `rj` e `pesquisa`). As avaliações estão em [AVALIACAO.md](AVALIACAO.md) (`python -m src.avaliar --scenario saude`).
+
 O cenário de pesquisa usa os mesmos comandos com `--scenario pesquisa` (a coleta é `python -m src.fetch_corpus fetch --scenario pesquisa --base openalex_estruturado`).
 
 A geração usa a Groq por padrão (chave gratuita em console.groq.com, `GROQ_API_KEY` no `.env`); também funcionam a OpenAI (`LLM_PROVIDER=openai`) e um modelo local (`LLM_PROVIDER=ollama`). A Groq não oferece embeddings, então os vetores continuam no Ollama local. Sem pergunta na linha de comando, `src.generate` abre um modo interativo. Cada etapa fica registrada em `logs/pipeline-AAAA-MM-DD.jsonl`.
@@ -40,7 +42,7 @@ flowchart LR
     A --> R[Planejador determinístico]
     R -->|estruturada| S[Consulta SQL controlada]
     R -->|agregada| AG[Indicadores e séries]
-    R -->|documentos| D[BM25 + FAISS + RRF + rerank]
+    R -->|documentos| D[BM25 + FAISS + RRF]
     R -->|híbrida| H[Mais de uma rota]
     S --> O[Resposta com fontes numeradas]
     AG --> O
@@ -52,26 +54,41 @@ flowchart LR
 Decisões que o projeto mantém:
 
 - **A LLM não escreve SQL.** Ela só preenche um plano validado por schema; o banco recebe campos permitidos e parâmetros protegidos.
-- **Duas buscas combinadas:** BM25 (SQLite FTS5) e FAISS (embeddings), fundidas por RRF em código, com rerank por cross-encoder e ablação medida.
+- **Duas buscas combinadas:** BM25 (SQLite FTS5) e FAISS (embeddings), fundidas por RRF em código. A ablação (BM25, vetores e RRF) está medida em [AVALIACAO.md](AVALIACAO.md); o rerank por cross-encoder está previsto e **não foi implementado**.
 - **Sensibilidade classificada na ingestão**, nunca na hora de responder. CPF, telefone e e-mail pessoal são mascarados antes de indexar.
 - **Cálculos numéricos em código (SQL)**, não pelo modelo.
 - **Sem evidência, o sistema diz que não sabe.** Não acusa e não emite juízo jurídico ou clínico.
 
 Detalhes em [ARQUITETURA.md](ARQUITETURA.md).
 
+## Limitações conhecidas
+
+Ditas aqui porque o projeto é um portfólio e o que não funciona importa tanto quanto o que funciona. Os detalhes e os números estão em [PROGRESSO.md](PROGRESSO.md) e [AVALIACAO.md](AVALIACAO.md).
+
+- **Rerank não implementado.** A comparação "RRF + rerank" da avaliação não foi feita.
+- **Avaliação pequena.** A recuperação foi medida em 34 perguntas escritas por mim, e as diferenças entre BM25, vetores e RRF não são estatisticamente conclusivas. A resposta final foi medida com 3 repetições só no cenário de saúde; o RJ e a pesquisa esperam o limite diário da Groq.
+- **Falhas previstas que continuam.** A comparação entre o que um protocolo clínico cita e o que a RENAME lista (SA-10) não funciona, e o RJ-04 (contratações diretas e proporção) é instável. Sem memória de conversa, "desses" na segunda pergunta (PE-02) não funciona.
+- **Redação de dado sensível.** A remoção de trechos que identificam pessoas em registros sintéticos só pega o que as regras conhecem; a cobertura em texto novo é desconhecida.
+- **Os cenários conversacionais são sintéticos.** Pessoas, órgãos e números são fictícios, gerados com semente fixa.
+- **Os dados são um recorte datado.** Três doenças na saúde, uma amostra de artigos na pesquisa, e a RENAME de dezembro de 2024. Nada aqui substitui orientação clínica, jurídica ou profissional.
+- **API e console (`app/`) não existem**: o uso é pela linha de comando.
+
 ## Estrutura do repositório
 
 ```text
 README.md              vitrine e estado real dos cenários
-ARQUITETURA.md         pipeline, estágios e decisões
+ARQUITETURA.md         pipeline, estágios e decisões (desenho; ver o aviso no topo)
+AVALIACAO.md           ablação da recuperação e resposta final com repetições
+LICENSE                MIT
 PROGRESSO.md           o que está pronto, o que falta e decisões tomadas
 .env.example           variáveis necessárias, sem valores reais
 scenarios/<nome>/      tudo o que varia por cenário
     README.md  corpus_manifest.yaml  PERSONAS.md
-    sensibilidade.yaml  eval/questions.json
-src/                   motor único, sem nada específico de cenário (fase 1)
-app/                   API e console (fase 1)
-tests/                 testes unitários, de contrato e de integração (fase 1)
+    sensibilidade.yaml  capacidades.yaml  indicadores.yaml
+    eval/questions.json  eval/retrieval_gold.json  eval/respostas.json
+src/                   motor único, sem nada específico de cenário
+app/                   API e console: **não implementados** (só o README)
+tests/                 testes unitários e de contrato (648)
 data/inventory/        inventário de cada coleta (os dados em si não vão para o Git)
 ```
 
@@ -83,13 +100,17 @@ Este projeto parte de uma ideia desenvolvida em grupo na residência TIC em Tril
 |---|---|---|
 | Natureza | trabalho em equipe | trabalho individual |
 | Escopo | contratações do RJ | três cenários |
-| Código | do grupo, com ajustes meus | a escrever do zero (fase 1) |
-| O que mostra | trabalhar em equipe num projeto real | desenhar e construir um sistema sozinha (em andamento) |
+| Código | do grupo, com ajustes meus | escrito do zero |
+| O que mostra | trabalhar em equipe num projeto real | desenhar e construir um sistema sozinha |
 
-O que veio da ideia do grupo: a arquitetura de Adaptive RAG e o cenário de contratações. O que será novo aqui: o motor reescrito, os outros dois cenários, o roteamento por tipo de evidência, a avaliação por persona e a ablação das buscas.
+O que veio da ideia do grupo: a arquitetura de Adaptive RAG e o cenário de contratações. O que é novo aqui: o motor reescrito, os outros dois cenários, o roteamento por tipo de evidência, a avaliação por persona e a ablação das buscas.
 
 ## Créditos
 
 A proposta dos cenários e o padrão de engenharia (manifesto do corpus, versionamento, logs e testes) vêm do material do Grande Desafio de IA Generativa e RAG da residência TIC em Trilhas (PUC-Rio, Instituto ECOA). As fontes de dados são públicas (PNCP, Planalto, OpenAlex, entre outras) e cada uma é descrita no manifesto do cenário. Nenhum código do repositório do grupo foi copiado.
 
 Os integrantes do Time 03 estão listados no [rag-contratacoes](https://github.com/EsterNevess/rag-contratacoes#créditos).
+
+## Licença
+
+Código e textos sob a licença [MIT](LICENSE). Os dados coletados não fazem parte do repositório: cada fonte (PNCP, Planalto, OpenAlex, Ministério da Saúde, FAPERJ, CNPq e outras) mantém os seus próprios termos de uso, e o manifesto de cada cenário registra a origem e a licença declarada.
