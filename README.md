@@ -39,6 +39,17 @@ O cenário de pesquisa usa os mesmos comandos com `--scenario pesquisa` (a colet
 
 A geração usa a Groq por padrão (chave gratuita em console.groq.com, `GROQ_API_KEY` no `.env`); também funcionam a OpenAI (`LLM_PROVIDER=openai`) e um modelo local (`LLM_PROVIDER=ollama`). A Groq não oferece embeddings, então os vetores continuam no Ollama local. Sem pergunta na linha de comando, `src.generate` abre um modo interativo. Cada etapa fica registrada em `logs/pipeline-AAAA-MM-DD.jsonl`.
 
+## Testes, lint e cobertura
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest                     # mais de 750 testes, sem rede e sem modelo de linguagem
+ruff check .                         # lint (regras E, F, W, I, B, UP; configuração em pyproject.toml)
+coverage run -m pytest && coverage report
+```
+
+Cobertura medida em 16/11: **92%** das linhas de `src/`, `app/` e `config.py` (4.598 linhas). O que ficou sem teste são, sobretudo, as linhas de comando de `ingest`, `index`, `normalize` e `fetch_corpus` (cobertas de 80% a 91%, pelo caminho das funções, e não pelas chamadas na linha de comando), o laço de `avaliar_respostas` e o caminho que carrega o modelo de rerank. O CI roda o lint e exige ao menos 85% de cobertura. Os testes não chamam modelo de linguagem de verdade (o `-m llm` os liga).
+
 ## Como o sistema pensa
 
 ```mermaid
