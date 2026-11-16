@@ -61,6 +61,15 @@ Estas decisões vêm de problemas observados no projeto em equipe `rag-contratac
 | `src/generate.py` | Síntese com citações e guardrails de saída. |
 | `src/schema.py` | Modelos Pydantic (plano, resposta, chunk). |
 | `src/obs.py` | Logs estruturados e contagem de tokens por estágio. |
+| `src/capacidades.py` | Lê `scenarios/<id>/capacidades.yaml`: entidades, campos, filtros de documentos, regras de entrada e de saída. |
+| `src/indicadores.py` | Base agregada: indicadores calculados em SQL, com definição e ressalvas. |
+| `src/normalize.py`, `normalize_saude.py`, `normalize_openalex.py` | Normalização em tabelas SQL (PNCP, RENAME e protocolos, OpenAlex). |
+| `src/pcdt_versoes.py` | Comparação de versões de um protocolo, seção por seção, em código. |
+| `src/redacao.py`, `src/pii.py` | Redação de dados pessoais e sensíveis na ingestão e mascaramento. |
+| `src/synth.py` | Bases conversacionais sintéticas (semente fixa). |
+| `src/llm.py` | Cliente do modelo de linguagem (Groq, OpenAI ou Ollama) com repetição e leitura de tokens. |
+| `src/avaliar.py`, `src/avaliar_respostas.py` | Avaliação da recuperação (com bootstrap) e da resposta final com repetições. |
+| `app/` | Interface de perguntas em Streamlit (opcional). |
 
 ## Testes
 
