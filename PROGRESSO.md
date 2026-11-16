@@ -312,7 +312,8 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [x] SA-02: busca por versão (os melhores trechos de cada versão) e regra de que a "anterior" é a publicada logo antes da vigente. Reverificado: compara 33/2026 com 16/2021, com as datas, e diz que os trechos recuperados não mostram diferença explícita, sem inventar
 - [x] SA-10: tabela `pcdt_medicamento` (69 linhas) com a marca de constar na RENAME, entidade e dica declaradas, testes (655 passando). Consulta conferida sem o modelo
 - [x] SA-02: afirmações "acrescenta" conferidas contra o texto das duas versões: 5 de 6 estavam também na versão anterior (ver AVALIACAO.md); regra de resposta endurecida
-- [ ] SA-02: repetir com o modelo depois da regra nova, e comparar as versões seção por seção (não feito)
+- [x] Comparação de versões seção por seção em código (`src/pcdt_versoes.py`, tabela `pcdt_secao`, 76 linhas, testes com mutação conferida)
+- [ ] SA-02: repetir com o modelo depois da regra nova e da tabela `pcdt_secao` (a pergunta deve usar a rota híbrida com a entidade `pcdt_secao`)
 - [ ] SA-10: repetir a pergunta com o modelo (3 repetições) quando o limite da Groq voltar
 - [x] Lista de fármacos da artrite de 2026 (por classe, sem apresentação) e do diabetes tipo 1 (sem dois-pontos): 89 linhas nas cinco versões, todas na RENAME; duas insulinas por correspondência aproximada, registradas no relatório
 - [x] OCR para PDFs escaneados: não foi preciso, os 7 PDFs têm camada de texto
