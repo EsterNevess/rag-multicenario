@@ -30,6 +30,14 @@ MIN_CARACTERES_DA_FRASE = 40
 _FIM_DE_FRASE = re.compile(r"(?<=[.;:!?])\s+")
 _NUMERACAO = re.compile(r"^\s*\d+(?:\.\d+)*\.?\s+")
 _PARTE = re.compile(r"\s*\(parte \d+/\d+\)$")
+_FRAGMENTO_DE_TABELA = re.compile(r"^\d+\s*-\s|\d,\d")  # "46 - A média do DM 0,19 menor": linha de tabela que o PDF deixou parecer título
+# Títulos que protocolos de épocas diferentes dão à mesma parte. Só entram trocas que conferi à mão nas versões do corpus.
+SINONIMOS_DE_SECAO = {
+    "monitorizacao": "monitoramento",
+    "abordagem terapeutica": "tratamento",
+    "criterios de elegibilidade": "criterios de inclusao",
+    "gestao e controle": "regulacao controle e avaliacao pelo gestor",
+}
 _USO_PRIVADO = re.compile("[" + chr(0xE000) + "-" + chr(0xF8FF) + "]")
 
 
@@ -44,6 +52,10 @@ class Secao:
     partes: list[str] = field(default_factory=list)
 
     @property
+    def canonica(self) -> str:
+        return SINONIMOS_DE_SECAO.get(self.chave, self.chave)
+
+    @property
     def texto(self) -> str:
         return "\n".join(self.partes)
 
@@ -52,6 +64,17 @@ def chave_do_titulo(titulo: str) -> str:
     """Título sem numeração, acento, caixa e pontuação: '7    FÁRMACOS' e '8. Fármacos' dão a mesma chave."""
     t = _NUMERACAO.sub("", _sem_acento(titulo))
     return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", t)).strip()
+
+
+def titulo_valido(rotulo: str) -> bool:
+    """Título de seção de verdade: tira os fragmentos de tabela (começam com 'NN - ' ou trazem número decimal) e o texto corrido,
+    que quase não tem maiúsculas (os títulos dos protocolos vêm em caixa alta; 'Preâmbulo' é o único em caixa mista)."""
+    if rotulo == "Preâmbulo":
+        return True
+    if _FRAGMENTO_DE_TABELA.search(rotulo):
+        return False
+    letras = [c for c in rotulo if c.isalpha()]
+    return bool(letras) and sum(c.isupper() for c in letras) / len(letras) >= 0.5
 
 
 def _corpo(chunk: dict[str, Any]) -> str:
@@ -79,6 +102,10 @@ def secoes_da_versao(chunks: list[dict[str, Any]]) -> tuple[list[Secao], int]:
         chave = chave_do_titulo(rotulo)
         if not chave:
             continue
+        if not titulo_valido(rotulo):  # fragmento de tabela: o texto continua a seção em andamento
+            if atual is not None:
+                atual.partes.append(corpo)
+            continue
         if chave in vistos:
             atual = vistos[chave] if atual is vistos[chave] else None  # continuação do mesmo título (partes) ou repetição de anexo
             if atual is not None:
@@ -93,31 +120,44 @@ def secoes_da_versao(chunks: list[dict[str, Any]]) -> tuple[list[Secao], int]:
 
 
 def casar_secoes(novas: list[Secao], anteriores: list[Secao]) -> list[tuple[Secao | None, Secao | None]]:
-    """Pares (nova, anterior), na ordem da nova e depois as só da anterior. Casa por título igual; depois por um conter o outro
-    (≥ 12 caracteres: 'diagnostico e classificacao' dentro de 'diagnostico e classificacao de artrite reumatoide'); depois por semelhança ≥ 0,85."""
-    livres = list(anteriores)
-    pares: list[tuple[Secao | None, Secao | None]] = []
+    """Pares (nova, anterior), na ordem da nova e depois as só da anterior.
 
-    def procurar(nova: Secao) -> Secao | None:
+    Em três passadas, e cada uma só olha o que as anteriores não casaram (assim um título curto não rouba o par de um exato):
+    título igual (com os sinônimos de SINONIMOS_DE_SECAO); um conter o outro, a partir de 8 caracteres ('farmacos' em 'farmacos e esquema
+    de administracao'), com o mais parecido primeiro; e semelhança de texto ≥ 0,85.
+    """
+    par_da: dict[int, Secao] = {}
+    livres = list(anteriores)
+
+    def passada(escolher) -> None:
+        for i, nova in enumerate(novas):
+            if i in par_da:
+                continue
+            achado = escolher(nova)
+            if achado is not None:
+                par_da[i] = achado
+                livres.remove(achado)
+
+    def igual(nova: Secao) -> Secao | None:
+        return next((s for s in livres if s.canonica == nova.canonica), None)
+
+    def contido(nova: Secao) -> Secao | None:
+        candidatas = []
         for s in livres:
-            if s.chave == nova.chave:
-                return s
-        for s in livres:
-            menor, maior = sorted((s.chave, nova.chave), key=len)
-            if len(menor) >= 12 and maior.startswith(menor):
-                return s
-        melhor = max(livres, key=lambda s: SequenceMatcher(None, s.chave, nova.chave).ratio(), default=None)
-        if melhor is not None and SequenceMatcher(None, melhor.chave, nova.chave).ratio() >= 0.85:
+            menor, maior = sorted((s.canonica, nova.canonica), key=len)
+            if len(menor) >= 8 and maior.startswith(menor):
+                candidatas.append(s)
+        return max(candidatas, key=lambda s: SequenceMatcher(None, s.canonica, nova.canonica).ratio(), default=None)
+
+    def parecido(nova: Secao) -> Secao | None:
+        melhor = max(livres, key=lambda s: SequenceMatcher(None, s.canonica, nova.canonica).ratio(), default=None)
+        if melhor is not None and SequenceMatcher(None, melhor.canonica, nova.canonica).ratio() >= 0.85:
             return melhor
         return None
 
-    for nova in novas:
-        par = procurar(nova)
-        if par is not None:
-            livres.remove(par)
-        pares.append((nova, par))
-    pares += [(None, s) for s in livres]
-    return pares
+    for escolher in (igual, contido, parecido):
+        passada(escolher)
+    return [(nova, par_da.get(i)) for i, nova in enumerate(novas)] + [(None, s) for s in livres]
 
 
 def frases(texto: str) -> list[str]:

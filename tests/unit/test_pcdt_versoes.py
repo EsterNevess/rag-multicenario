@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from src.pcdt_versoes import Secao, casar_secoes, chave_do_titulo, comparar_versoes, frases, secoes_da_versao, tabela_de_secoes
 
 FRASE_A = "O metotrexato em monoterapia deve ser a primeira escolha terapêutica no tratamento inicial."
@@ -100,3 +102,44 @@ def test_regressao_do_sa02_assunto_presente_nas_duas_versoes_nao_aparece_como_ac
     anterior = [_chunk("10.   TERMO DE ESCLARECIMENTO E RESPONSABILIDADE (TER)", termo, versao="V2021", data="2021-01-01")]
     (linha,), _ = comparar_versoes(nova, anterior)
     assert linha["presenca"] == "nas duas versões" and linha["frases_novas"] == 0
+
+
+# ----------------------------------------------------------------- conferência à mão das versões da artrite (16/11)
+
+
+def test_fragmento_de_tabela_nao_e_titulo_e_o_texto_continua_a_secao_em_andamento():
+    from src.pcdt_versoes import titulo_valido
+
+    assert not titulo_valido("46 - A média do DM 0,19 menor") and not titulo_valido("46 - A média do índice DM0,19 maior")
+    assert not titulo_valido("46 - A MÉDIA DO DM 0,19 MENOR")  # em caixa alta: só a regra do fragmento de tabela pega
+    assert not titulo_valido("Resultado da análise feita pelo grupo com dados de 2019")  # texto corrido: quase sem maiúsculas
+    assert titulo_valido("7    FÁRMACOS") and titulo_valido("Preâmbulo") and titulo_valido("2. CLASSIFICAÇÃO ESTATÍSTICA INTERNACIONAL DE DOENÇAS")
+    secoes, _ = secoes_da_versao([
+        _chunk("6.   TRATAMENTO", "texto do tratamento"), _chunk("46 - A média do DM 0,19 menor", "linha de tabela"), _chunk("7.   MONITORAMENTO", "monitorar"),
+    ])
+    assert [s.chave for s in secoes] == ["tratamento", "monitoramento"] and "linha de tabela" in secoes[0].texto
+
+
+def test_titulo_exato_ganha_do_titulo_curto_que_so_e_prefixo():
+    """Antes, '5. RECOMENDAÇÕES' (um título solto, de 16 caracteres) roubava o par de '5 RECOMENDAÇÕES PARA PESQUISA' antes do exato."""
+    nova = [Secao("5. RECOMENDAÇÕES", chave_do_titulo("5. RECOMENDAÇÕES")), Secao("6 . RECOMENDAÇÕES PARA PESQUISA", chave_do_titulo("6 . RECOMENDAÇÕES PARA PESQUISA"))]
+    antiga = [Secao("5 RECOMENDAÇÕES PARA PESQUISA", chave_do_titulo("5 RECOMENDAÇÕES PARA PESQUISA"))]
+    pares = [(n.titulo, a.titulo if a else None) for n, a in casar_secoes(nova, antiga) if n]
+    assert pares == [("5. RECOMENDAÇÕES", None), ("6 . RECOMENDAÇÕES PARA PESQUISA", "5 RECOMENDAÇÕES PARA PESQUISA")]
+
+
+@pytest.mark.parametrize("nova,antiga", [
+    ("10. MONITORIZAÇÃO", "9 MONITORAMENTO"),
+    ("6. ABORDAGEM TERAPÊUTICA", "8 TRATAMENTO"),
+    ("3. CRITÉRIOS DE ELEGIBILIDADE", "5 CRITÉRIOS DE INCLUSÃO"),
+    ("11. GESTÃO E CONTROLE", "11 REGULAÇÃO/CONTROLE/AVALIAÇÃO PELO GESTOR"),
+    ("8. FÁRMACOS", "8. FÁRMACOS E ESQUEMA DE ADMINISTRAÇÃO"),  # um título contém o outro, a partir de 8 caracteres
+])
+def test_titulos_que_protocolos_de_epocas_diferentes_dao_a_mesma_parte_casam(nova, antiga):
+    pares = casar_secoes([Secao(nova, chave_do_titulo(nova))], [Secao(antiga, chave_do_titulo(antiga))])
+    assert pares[0][1] is not None and pares[0][1].titulo == antiga
+
+
+def test_titulos_de_partes_diferentes_nao_casam_so_por_causa_dos_sinonimos():
+    pares = casar_secoes([Secao("7. FLUXOGRAMA DE TRATAMENTO", chave_do_titulo("7. FLUXOGRAMA DE TRATAMENTO"))], [Secao("8 TRATAMENTO", chave_do_titulo("8 TRATAMENTO"))])
+    assert pares[0][1] is None and pares[1] == (None, pares[1][1])
