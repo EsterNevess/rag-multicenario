@@ -8,4 +8,4 @@ python -m src.avaliar_respostas --scenario saude --repeticoes 3 # resposta final
 python -m src.avaliar_respostas --scenario rj --retomar         # continua uma rodada interrompida pelo limite
 ```
 
-O rerank por cross-encoder não foi implementado.
+O rerank por cross-encoder é opcional e entra na avaliação quando os arquivos do modelo existem (sistema `rrf_rerank`).

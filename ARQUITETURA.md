@@ -1,6 +1,6 @@
 # Arquitetura
 
-Este documento descreve o **desenho**. Ele foi escrito na fase 0 e nem tudo foi implementado: o estágio `rerank` e a API e o console (`app/`) não existem. O que foi feito, o que falta e as medições estão em [PROGRESSO.md](PROGRESSO.md) e [AVALIACAO.md](AVALIACAO.md).
+Este documento descreve o **desenho**. Ele foi escrito na fase 0 e nem tudo foi implementado: a API e o console (`app/`) não existem, e o estágio `rerank` é opcional e vem desligado. O que foi feito, o que falta e as medições estão em [PROGRESSO.md](PROGRESSO.md) e [AVALIACAO.md](AVALIACAO.md).
 
 ## Princípio
 
@@ -18,7 +18,7 @@ Cada estágio emite uma linha de log JSONL com o mesmo nome (campo `stage`).
 | 4 | `retrieval_bm25` | Busca lexical (SQLite FTS5), por base. |
 | 5 | `retrieval_denso` | Busca vetorial (FAISS), por base. |
 | 6 | `fusao_rrf` | Fusão das duas buscas por Reciprocal Rank Fusion, em código. |
-| 7 | `rerank` | Cross-encoder sobre os melhores candidatos. **Previsto, não implementado.** |
+| 7 | `rerank` | Cross-encoder (`bge-reranker-v2-m3`, ONNX int8) sobre os 20 melhores da fusão. **Opcional, desligado por padrão** (`RERANK=true`): melhora o MRR, custa ~19 s por busca em CPU (veja AVALIACAO.md). |
 | 8 | `geracao` | A LLM redige a resposta só com as evidências recuperadas, com fontes numeradas. |
 | 9 | `validacao` | Confere citações, cobertura, dado pessoal e recusas. |
 | 10 | `feedback` | Registra a avaliação do usuário. |
@@ -56,7 +56,8 @@ Estas decisões vêm de problemas observados no projeto em equipe `rag-contratac
 | `src/ingest.py` | Chunking, metadados, classificação de sensibilidade e mascaramento. |
 | `src/index.py` | Embeddings com cache em disco e índices persistidos (carregar, nunca reindexar). |
 | `src/router.py` | Analisador, validação do plano e escolha da rota. |
-| `src/retrieve.py` | BM25, FAISS, RRF e filtros (o rerank não foi implementado). |
+| `src/retrieve.py` | BM25, FAISS, RRF, filtros e a aplicação opcional do rerank. |
+| `src/rerank.py` | Cross-encoder em ONNX (`onnxruntime` + `tokenizers`), sem PyTorch; não baixa nada. |
 | `src/generate.py` | Síntese com citações e guardrails de saída. |
 | `src/schema.py` | Modelos Pydantic (plano, resposta, chunk). |
 | `src/obs.py` | Logs estruturados e contagem de tokens por estágio. |

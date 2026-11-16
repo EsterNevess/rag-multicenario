@@ -267,7 +267,7 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 **Motor único (vale para os três)**
 - [x] Coleta versionada com inventário e SHA-256, ingestão, índice (BM25 + vetores + RRF), normalização em SQL, roteador com guardrails, geração com citações conferidas, CLI
 - [x] Capacidades por cenário em `capacidades.yaml` (campos, valores codificados, regras de recusa, textos dos prompts)
-- [~] Rerank por cross-encoder (previsto, não implementado)
+- [x] Rerank por cross-encoder (opcional, desligado por padrão): bge-reranker-v2-m3 em ONNX int8; MRR +0,10 nas 59 perguntas, ~19 s por busca em CPU
 - [ ] Memória de conversa (PE-02 e PE-08 dizem "desses")
 - [ ] Conferir se cada número do texto bate com a evidência (hoje só as citações são conferidas)
 - [x] Rota agregada (indicadores calculados em SQL) no roteador
@@ -277,10 +277,11 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [x] Guardrails em camadas: entrada, mascaramento e redação na ingestão, níveis de acesso, regras no prompt e guarda de saída
 - [~] Avaliação (fase 5), ver [AVALIACAO.md](AVALIACAO.md):
   - [x] Recuperação: BM25 x vetores x RRF em 34 perguntas, sem modelo, com intervalo de confiança (o RRF tem a maior média de MRR, mas não é conclusivo)
-  - [x] Segundo conjunto de 25 perguntas de recuperação, escrito depois das decisões: a vantagem do k_rrf = 10 não se repetiu (+0,005) e o filtro de vigência e de doença é o efeito mais firme (+0,054 nas 59, sem zero no intervalo)
+  - [x] Segundo conjunto de 25 perguntas de recuperação, escrito depois das decisões: a vantagem do k_rrf = 10 não se repetiu (+0,005) e o filtro de vigência e de doença é um efeito firme (+0,064 nas 59, sem zero no intervalo)
   - [x] Resposta final com 3 repetições na saúde (13 perguntas)
   - [ ] Resposta final com 3 repetições no RJ (parou no RJ-04) e na pesquisa (não começou): limite diário da Groq, retomar com `python -m src.avaliar_respostas --scenario <id> --retomar`
-  - [ ] RRF + rerank (precisa baixar um modelo de reranking)
+  - [x] RRF + rerank na ordenação dos trechos (59 perguntas, IC sem zero)
+  - [ ] Rerank na resposta final (depende da Groq)
 
 **Cenário RJ (contratações públicas)**
 - [x] Normativa: 1.458 trechos indexados (Lei 14.133, 7 decretos, 5 editais)

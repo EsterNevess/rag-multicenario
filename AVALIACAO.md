@@ -21,7 +21,7 @@ Mede só a **recuperação** de trechos (BM25, busca densa e fusão RRF), sem mo
 | Denso | 0,588 | **0,971** | 0,736 | 0,406 | ~400 ms (inclui o embedding da pergunta) |
 | RRF (k=60, padrão) | 0,676 | 0,941 | 0,799 | 0,471 | ~420 ms |
 | RRF (k=10) | 0,735 | 0,941 | **0,833** | 0,476 | ~420 ms |
-| RRF sem filtro de vigência | 0,647 | 0,912 | 0,770 | 0,435 | ~420 ms |
+| RRF sem filtro de vigência | 0,618 | 0,941 | 0,760 | 0,435 | ~420 ms |
 
 Por cenário (MRR@10, BM25 / denso / RRF): RJ 0,687 / 0,745 / 0,722; saúde 0,711 / 0,783 / 0,792; pesquisa 0,875 / 0,667 / 0,900.
 
@@ -34,12 +34,12 @@ Diferenças pareadas no MRR@10, com intervalo de confiança de 95% por bootstrap
 | RRF - BM25 | +0,048 | [-0,040; +0,137] | 9 / 3 / 22 |
 | RRF - denso | +0,063 | [-0,051; +0,180] | 9 / 5 / 20 |
 | RRF k=10 - RRF k=60 | +0,034 | [0,000; +0,088] | 2 / 0 / 32 |
-| RRF - RRF sem filtro | +0,029 | [0,000; +0,078] | 2 / 0 / 32 |
+| RRF - RRF sem filtro | +0,039 | [-0,007; +0,103] | 3 / 1 / 30 |
 
 - **O RRF tem a maior média de MRR entre os sistemas de k=60, mas o intervalo contra BM25 e contra denso inclui zero.** Com 34 perguntas, isso não prova que o híbrido é melhor; é o que os dados favorecem.
 - **Os sistemas são complementares.** O denso acha algo relevante no top 5 em 97% das perguntas, mas põe o relevante em primeiro lugar menos vezes (59%). O BM25 acerta mais o primeiro lugar (68%) mas falha em 15% das perguntas. O RRF fica no meio e ganha no ranking.
 - **O RRF perdeu duas perguntas que o denso acertou** (SA-R02, insulina no diabetes tipo 1, e SA-R03, medicamentos do Parkinson). Nelas o BM25 não trouxe nada relevante e puxou o resultado para baixo. É o custo de fundir uma lista ruim com uma boa.
-- **O filtro de doença e de vigência ajuda, pouco e sem folga estatística.** Nas 9 perguntas de saúde que o usam, o MRR vai de 0,611 (sem filtro) para 0,722 (com filtro). Em 32 das 34 perguntas o resultado é idêntico.
+- **O filtro de doença e de vigência ajuda, pouco e sem folga estatística nas 34 originais** (+0,039, 3 vitórias, 1 derrota, 30 empates). As linhas "sem filtro" desta seção e da seguinte foram recalculadas depois do corpus v2 (artrite de 2020 e diabetes tipo 2 entraram; as perguntas de diabetes tipo 1 passaram a filtrar por "tipo 1"); com o corpus v1 o efeito era +0,029, sem derrotas.
 - **k_rrf = 10 parece melhor que 60** (2 vitórias, 0 derrotas), mas escolhi esse valor olhando as mesmas perguntas em que ele é medido. Não alterei o padrão do motor por isso.
 
 ## Segundo conjunto: 25 perguntas novas
@@ -52,21 +52,51 @@ Para testar o que foi decidido com as 34 primeiras, escrevi 25 perguntas novas (
 | Denso | 0,560 | **0,880** | 0,683 | 0,504 |
 | RRF (k=60, padrão) | **0,640** | **0,880** | 0,731 | **0,560** |
 | RRF (k=10) | **0,640** | 0,840 | **0,737** | 0,544 |
-| RRF sem filtro de vigência | 0,520 | 0,840 | 0,645 | 0,464 |
+| RRF sem filtro de vigência | 0,520 | 0,840 | 0,634 | 0,464 |
 
 | Comparação (MRR@10) | Novas (25) | Todas (59) |
 |---|---|---|
 | RRF - BM25 | +0,065 [-0,038; +0,178] | +0,055 [-0,011; +0,125] |
 | RRF - denso | +0,049 [-0,078; +0,179] | +0,057 [-0,026; +0,145] |
 | RRF k=10 - RRF k=60 | +0,005 [-0,004; +0,020] | +0,022 [-0,001; +0,053] |
-| RRF - RRF sem filtro | +0,086 [+0,002; +0,187] | +0,054 [+0,013; +0,104] |
+| RRF - RRF sem filtro | +0,098 [+0,002; +0,203] | +0,064 [+0,014; +0,124] |
 
 O que o conjunto novo mostra:
 
 - **A vantagem do k_rrf = 10 não se repetiu.** Nas perguntas novas a diferença é +0,005 (1 vitória, 1 derrota, 23 empates). O +0,034 do primeiro conjunto era em grande parte efeito de ter escolhido o valor olhando aquelas perguntas. Manter k = 60.
 - **O RRF continua à frente de BM25 e denso, no mesmo tamanho (+0,05 a +0,07), mas o intervalo ainda inclui zero** nos dois conjuntos e nos 59 juntos (o de RRF contra BM25 por pouco: [-0,011; +0,125]). A direção é consistente; a prova estatística, não.
-- **O filtro de doença e de vigência é a diferença mais firme.** Nas 25 novas (+0,086, intervalo sem zero) e nos 59 juntos (+0,054 [+0,013; +0,104], 6 vitórias, 0 derrotas, 53 empates). Ajuda em perguntas de saúde; nas demais não muda nada. Na saúde, sem o filtro o MRR das novas cai de 0,806 para 0,537.
+- **O filtro de doença e de vigência é a diferença mais firme.** Nas 25 novas (+0,098, intervalo sem zero por pouco) e nos 59 juntos (+0,064 [+0,014; +0,124], 7 vitórias, 2 derrotas, 50 empates). Ajuda em perguntas de saúde; nas demais não muda nada. Na saúde, sem o filtro o MRR das novas cai de 0,806 para 0,501.
 - **Os conjuntos não são independentes do meu olhar.** Eu escrevi todas as perguntas e todos os critérios, e já conhecia o corpus e os pontos fracos dos sistemas. O conjunto novo é mais honesto para decidir o k do que o primeiro, mas continua sendo meu.
+
+## Rerank por cross-encoder
+
+O rerank lê a pergunta e cada trecho juntos e reordena os 20 primeiros da fusão RRF. O modelo é o `BAAI/bge-reranker-v2-m3` (multilíngue, Apache-2.0), na conversão ONNX quantizada em 8 bits (`onnx-community/bge-reranker-v2-m3-ONNX`, 544 MB), executado com `onnxruntime` em CPU, sem PyTorch. Mediu-se nas mesmas 59 perguntas (34 + 25), sem tocar nos critérios: `python -m src.avaliar --scenario <id>` passa a incluir o sistema `rrf_rerank` quando os arquivos do modelo existem em `data/models/`.
+
+| Sistema (59 perguntas) | hit@1 | hit@5 | MRR@10 | P@5 |
+|---|---|---|---|---|
+| BM25 | 0,627 | 0,831 | 0,715 | 0,485 |
+| Denso | 0,576 | 0,932 | 0,713 | 0,447 |
+| RRF (k=60, padrão) | 0,661 | 0,915 | 0,770 | 0,512 |
+| RRF (k=10) | 0,695 | 0,898 | 0,792 | 0,505 |
+| **RRF + rerank** | **0,814** | **0,966** | **0,871** | **0,576** |
+
+| Comparação (MRR@10) | Diferença | IC 95% | Vitórias / derrotas / empates |
+|---|---|---|---|
+| RRF + rerank - RRF, 59 perguntas | +0,101 | [+0,025; +0,180] | 14 / 4 / 41 |
+| RRF + rerank - RRF, só o conjunto original (34) | +0,056 | [-0,022; +0,140] | 7 / 3 / 24 |
+| RRF + rerank - RRF, só o conjunto novo (25) | +0,162 | [+0,029; +0,308] | 7 / 1 / 17 |
+| RRF + rerank - BM25 (59) | +0,157 | [+0,072; +0,248] | 19 / 3 / 37 |
+| RRF + rerank - denso (59) | +0,158 | [+0,073; +0,248] | 19 / 6 / 34 |
+
+Por cenário (MRR@10, RRF -> RRF + rerank): RJ 0,722 -> 0,857 (+0,135, [-0,008; +0,286]); saúde 0,797 -> 0,858 (+0,061, [-0,068; +0,198]); pesquisa 0,796 -> 0,903 (+0,106, [0,000; +0,227], e o BM25 sozinho já tinha 0,847).
+
+O que isso sustenta:
+
+- **É a primeira diferença de ordenação com intervalo sem zero.** O rerank melhora o MRR em +0,10 (vantagem concentrada no primeiro lugar: hit@1 de 0,661 para 0,814) e aparece também no conjunto novo, escrito depois das decisões, onde o ganho é maior (+0,162). Em cada cenário isolado o intervalo ainda inclui zero (ou encosta nele), porque há poucas perguntas.
+- **Não é uma melhoria em tudo.** Em 4 das 59 perguntas o rerank piorou o MRR (RJ-N04, SA-R04, SA-R05 e PE-R05; a maior queda é −0,67), em 14 melhorou e em 41 deu o mesmo. O hit@5 sobe pouco (0,915 -> 0,966): ele reorganiza a ordem mais do que acha trechos que a fusão perdeu, porque só vê os 20 primeiros.
+- **O custo é alto em CPU.** Mediana de ~19 s por busca (o RRF leva ~0,3 s), com 20 candidatos de até 512 tokens por pergunta. Por isso fica **desligado por padrão** (`RERANK=true` no `.env` liga). Reduzir o número de candidatos ou o tamanho do trecho deve baratear, mas não foi medido.
+- **Medi a ordenação dos trechos, não a resposta final.** Não sei se melhor ordenação melhora a resposta escrita pelo modelo, e isso depende da Groq. O modelo foi quantizado em 8 bits; não comparei com a versão sem quantização.
+- **As perguntas e os critérios são meus**, como nos conjuntos anteriores (ver "Limites desta avaliação").
 
 ## Resposta final com repetições (fase 5, parte 2)
 
@@ -97,7 +127,7 @@ O que as repetições mostraram:
 
 ## O que não foi medido
 
-- **Rerank por cross-encoder.** Não está implementado. Exige baixar um modelo de reranking (da ordem de gigabytes), o que não foi autorizado. A comparação "RRF + rerank" da fase 5 fica em aberto.
+- **Rerank na resposta final.** O rerank foi medido na ordenação dos trechos (seção acima), mas não na resposta escrita pelo modelo, que espera o limite da Groq. Está implementado como opção desligada por padrão.
 - **Resposta final no RJ e na pesquisa.** Só a saúde tem as 3 repetições (seção acima); o RJ tem 3 perguntas com 1 repetição e a pesquisa nenhuma, por causa do limite diário da Groq.
 - **Perguntas de dados** (estruturada e agregada) não passam pela recuperação de trechos e ficam fora.
 
@@ -112,6 +142,7 @@ O que as repetições mostraram:
 
 1. **Manter o RRF como busca padrão.** Tem o melhor MRR entre os sistemas de k=60 e um hit@5 (0,94) próximo ao do denso. Não é imune a falha: quando o BM25 não traz nada relevante, ele pode atrapalhar (as duas perguntas acima).
 2. **Manter k_rrf = 60.** O sinal a favor do 10 vinha do primeiro conjunto, em que o valor foi escolhido; no conjunto novo (25 perguntas) a diferença some (+0,005).
-3. **Manter o filtro de vigência e de doença**, que já é necessário por correção (não misturar versões) e é o efeito mais firme medido: +0,054 de MRR nas 59 perguntas, intervalo sem zero, sem nenhuma derrota.
-4. **Próximos passos para fechar a fase 5:** continuar a rodada de respostas do RJ e da pesquisa com `--retomar` quando o limite da Groq voltar; autorizar o download de um modelo de rerank e medir "RRF + rerank". O conjunto de perguntas foi ampliado (segundo conjunto, acima).
+3. **Manter o filtro de vigência e de doença**, que já é necessário por correção (não misturar versões) e é um efeito firme: +0,064 de MRR nas 59 perguntas, com intervalo sem zero (7 vitórias, 2 derrotas).
+4. **Próximos passos para fechar a fase 5:** continuar a rodada de respostas do RJ e da pesquisa com `--retomar` quando o limite da Groq voltar; medir o efeito do rerank na resposta final (a ordenação dos trechos já foi medida). O conjunto de perguntas foi ampliado (segundo conjunto, acima).
+6. **Rerank: opcional e desligado.** Melhora o MRR em +0,10 nas 59 perguntas, ao custo de ~19 s por busca em CPU. Sem evidência de ganho na resposta final e com esse custo, não vira o padrão.
 5. **Falha conhecida:** o SA-10. A causa (comparar sem ter extraído os medicamentos do protocolo) foi tratada com a tabela `pcdt_medicamento`, mas a pergunta só será dada como corrigida depois de repetida com o modelo, e a lista cobre só o que o protocolo enumera.

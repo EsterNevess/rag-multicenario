@@ -31,6 +31,8 @@ O cenário de saúde usa os mesmos comandos com `--scenario saude`, mais as base
 
 O cenário de pesquisa usa os mesmos comandos com `--scenario pesquisa` (a coleta é `python -m src.fetch_corpus fetch --scenario pesquisa --base openalex_estruturado`).
 
+**Rerank (opcional).** `pip install -r requirements-rerank.txt` e baixar para `data/models/bge-reranker-v2-m3-onnx/` dois arquivos de [onnx-community/bge-reranker-v2-m3-ONNX](https://huggingface.co/onnx-community/bge-reranker-v2-m3-ONNX): `onnx/model_int8.onnx` (544 MB, salvo como `model_int8.onnx`) e `tokenizer.json` (16 MB). Com eles, `python -m src.avaliar` mede o sistema `rrf_rerank`, e `RERANK=true` no `.env` liga o rerank no motor. O modelo original é o BAAI/bge-reranker-v2-m3 (Apache-2.0).
+
 A geração usa a Groq por padrão (chave gratuita em console.groq.com, `GROQ_API_KEY` no `.env`); também funcionam a OpenAI (`LLM_PROVIDER=openai`) e um modelo local (`LLM_PROVIDER=ollama`). A Groq não oferece embeddings, então os vetores continuam no Ollama local. Sem pergunta na linha de comando, `src.generate` abre um modo interativo. Cada etapa fica registrada em `logs/pipeline-AAAA-MM-DD.jsonl`.
 
 ## Como o sistema pensa
@@ -54,7 +56,7 @@ flowchart LR
 Decisões que o projeto mantém:
 
 - **A LLM não escreve SQL.** Ela só preenche um plano validado por schema; o banco recebe campos permitidos e parâmetros protegidos.
-- **Duas buscas combinadas:** BM25 (SQLite FTS5) e FAISS (embeddings), fundidas por RRF em código. A ablação (BM25, vetores e RRF) está medida em [AVALIACAO.md](AVALIACAO.md); o rerank por cross-encoder está previsto e **não foi implementado**.
+- **Duas buscas combinadas:** BM25 (SQLite FTS5) e FAISS (embeddings), fundidas por RRF em código. A ablação (BM25, vetores e RRF) está medida em [AVALIACAO.md](AVALIACAO.md); o rerank por cross-encoder está implementado como **opção desligada** (melhora o MRR em +0,10, ao custo de ~19 s por busca em CPU; veja "Rerank (opcional)" abaixo).
 - **Sensibilidade classificada na ingestão**, nunca na hora de responder. CPF, telefone e e-mail pessoal são mascarados antes de indexar.
 - **Cálculos numéricos em código (SQL)**, não pelo modelo.
 - **Sem evidência, o sistema diz que não sabe.** Não acusa e não emite juízo jurídico ou clínico.
@@ -65,7 +67,7 @@ Detalhes em [ARQUITETURA.md](ARQUITETURA.md).
 
 Ditas aqui porque o projeto é um portfólio e o que não funciona importa tanto quanto o que funciona. Os detalhes e os números estão em [PROGRESSO.md](PROGRESSO.md) e [AVALIACAO.md](AVALIACAO.md).
 
-- **Rerank não implementado.** A comparação "RRF + rerank" da avaliação não foi feita.
+- **Rerank só medido na ordenação dos trechos.** Não foi medido na resposta final e custa ~19 s por busca em CPU, por isso fica desligado por padrão.
 - **Avaliação pequena.** A recuperação foi medida em 59 perguntas escritas por mim (34 + 25 de um segundo conjunto), e as diferenças entre BM25, vetores e RRF não são estatisticamente conclusivas; só o efeito do filtro de vigência e de doença tem intervalo sem zero. A resposta final foi medida com 3 repetições só no cenário de saúde; o RJ e a pesquisa esperam o limite diário da Groq.
 - **Falhas previstas que continuam.** A comparação entre o que um protocolo clínico cita e o que a RENAME lista (SA-10) passou a ter uma tabela própria (`pcdt_medicamento`), testada na consulta mas ainda não repetida com o modelo; ela cobre as cinco versões de protocolo do corpus, mas só os medicamentos que cada protocolo enumera, e o RJ-04 (contratações diretas e proporção) oscilava porque o modelo às vezes errava o plano três vezes seguidas. Agora, nesse caso, um plano de reserva sem o modelo usa o indicador pronto (testado por teste unitário, ainda não repetido com o modelo). Sem memória de conversa, "desses" na segunda pergunta (PE-02) não funciona.
 - **Redação de dado sensível.** A remoção de trechos que identificam pessoas em registros sintéticos só pega o que as regras conhecem; a cobertura em texto novo é desconhecida.
