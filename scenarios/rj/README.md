@@ -1,6 +1,6 @@
 # Cenário: contratações públicas do Estado do RJ
 
-**Estado:** em andamento. A base normativa foi coletada (v1, 13 arquivos). As outras três bases ainda não.
+**Estado:** as quatro bases existem e estão em uso. Normativa: 13 documentos, 1.456 trechos indexados. Estruturada: 37 mil contratações e 46 mil contratos (período de janeiro a agosto de 2026, versão v3 do corpus), normalizados em SQL. Agregada: 7 indicadores calculados em SQL. Conversacional: 20 atas e e-mails sintéticos. A avaliação e o que ainda falha estão em [AVALIACAO.md](../../AVALIACAO.md) e [PROGRESSO.md](../../PROGRESSO.md).
 
 ## O problema
 
@@ -12,10 +12,10 @@ Toda contratação pública brasileira é publicada no PNCP (Lei 14.133/2021). O
 |---|---|---|---|
 | Normativa | Lei 14.133/2021, decretos estaduais, editais | Planalto, Rede Log do RJ, PNCP | HTML e PDF por URL |
 | Estruturada | Contratos e contratações, UF = RJ | PNCP, API de consulta | REST, paginada |
-| Agregada | Plano de Contratações Anual e valores homologados por item | PNCP | REST |
+| Agregada | 7 indicadores calculados em SQL sobre a base estruturada (o Plano de Contratações Anual e os valores homologados por item não foram coletados) | Derivada da estruturada | SQL |
 | Conversacional | Atas e trilha de e-mails de compras | PNCP + base sintética | Texto |
 
-Período do corpus: janeiro a agosto de 2026 (a confirmar no inventário da fase 1).
+Período do corpus: janeiro a agosto de 2026 (confirmado no inventário).
 
 ## Como coletar o corpus
 
@@ -55,7 +55,7 @@ Com o corpus coletado, a ingestão corta cada documento em trechos (um por artig
 python -m src.ingest --scenario rj
 ```
 
-Na versão atual: 1.458 trechos (298 da Lei 14.133, 343 dos decretos, 817 dos editais). Cada trecho traz o documento, o artigo ou a seção, a hierarquia (título, capítulo, seção), a data de publicação, a sensibilidade e a marca de dado pessoal mascarado. Os arquivos gerados não vão para o Git.
+Na versão atual: 1.456 trechos (o detalhamento por documento está no relatório da ingestão; eram 1.458 antes das correções de leitura de PDF em duas colunas e de cabeçalhos de página). Cada trecho traz o documento, o artigo ou a seção, a hierarquia (título, capítulo, seção), a data de publicação, a sensibilidade e a marca de dado pessoal mascarado. Os arquivos gerados não vão para o Git.
 
 ## Como indexar
 
@@ -66,7 +66,7 @@ ollama pull qwen3-embedding:0.6b
 python -m src.index build --scenario rj
 ```
 
-Em um notebook sem placa de vídeo, são cerca de 0,2 a 0,4 trecho por segundo, então a primeira indexação dos 1.458 trechos leva de 1 a 2 horas. Ela pode ser interrompida e retomada: cada lote fica em um cache em disco. Para usar a OpenAI no lugar do Ollama, configure `EMBEDDING_PROVIDER=openai` no `.env` (ver `.env.example`).
+Em um notebook sem placa de vídeo, são cerca de 0,2 a 0,4 trecho por segundo, então a primeira indexação dos cerca de 1.450 trechos leva de 1 a 2 horas. Ela pode ser interrompida e retomada: cada lote fica em um cache em disco. Para usar a OpenAI no lugar do Ollama, configure `EMBEDDING_PROVIDER=openai` no `.env` (ver `.env.example`).
 
 ## Arquivos do cenário
 

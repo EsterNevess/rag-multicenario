@@ -1,6 +1,6 @@
 # Cenário: inteligência sobre pesquisa acadêmica
 
-**Estado:** em andamento (fase 2). A base estruturada está coletada e normalizada: 5.000 artigos do OpenAlex (os 1.000 mais citados de cada ano, 2020 a 2024, de 10 instituições do RJ). Os 8 documentos normativos (2 resoluções do CNS, 5 documentos da FAPERJ e 1 chamada do CNPq) estão coletados; falta cortá-los e indexá-los. Faltam também a base agregada e a conversacional sintética.
+**Estado:** as quatro bases existem e estão em uso. A base estruturada está coletada e normalizada: 5.000 artigos do OpenAlex (os 1.000 mais citados de cada ano, 2020 a 2024, de 10 instituições do RJ). Os 8 documentos normativos (2 resoluções do CNS, 5 documentos da FAPERJ e 1 chamada do CNPq) estão cortados e indexados (453 trechos). A base agregada (6 indicadores) e a conversacional sintética (21 pareceres e e-mails) também existem. A avaliação e o que ainda falha estão em [AVALIACAO.md](../../AVALIACAO.md).
 
 ## O problema
 
