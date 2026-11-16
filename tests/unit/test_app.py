@@ -52,10 +52,10 @@ def test_perguntar_vazio_nao_chama_o_motor(monkeypatch):
 
 
 def test_perguntar_devolve_a_resposta_e_transforma_falha_do_modelo_em_mensagem(monkeypatch):
-    monkeypatch.setattr(nucleo, "responder", lambda p, c: _ok())
+    monkeypatch.setattr(nucleo, "responder", lambda p, c, a=None: _ok())
     assert nucleo.perguntar(object(), " pergunta ").resposta.answer.startswith("O adalimumabe")
 
-    def falha(p, c):
+    def falha(p, c, a=None):
         raise LLMIndisponivel("HTTP 429")
 
     monkeypatch.setattr(nucleo, "responder", falha)
@@ -89,7 +89,7 @@ def tela(monkeypatch):
     st.cache_resource.clear()
     chamadas = []
     monkeypatch.setattr(nucleo, "criar_contexto", lambda cenario: chamadas.append(cenario) or object())
-    monkeypatch.setattr(nucleo, "responder", lambda p, c: _recusa() if "dose" in p else _ok())
+    monkeypatch.setattr(nucleo, "responder", lambda p, c, a=None: _recusa() if "dose" in p else _ok())
     at = AppTest.from_file(SCRIPT, default_timeout=30)
     at.chamadas = chamadas
     return at.run()

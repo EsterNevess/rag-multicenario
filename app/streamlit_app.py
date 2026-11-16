@@ -50,6 +50,8 @@ def _mostrar(resultado: nucleo.Resultado) -> None:
             st.caption("O modelo só monta este plano; quem executa a consulta (e valida os campos) é o código. Ele nunca escreve SQL.")
         else:
             st.caption("A pergunta foi barrada antes de o modelo montar um plano (regra de entrada).")
+        if resultado.usou_contexto:
+            st.caption("Esta pergunta foi lida junto com a anterior (a pergunta e o plano dela). Se for um assunto novo, desmarque \"Continuar a conversa\" na lateral.")
         if r.trace_id:
             st.caption(f"Registro da consulta: {r.trace_id}")
 
@@ -65,12 +67,14 @@ def main() -> None:
             "Os dados são um recorte datado. As atas, a ouvidoria e os pareceres são documentos **sintéticos**, gerados por script. "
             "Nada aqui substitui orientação clínica, jurídica ou profissional. As respostas citam as fontes; confira-as."
         )
+        continuar = st.checkbox("Continuar a conversa", value=True, help="Perguntas como \"desses, quais...\" ou \"e em 2025?\" usam a pergunta anterior (só a pergunta e o plano dela, não a resposta). Memória de um turno.")
         st.caption("Limites conhecidos e medições: AVALIACAO.md no repositório.")
 
     if st.session_state.get("cenario_atual") != cenario:
         st.session_state["cenario_atual"] = cenario
         st.session_state["pergunta"] = ""
         st.session_state["resultado"] = None
+        st.session_state["turno"] = None
 
     try:
         ctx = contexto(cenario)
@@ -86,8 +90,11 @@ def main() -> None:
 
     pergunta = st.text_area("Pergunta", key="pergunta", height=90)
     if st.button("Perguntar", type="primary"):
+        anterior = st.session_state.get("turno") if continuar else None
         with st.spinner("Consultando..."):
-            st.session_state["resultado"] = nucleo.perguntar(ctx, pergunta)
+            resultado = nucleo.perguntar(ctx, pergunta, anterior)
+        st.session_state["resultado"] = resultado
+        st.session_state["turno"] = nucleo.turno_de(pergunta, resultado)
 
     if st.session_state.get("resultado") is not None:
         st.divider()

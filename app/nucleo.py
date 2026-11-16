@@ -16,7 +16,7 @@ if str(RAIZ) not in sys.path:  # `streamlit run app/streamlit_app.py` põe só a
 
 from config import Settings  # noqa: E402
 from src.fetch_corpus import pastas_do_cenario  # noqa: E402
-from src.generate import carregar_contexto, responder  # noqa: E402
+from src.generate import TurnoAnterior, carregar_contexto, responder  # noqa: E402
 from src.llm import LLMIndisponivel  # noqa: E402
 from src.schema import PlanoConsulta, RAGResponse  # noqa: E402
 
@@ -65,19 +65,27 @@ class Resultado:
 
     resposta: RAGResponse | None = None
     erro: str | None = None
+    usou_contexto: bool = False  # a pergunta foi enviada ao analisador junto com o turno anterior
 
 
 def criar_contexto(cenario: str) -> Any:
     return carregar_contexto(Settings(scenario=cenario), pastas_do_cenario(cenario))
 
 
-def perguntar(ctx: Any, pergunta: str) -> Resultado:
+def turno_de(pergunta: str, resultado: Resultado | None) -> TurnoAnterior | None:
+    """O turno que a próxima pergunta pode usar como contexto: só respostas que não foram recusa e que tiveram plano."""
+    if resultado is None or resultado.resposta is None or resultado.resposta.is_refusal or resultado.resposta.plano is None:
+        return None
+    return TurnoAnterior(pergunta.strip(), resultado.resposta.plano)
+
+
+def perguntar(ctx: Any, pergunta: str, anterior: TurnoAnterior | None = None) -> Resultado:
     """Chama o motor. Falha do provedor do modelo vira mensagem; o resto não é engolido de forma silenciosa."""
     pergunta = pergunta.strip()
     if not pergunta:
         return Resultado(erro="Escreva uma pergunta.")
     try:
-        return Resultado(resposta=responder(pergunta, ctx))
+        return Resultado(resposta=responder(pergunta, ctx, anterior), usou_contexto=anterior is not None)
     except LLMIndisponivel as erro:
         return Resultado(erro=f"O modelo de linguagem não respondeu: {erro}. Se for o limite de uso do plano gratuito, tente de novo mais tarde.")
 

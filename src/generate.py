@@ -171,10 +171,37 @@ def _extrair_json(texto: str) -> dict[str, Any]:
     return dados
 
 
-def analisar(pergunta: str, ctx: Contexto) -> PlanoConsulta:
+@dataclass(frozen=True)
+class TurnoAnterior:
+    """O turno anterior da conversa, só o que ajuda a resolver "desses" ou "e em 2025?": a pergunta e o plano que ela gerou.
+
+    O texto da resposta NÃO entra: ele traz trechos de documentos, e o que um documento diz não deve poder dar instruções ao analisador.
+    A memória é de um turno só.
+    """
+
+    pergunta: str
+    plano: PlanoConsulta
+
+
+def mensagem_do_analisador(pergunta: str, anterior: TurnoAnterior | None = None) -> str:
+    """O que o analisador lê: a pergunta, ou a pergunta com o turno anterior como contexto (a LLM decide se depende dele)."""
+    if anterior is None:
+        return pergunta
+    plano = {k: v for k, v in anterior.plano.model_dump(mode="json").items() if v not in (None, [], {})}
+    return (
+        "Conversa anterior. Use-a SÓ se a pergunta atual depender dela (por exemplo \"desses\", \"e em 2025?\", \"e nos municípios?\"): "
+        "nesse caso, reaproveite os filtros do plano anterior e acrescente ou troque o que a pergunta atual pedir. "
+        "Se a pergunta atual for independente, ignore esta seção.\n"
+        f"Pergunta anterior: {anterior.pergunta}\nPlano anterior: {json.dumps(plano, ensure_ascii=False)}\n\n"
+        f"Pergunta atual: {pergunta}"
+    )
+
+
+def analisar(pergunta: str, ctx: Contexto, anterior: TurnoAnterior | None = None) -> PlanoConsulta:
     """Pede o plano à LLM; se vier inválido, devolve a ela a lista de problemas uma vez."""
     sistema = montar_prompt_analise(ctx)
-    usuario = pergunta
+    base = mensagem_do_analisador(pergunta, anterior)
+    usuario = base
     ultimo = ""
     for tentativa in range(1, TENTATIVAS_DO_ANALISADOR + 1):
         with ctx.logger.etapa(Stage.QUERY_ANALYSIS, pergunta) as e:
@@ -195,7 +222,7 @@ def analisar(pergunta: str, ctx: Contexto) -> PlanoConsulta:
             ultimo = "; ".join(erro.problemas) if isinstance(erro, PlanoInvalido) else str(erro).replace("\n", " ")
             if "existe um indicador pronto" not in ultimo:
                 ultimo += _dica_de_indicador(pergunta, ctx)
-            usuario = f"{pergunta}\n\nSua resposta anterior foi recusada pelo validador: {ultimo}\nCorrija e responda só com o JSON."
+            usuario = f"{base}\n\nSua resposta anterior foi recusada pelo validador: {ultimo}\nCorrija e responda só com o JSON."
     reserva = plano_de_reserva(pergunta, ctx)  # o analisador não acertou: se há um indicador inequívoco, usa-o sem o modelo
     if reserva is not None:
         with ctx.logger.etapa(Stage.QUERY_ANALYSIS, pergunta) as e:
@@ -498,7 +525,7 @@ def _resposta_catalogo(ctx: Contexto) -> str:
     return "\n".join(partes)
 
 
-def responder(pergunta: str, ctx: Contexto) -> RAGResponse:
+def responder(pergunta: str, ctx: Contexto, anterior: TurnoAnterior | None = None) -> RAGResponse:
     with ctx.logger.etapa(Stage.GUARDRAIL, pergunta) as e:
         decisao = avaliar_pergunta(pergunta, ctx.cap)
         e.output = "permitida" if decisao.permitida else f"recusada: {decisao.categoria}"
@@ -509,7 +536,7 @@ def responder(pergunta: str, ctx: Contexto) -> RAGResponse:
         return _recusa("sem_dados", "Nenhuma base está carregada neste ambiente. Rode a coleta, a normalização e a indexação do cenário.", ctx)
 
     try:
-        plano = analisar(pergunta, ctx)
+        plano = analisar(pergunta, ctx, anterior)
     except PerguntaNaoEntendida:
         return _recusa("pergunta_nao_entendida", "Não consegui transformar a pergunta em uma consulta que eu saiba fazer. Tente reformular, citando o órgão, o período ou o tipo de contratação.", ctx)
 
@@ -648,19 +675,23 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Erro: {erro}", file=sys.stderr)
         return 2
 
-    def perguntar(texto: str) -> int:
+    anterior: TurnoAnterior | None = None  # só o modo interativo lembra o turno anterior
+
+    def perguntar(texto: str, com_contexto: bool = False) -> int:
+        nonlocal anterior
         ctx.logger.query_id = f"q_{hashlib.sha256(texto.encode()).hexdigest()[:6]}"
         try:
-            r = responder(texto, ctx)
+            r = responder(texto, ctx, anterior if com_contexto else None)
         except (LLMIndisponivel, EmbeddingIndisponivel, RuntimeError) as erro:
             print(f"Erro: {erro}", file=sys.stderr)
             return 3
+        anterior = TurnoAnterior(texto, r.plano) if (com_contexto is not None and not r.is_refusal and r.plano is not None) else None
         print(r.model_dump_json(indent=2) if args.json else formatar(r))
         return 0
 
     if args.pergunta:
         return perguntar(" ".join(args.pergunta))
-    print("Pergunte sobre contratações públicas do RJ (linha vazia para sair).")
+    print("Faça uma pergunta (linha vazia para sair). Perguntas de continuação, como \"desses, quais...\", usam a pergunta anterior; \"/nova\" começa um assunto novo.")
     while True:
         try:
             texto = input("\n> ").strip()
@@ -668,7 +699,10 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if not texto:
             return 0
-        perguntar(texto)
+        if texto == "/nova":
+            anterior = None
+            continue
+        perguntar(texto, com_contexto=True)
 
 
 if __name__ == "__main__":
