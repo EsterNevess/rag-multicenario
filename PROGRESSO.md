@@ -259,7 +259,7 @@ Depois dos defeitos abaixo, **as correções estão testadas por teste unitário
 
 O que isso quer dizer: o filtro de vigência e as recusas funcionam; a comparação entre versões depende de recuperar as versões certas (SA-02), e a comparação PCDT x RENAME (SA-10) não funciona, porque exigiria extrair os medicamentos do protocolo e cruzar um a um.
 
-## Checklist dos três cenários (atualizado em 2026-11-06)
+## Checklist dos três cenários (atualizado em 2026-11-16)
 
 Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 
@@ -271,21 +271,29 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [ ] Conferir se cada número do texto bate com a evidência (hoje só as citações são conferidas)
 - [x] Rota agregada (indicadores calculados em SQL) no roteador
 - [x] Rota conversacional (pareceres, atas) com a recusa de identidade e de dado pessoal
-- [ ] API e console (`app/`), se for mostrar uma tela e não só a linha de comando
-- [~] Avaliação (fase 5): ablação BM25 x vetores x RRF feita em 34 perguntas, sem modelo de linguagem (ver [AVALIACAO.md](AVALIACAO.md)). Resposta final com 3 repetições feita só na saúde (RJ e pesquisa esperam o limite diário da Groq, retomar com `--retomar`). Falta o rerank por cross-encoder (precisa baixar um modelo)
+- [ ] API e console (`app/`), se for mostrar uma tela e não só a linha de comando (hoje o uso é pela linha de comando)
+- [x] Filtros de documentos por metadado (`doenca`, `vigente_em`) e busca por versão para comparar versões de um documento
+- [x] Guardrails em camadas: entrada, mascaramento e redação na ingestão, níveis de acesso, regras no prompt e guarda de saída
+- [~] Avaliação (fase 5), ver [AVALIACAO.md](AVALIACAO.md):
+  - [x] Recuperação: BM25 x vetores x RRF em 34 perguntas, sem modelo, com intervalo de confiança (o RRF tem a maior média de MRR, mas não é conclusivo)
+  - [x] Resposta final com 3 repetições na saúde (13 perguntas)
+  - [ ] Resposta final com 3 repetições no RJ (parou no RJ-04) e na pesquisa (não começou): limite diário da Groq, retomar com `python -m src.avaliar_respostas --scenario <id> --retomar`
+  - [ ] RRF + rerank (precisa baixar um modelo de reranking)
 
 **Cenário RJ (contratações públicas)**
 - [x] Normativa: 1.458 trechos indexados (Lei 14.133, 7 decretos, 5 editais)
 - [x] Estruturada: 37.637 contratações e 46.450 contratos (v3 normalizada)
-- [x] Rodada real nas 10 perguntas
+- [x] Rodada real nas 10 perguntas (RJ-04 instável)
 - [x] Agregada (opção A): 7 indicadores calculados em SQL sobre o que já temos. O RJ-10 (preço por quilo) segue recusado, agora com a razão: a base não tem itens. O PCA e os valores homologados por item ficam fora
 - [x] Conversacional sintética: 20 atas e e-mails, com 5 armadilhas (dado pessoal, pedido de "confirmar a fraude", senha, dado bancário)
-- [ ] Reindexar a normativa a partir da v3 (o índice atual veio da v2)
+- [ ] Reindexar a normativa a partir da v3 (o índice atual veio da v2, e antes das mudanças de leitura de PDF em duas colunas)
+- [ ] RJ-04 (contratações diretas e proporção): o modelo nem sempre escolhe o indicador; um plano de reserva determinístico ainda não foi feito
 
 **Cenário pesquisa acadêmica**
 - [x] Normativa: 8 documentos, 453 trechos indexados
 - [x] Estruturada: 5.000 artigos do OpenAlex (3 tabelas)
 - [x] Rodada real nas 10 perguntas
+- [ ] Reindexar a normativa e as bases com as mudanças de leitura de PDF (os índices são anteriores a elas)
 - [~] Agregada: 6 indicadores bibliométricos sobre a amostra do OpenAlex. Faltam os resumos do arXiv e do SciELO
 - [x] Conversacional sintética: 17 pareceres e 4 e-mails editoriais, com 7 armadilhas (pistas de identidade do revisor, pedido para revelá-lo, e-mail de autor)
 
@@ -297,14 +305,18 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [x] Agregada: 3 indicadores (dispensação recusada por decisão)
 - [x] Conversacional sintética: 30 registros de ouvidoria, 6 armadilhas
 - [x] Índices: 635 vetores (PCDT) e 30 (ouvidoria)
-- [x] Rodada real nas 10 perguntas (8 certas ou plausíveis, SA-02 parcial, SA-10 falhou como previsto)
+- [x] Rodada real: 13 perguntas × 3 repetições (rota e recusa estáveis em 12 de 13; SA-10 falha nas 3, como previsto; a pergunta da lacuna de 2021 é instável)
 - [x] SA-02: busca por versão (os melhores trechos de cada versão) e regra de que a "anterior" é a publicada logo antes da vigente. Reverificado: compara 33/2026 com 16/2021, com as datas, e diz que os trechos recuperados não mostram diferença explícita, sem inventar
 - [ ] SA-10 (extrair os medicamentos do protocolo e cruzar com a RENAME)
-- [ ] OCR para PDFs escaneados: não foi preciso, os 7 PDFs têm camada de texto
+- [x] OCR para PDFs escaneados: não foi preciso, os 7 PDFs têm camada de texto
+- [ ] Incluir a Portaria Conjunta 14/2020 da artrite reumatoide (só existe em HTML) e o PCDT de diabetes tipo 2, para fechar as lacunas do corpus
 
 **Publicação e portfólio**
-- [ ] Revisar os textos, escolher a licença e tornar o `rag-multicenario` público
-- [ ] README final com o estado real dos três cenários e uma demonstração
+- [x] Varredura de segredos e de dados pessoais no histórico inteiro (33 commits): limpo; só dados falsos de teste
+- [x] Licença MIT e README com o estado real, as limitações conhecidas e o que ainda não existe (rerank, `app/`)
+- [x] Itens de logística interna retirados do checklist
+- [ ] Tornar o `rag-multicenario` público (ação da Ester nas configurações do GitHub; conferir antes como o README aparece)
+- [ ] Demonstração (vídeo curto ou captura) do sistema respondendo nos três cenários
 - [ ] Vídeo do `rag-contratacoes` e link no README
 - [ ] Deck opcional de posicionamento
 
@@ -319,17 +331,15 @@ Pronto:
 - [x] Cenário saúde: manifesto, personas, sensibilidade e 10 perguntas de avaliação.
 - [x] Cenário pesquisa: manifesto, personas, sensibilidade e 10 perguntas de avaliação.
 
-Falta para fechar a fase 0:
+A fase 0 foi concluída; a publicação do repositório está no checklist acima.
 
-- [ ] Revisar os textos e tornar o repositório público.
+## Fases
 
-## Próximas fases
-
-1. **Fase 1:** motor + cenário RJ (normativa e estruturada), com `fetch_corpus`, `ingest`, `index`, `router`, `retrieve`, `generate`, logs e testes. Reaproveita dados públicos já coletados (corpus normativo e snapshot RAW do PNCP), declarados no manifesto.
-2. **Fase 2:** cenário de pesquisa acadêmica (coleta por APIs abertas).
-3. **Fase 3:** cenário de saúde (extração de PDF um a um, com OCR para os escaneados).
-4. **Fase 4:** agregada e conversacional sintética de cada cenário.
-5. **Fase 5:** avaliação (ablação BM25 x FAISS x RRF x RRF + rerank, 3 repetições por pergunta) e documento de decisões.
+1. **Fase 1: motor + cenário RJ.** Feita. Rodada real feita; RJ-04 instável.
+2. **Fase 2: cenário de pesquisa acadêmica.** Feita.
+3. **Fase 3: cenário de saúde.** Feita. Não foi preciso OCR.
+4. **Fase 4: agregada e conversacional sintética de cada cenário.** Feita nos três.
+5. **Fase 5: avaliação.** Em parte: recuperação medida; resposta final com repetições só na saúde; falta o rerank. Ver o checklist e o [AVALIACAO.md](AVALIACAO.md).
 
 ## Decisões tomadas
 
@@ -340,3 +350,7 @@ Falta para fechar a fase 0:
 | 2026-10-27 | Provedor de modelos configurável (OpenAI ou Ollama) | Não depender do endpoint compartilhado da residência |
 | 2026-10-27 | Embeddings de 1024 dimensões | Compatível com o modelo usado no projeto em equipe |
 | 2026-10-27 | Dados nunca vão para o Git; manifesto e inventário vão | Reprodutibilidade sem versionar arquivos grandes |
+| 2026-11-06 | Base agregada calculada em SQL sobre o que já se coleta (opção A no RJ e na pesquisa, opção C na saúde); dispensação e internações do DATASUS não são coletadas | Os arquivos `.dbc` não têm CSV simples; o SA-05 é recusado com o motivo escrito no catálogo |
+| 2026-11-16 | Manter o RRF (k=60) como busca padrão | Maior MRR entre os sistemas de k=60 em 34 perguntas, mas sem significância estatística; k=10 não foi adotado porque foi escolhido nos mesmos dados |
+| 2026-11-16 | Registros conversacionais são sintéticos e a base fica fora do Git | Nenhum dado pessoal real; semente fixa para reproduzir |
+| 2026-11-16 | Licença MIT | Simples e comum em portfólio; os dados coletados não entram no repositório |
