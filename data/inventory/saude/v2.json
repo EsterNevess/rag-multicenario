@@ -1,0 +1,167 @@
+{
+  "scenario_id": "saude",
+  "version": "v2",
+  "coletado_em": "2026-11-16T14:58:16-03:00",
+  "manifest_hash": "sha256:7b3bb7f0f45ac9fd0a1a0940f9a6b016a41fc08bd0314c4fd2caed594b8c9570",
+  "totais": {
+    "arquivos": 9,
+    "bytes": 20573236,
+    "falhas": 0
+  },
+  "por_base": [
+    {
+      "base_id": "pcdt_normativo",
+      "natureza": "normativa",
+      "estado": "coletada",
+      "motivo_nao_coletada": null,
+      "arquivos": 8,
+      "formatos": {
+        "pdf": 8
+      },
+      "bytes": 19112693,
+      "falhas": 0,
+      "volume_alvo": 8,
+      "divergencia_alvo": 0
+    },
+    {
+      "base_id": "rename_estruturado",
+      "natureza": "estruturada",
+      "estado": "coletada",
+      "motivo_nao_coletada": null,
+      "arquivos": 1,
+      "formatos": {
+        "pdf": 1
+      },
+      "bytes": 1460543,
+      "falhas": 0,
+      "volume_alvo": 1,
+      "divergencia_alvo": 0
+    },
+    {
+      "base_id": "indicadores_agregado",
+      "natureza": "agregada",
+      "estado": "nao_coletada",
+      "motivo_nao_coletada": "decisão: os dados de internação e dispensação do SUS vêm em arquivos .dbc do FTP do DATASUS (sem CSV simples), e a agregada é calculada em SQL sobre o que já se coleta (RENAME e catálogo de PCDT)",
+      "arquivos": 0,
+      "formatos": {},
+      "bytes": 0,
+      "falhas": 0,
+      "volume_alvo": "a definir",
+      "divergencia_alvo": null
+    },
+    {
+      "base_id": "ouvidoria_conversacional",
+      "natureza": "conversacional",
+      "estado": "nao_coletada",
+      "motivo_nao_coletada": "gerada por `python -m src.synth build` (semente fixa), fora da coleta versionada; a ingestão lê data/synthetic",
+      "arquivos": 0,
+      "formatos": {},
+      "bytes": 0,
+      "falhas": 0,
+      "volume_alvo": 30,
+      "divergencia_alvo": null
+    }
+  ],
+  "arquivos": [
+    {
+      "path": "data/raw/saude/v2/pcdt_normativo/antigo-conitec.saude.gov.br_images_Relatorios_2020_Relatorio_PCDT_ArtriteReumatoide_460_2020.pdf",
+      "base_id": "pcdt_normativo",
+      "tipo": "pdf",
+      "bytes": 3142174,
+      "sha256": "35a9ae139d0c287be65833a8823e8aa58b4a4cb994db00d28b691bb5135d7a59",
+      "origem": "http://antigo-conitec.saude.gov.br/images/Relatorios/2020/Relatorio_PCDT_ArtriteReumatoide_460_2020.pdf",
+      "chave": "http://antigo-conitec.saude.gov.br/images/Relatorios/2020/Relatorio_PCDT_ArtriteReumatoide_460_2020.pdf",
+      "coletado_em": "2026-11-16T14:57:56-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/saude/v2/pcdt_normativo/www.gov.br_conitec_pt-br_midias_consultas_relatorios_2020_20200908_relatorio_artrite_reumatoide_551.pdf__display-file_file.pdf",
+      "base_id": "pcdt_normativo",
+      "tipo": "pdf",
+      "bytes": 3866913,
+      "sha256": "ca0b29af851ec4564d99be7dfc2a5ea305ea43e865106b4236a9e3bf0f6d9b9d",
+      "origem": "https://www.gov.br/conitec/pt-br/midias/consultas/relatorios/2020/20200908_relatorio_artrite_reumatoide_551.pdf/@@display-file/file",
+      "chave": "https://www.gov.br/conitec/pt-br/midias/consultas/relatorios/2020/20200908_relatorio_artrite_reumatoide_551.pdf/@@display-file/file",
+      "coletado_em": "2026-11-16T14:57:59-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/saude/v2/pcdt_normativo/www.gov.br_conitec_pt-br_midias_protocolos_20211112_portaria_conjunta_16_pcdt_ar.pdf__display-file_file.pdf",
+      "base_id": "pcdt_normativo",
+      "tipo": "pdf",
+      "bytes": 4026000,
+      "sha256": "cf0edbd769ced4dc7d376a67f5cec68707499341e4112eeb25cc6e75573d6fa2",
+      "origem": "https://www.gov.br/conitec/pt-br/midias/protocolos/20211112_portaria_conjunta_16_pcdt_ar.pdf/@@display-file/file",
+      "chave": "https://www.gov.br/conitec/pt-br/midias/protocolos/20211112_portaria_conjunta_16_pcdt_ar.pdf/@@display-file/file",
+      "coletado_em": "2026-11-16T14:58:02-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/saude/v2/pcdt_normativo/www.gov.br_conitec_pt-br_midias_protocolos_2026_pcdt-diabete-melito-tipo-2__display-file_file.pdf",
+      "base_id": "pcdt_normativo",
+      "tipo": "pdf",
+      "bytes": 1826727,
+      "sha256": "f90b782997a5f90842877c6526432cd382b596ad6cb7ad95da0a2fd776dfae09",
+      "origem": "https://www.gov.br/conitec/pt-br/midias/protocolos/2026/pcdt-diabete-melito-tipo-2/@@display-file/file",
+      "chave": "https://www.gov.br/conitec/pt-br/midias/protocolos/2026/pcdt-diabete-melito-tipo-2/@@display-file/file",
+      "coletado_em": "2026-11-16T14:58:07-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/saude/v2/pcdt_normativo/www.gov.br_conitec_pt-br_midias_protocolos_pcdt_doenca_de_parkinson_2017-1.pdf__display-file_file.pdf",
+      "base_id": "pcdt_normativo",
+      "tipo": "pdf",
+      "bytes": 508461,
+      "sha256": "a913be7e3bb9633d8c70d45fd31c674b5ff6248d246cbeddefaaff5b684a4f6f",
+      "origem": "https://www.gov.br/conitec/pt-br/midias/protocolos/pcdt_doenca_de_parkinson_2017-1.pdf/@@display-file/file",
+      "chave": "https://www.gov.br/conitec/pt-br/midias/protocolos/pcdt_doenca_de_parkinson_2017-1.pdf/@@display-file/file",
+      "coletado_em": "2026-11-16T14:57:44-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/saude/v2/pcdt_normativo/www.gov.br_conitec_pt-br_midias_protocolos_publicacoes_ms_pcdt_diabetesmellitus_tipoi_isbn_19-08-2020.pdf__display-file_file.pdf",
+      "base_id": "pcdt_normativo",
+      "tipo": "pdf",
+      "bytes": 1083391,
+      "sha256": "bb74ce8a3519466604d4743a43302679e0b719e247f581e71de9271130e927bb",
+      "origem": "https://www.gov.br/conitec/pt-br/midias/protocolos/publicacoes_ms/pcdt_diabetesmellitus_tipoi_isbn_19-08-2020.pdf/@@display-file/file",
+      "chave": "https://www.gov.br/conitec/pt-br/midias/protocolos/publicacoes_ms/pcdt_diabetesmellitus_tipoi_isbn_19-08-2020.pdf/@@display-file/file",
+      "coletado_em": "2026-11-16T14:57:41-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/saude/v2/pcdt_normativo/www.gov.br_conitec_pt-br_midias_relatorios_2017_pcdt_ar_final.pdf__display-file_file.pdf",
+      "base_id": "pcdt_normativo",
+      "tipo": "pdf",
+      "bytes": 1477468,
+      "sha256": "7fc783af78d37810ae511f1545031a4d90eba2746fcd64fa4c205cec6f7254a7",
+      "origem": "https://www.gov.br/conitec/pt-br/midias/relatorios/2017/pcdt_ar_final.pdf/@@display-file/file",
+      "chave": "https://www.gov.br/conitec/pt-br/midias/relatorios/2017/pcdt_ar_final.pdf/@@display-file/file",
+      "coletado_em": "2026-11-16T14:57:46-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/saude/v2/pcdt_normativo/www.gov.br_saude_pt-br_assuntos_pcdt_a_artrite-reumatoide__download_file.pdf",
+      "base_id": "pcdt_normativo",
+      "tipo": "pdf",
+      "bytes": 3181559,
+      "sha256": "857824309b1a683f510e7f0ef176eb56d813dd07b75fd5c0bde18195f798fbaf",
+      "origem": "https://www.gov.br/saude/pt-br/assuntos/pcdt/a/artrite-reumatoide/@@download/file",
+      "chave": "https://www.gov.br/saude/pt-br/assuntos/pcdt/a/artrite-reumatoide/@@download/file",
+      "coletado_em": "2026-11-16T14:58:05-03:00",
+      "status": "ok"
+    },
+    {
+      "path": "data/raw/saude/v2/rename_estruturado/www.gov.br_saude_pt-br_composicao_sectics_rename_publicacoes_relacao-nacional-de-medicamentos-essenciais-2024.pdf",
+      "base_id": "rename_estruturado",
+      "tipo": "pdf",
+      "bytes": 1460543,
+      "sha256": "a991dd0934774854dbe087a259a484c21fdf70ad2d27f4af5ba5a5c51a2a15bc",
+      "origem": "https://www.gov.br/saude/pt-br/composicao/sectics/rename/publicacoes/relacao-nacional-de-medicamentos-essenciais-2024",
+      "chave": "https://www.gov.br/saude/pt-br/composicao/sectics/rename/publicacoes/relacao-nacional-de-medicamentos-essenciais-2024",
+      "coletado_em": "2026-11-16T14:58:14-03:00",
+      "status": "ok"
+    }
+  ],
+  "falhas": []
+}
