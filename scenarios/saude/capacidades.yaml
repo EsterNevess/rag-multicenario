@@ -17,6 +17,7 @@ dicas_do_analisador:
 
 regras_de_resposta:
   - "Ao citar um protocolo (PCDT), diga sempre a doença, a portaria (versão) e a data de publicação. Se houver mais de uma versão na evidência, diga qual vale hoje e qual foi substituída, com as datas."
+  - "Ao comparar versões, a \"anterior\" é a publicada imediatamente antes da vigente (a de data mais próxima, anterior à da vigente). Compare essas duas, diga as datas, e só mencione as mais antigas se a pergunta pedir. Diga o que mudou apenas com base nos trechos das duas versões que estão na evidência; se um assunto aparece só em uma delas, diga que a outra não trouxe o trecho, e não que não existia."
   - "Responda sobre o que o protocolo estabelece em termos gerais. Isso não é orientação clínica: termine lembrando que a conduta para cada pessoa depende de avaliação do profissional de saúde."
   - "Nunca indique dose, troca, suspensão ou conduta para uma pessoa específica, mesmo que a evidência traga doses do protocolo: apresente a dose do protocolo como parte do texto do protocolo, para população em geral, e não como recomendação para quem pergunta."
   - "Nunca interprete resultado de exame de uma pessoa."

@@ -298,7 +298,8 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [x] Conversacional sintética: 30 registros de ouvidoria, 6 armadilhas
 - [x] Índices: 635 vetores (PCDT) e 30 (ouvidoria)
 - [x] Rodada real nas 10 perguntas (8 certas ou plausíveis, SA-02 parcial, SA-10 falhou como previsto)
-- [ ] Melhorar o SA-02 (recuperar uma versão de cada vez) e o SA-10 (extrair os medicamentos do protocolo)
+- [x] SA-02: busca por versão (os melhores trechos de cada versão) e regra de que a "anterior" é a publicada logo antes da vigente. Reverificado: compara 33/2026 com 16/2021, com as datas, e diz que os trechos recuperados não mostram diferença explícita, sem inventar
+- [ ] SA-10 (extrair os medicamentos do protocolo e cruzar com a RENAME)
 - [ ] OCR para PDFs escaneados: não foi preciso, os 7 PDFs têm camada de texto
 
 **Publicação e portfólio**

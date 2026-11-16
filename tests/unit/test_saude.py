@@ -302,3 +302,33 @@ def test_documento_sem_versao_mantem_o_titulo_de_antes():
 
     lei = _achado(norma="Lei 14.133/2021", rotulo="Art. 75", data_publicacao="2021-04-01")
     assert evidencias_documentos([lei], 1)[0].rotulo == "Lei 14.133/2021 — Art. 75"
+
+
+# ----------------------------------------------------------------- comparação de versões
+
+
+def test_buscar_por_versao_traz_trechos_de_cada_versao_da_mais_recente_para_a_mais_antiga(tmp_path):
+    from src.index import CacheDeEmbeddings, carregar_indice, construir_indice
+    from src.retrieve import buscar_por_versao
+    from tests.fakes import EmbedderPalavras
+
+    emb = EmbedderPalavras()
+
+    def chunk(i, versao, pub, texto):
+        return {"texto": texto, "metadata": {"source_file": f"{i}.pdf", "doc_type": "pcdt", "chunk_id": i, "sensitivity": "publico", "base_id": "pcdt",
+                                             "natureza": "normativa", "doenca": "Artrite reumatoide", "versao": versao, "data_publicacao": pub}}
+
+    chunks = [chunk(f"c{n}", v, p, f"tratamento metotrexato artrite versao {v} item {n}") for n, (v, p) in
+              enumerate([("V2017", "2018-01-04")] * 3 + [("V2021", "2021-09-10")] + [("V2026", "2026-01-19")] * 4)]
+    jsonl = tmp_path / "x.jsonl"
+    jsonl.write_text("".join(json.dumps(c, ensure_ascii=False) + "\n" for c in chunks), encoding="utf-8")
+    cache = CacheDeEmbeddings(tmp_path / "cache.sqlite", emb.identity)
+    construir_indice(jsonl, tmp_path / "idx", emb, cache, tamanho_lote=8, escrever=lambda _: None)
+    cache.fechar()
+    indice = carregar_indice(tmp_path / "idx", emb.identity)
+
+    achados = buscar_por_versao({"pcdt": indice}, emb, "tratamento metotrexato artrite", filtros={"doenca__contem": "artrite"}, por_versao=2)
+    versoes = [r.metadata["versao"] for r in achados]
+    assert set(versoes) == {"V2017", "V2021", "V2026"}  # nenhuma versão fica de fora
+    assert versoes.index("V2026") < versoes.index("V2021") < versoes.index("V2017")
+    assert versoes.count("V2021") == 1 and versoes.count("V2026") == 2

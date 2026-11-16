@@ -26,7 +26,7 @@ from src.index import EmbeddingIndisponivel, IndiceCarregado, carregar_indice, c
 from src.llm import LLM, LLMIndisponivel, criar_llm
 from src.obs import PipelineLogger, Stage, Tokens
 from src.pii import mascarar_dados_pessoais
-from src.retrieve import buscar_por_bases
+from src.retrieve import buscar_por_bases, buscar_por_versao
 from src.indicadores import conferir_atualizacao, ler_ficha, localizar_agregado
 from src.router import _sem_acento, PlanoInvalido, avaliar_resposta, usa_base_agregada, ResultadoSQL, avaliar_pergunta, consultar, localizar_banco, validar_plano
 from src.schema import Fonte, Natureza, PlanoConsulta, RAGResponse, Rota
@@ -334,10 +334,11 @@ def coletar(plano: PlanoConsulta, pergunta: str, ctx: Contexto) -> tuple[list[Ev
         filtros_docs = filtros_de_documentos(plano, ctx)
         alvo = {n for n in plano.naturezas if n in (Natureza.NORMATIVA, Natureza.CONVERSACIONAL)} or {Natureza.NORMATIVA}
         indices = {b: i for b, i in ctx.indices.items() if ctx.natureza_da_base(b) in alvo}
-        achados = buscar_por_bases(
-            indices, ctx.embedder, consulta, k=5,
-            filtros=filtros_docs, logger=ctx.logger,
-        ) if indices else []
+        achados = []
+        if indices and "vigente_em" not in filtros_docs and plano.filtros_documentos.get("vigente_em") == "todas":
+            achados = buscar_por_versao(indices, ctx.embedder, consulta, filtros=filtros_docs, logger=ctx.logger)  # comparar versões
+        if indices and not achados:
+            achados = buscar_por_bases(indices, ctx.embedder, consulta, k=5, filtros=filtros_docs, logger=ctx.logger)
         evidencias += evidencias_documentos(achados, len(evidencias) + 1)
         if not achados:
             avisos.append("Nenhum trecho de documento foi encontrado para a pergunta.")

@@ -278,3 +278,28 @@ def buscar_por_bases(
     escolhidos = garantidos[:k] if len(garantidos) >= k else garantidos + restantes[: k - len(garantidos)]
     escolhidos.sort(key=lambda r: (-r.score_rrf, r.chunk_id))
     return escolhidos
+
+
+def buscar_por_versao(
+    indices: dict[str, IndiceCarregado],
+    embedder: Embedder,
+    consulta: str,
+    filtros: dict[str, Any] | None = None,
+    por_versao: int = 2,
+    logger: PipelineLogger | None = None,
+) -> list[Resultado]:
+    """Para comparar versões de um documento: os melhores trechos de CADA versão que casa com os filtros.
+
+    Sem isso, uma busca única deixa a versão mais parecida com a pergunta ocupar todos os lugares e as outras
+    nem aparecem. As versões são as do metadado `versao`; o resultado vem da mais recente para a mais antiga.
+    """
+    achados: list[Resultado] = []
+    for indice in indices.values():
+        versoes: dict[str, str] = {}
+        for meta in _metadados(indice).values():
+            if meta.get("versao") and casa_filtro(meta, filtros):
+                versoes[meta["versao"]] = meta.get("data_publicacao") or ""
+        for versao in versoes:
+            achados += buscar_hibrido(indice, embedder, consulta, k=por_versao, filtros={**(filtros or {}), "versao": versao}, logger=logger)
+    achados.sort(key=lambda r: (r.metadata.get("data_publicacao") or "", r.score_rrf), reverse=True)
+    return achados
