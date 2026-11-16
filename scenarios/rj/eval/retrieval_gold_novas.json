@@ -1,0 +1,23 @@
+{
+  "descricao": "Segundo conjunto de perguntas de recuperação, escrito DEPOIS das decisões tomadas com o primeiro (RRF como padrão, k_rrf = 60) e sem olhar o ranking dos sistemas nelas: os critérios só foram ajustados quando uma pergunta não tinha nenhum trecho relevante no índice. Mesmo formato de retrieval_gold.json.",
+  "itens": [
+    {"id": "RJ-N01", "pergunta": "O que acontece se o contratado atrasar a entrega ou não cumprir o contrato?", "base": "editais_normativo",
+     "relevante": {"texto": ["(atraso|inexecucao|descumprimento)", "(multa|sancao|penalidade)"]}},
+    {"id": "RJ-N02", "pergunta": "Em que situações a licitação pode ser dispensada?", "base": "editais_normativo",
+     "relevante": {"texto": ["licitacao (e|sera) dispensavel"]}},
+    {"id": "RJ-N03", "pergunta": "Em quantos dias úteis posso recorrer do resultado do julgamento?", "base": "editais_normativo",
+     "relevante": {"texto": ["recurso", "dias uteis"]}},
+    {"id": "RJ-N04", "pergunta": "Que critérios de julgamento podem ser usados, como menor preço ou melhor técnica?", "base": "editais_normativo",
+     "relevante": {"texto": ["menor preco", "melhor tecnica"]}},
+    {"id": "RJ-N05", "pergunta": "O que é o estudo técnico preliminar e para que serve?", "base": "editais_normativo",
+     "relevante": {"texto": ["estudo tecnico preliminar"]}},
+    {"id": "RJ-N06", "pergunta": "Que tipos de garantia a administração pode exigir de quem contrata?", "base": "editais_normativo",
+     "relevante": {"texto": ["garantia", "(seguro-garantia|caucao|fianca)"]}},
+    {"id": "RJ-N07", "pergunta": "Por quanto tempo vale a ata de registro de preços?", "base": "editais_normativo",
+     "relevante": {"texto": ["ata de registro de precos", "(vigencia|validade)"]}},
+    {"id": "RJ-N08", "pergunta": "Alguma empresa impugnou o edital?", "base": "atas_conversacional",
+     "relevante": {"texto": ["impugna"]}},
+    {"id": "RJ-N09", "pergunta": "Houve pedido de esclarecimento sobre prazo de entrega?", "base": "atas_conversacional",
+     "relevante": {"texto": ["esclarecimento"]}}
+  ]
+}

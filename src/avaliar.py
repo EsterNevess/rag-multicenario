@@ -5,7 +5,7 @@ regulares sobre o texto e os metadados do trecho), e não por uma lista de ids: 
 sobre o índice real e continua válido quando a ingestão muda. Não há modelo de linguagem aqui: tudo é determinístico e
 repetível, e cada sistema roda 3 vezes para confirmar isso.
 
-Uso: python -m src.avaliar --scenario saude [--hoje AAAA-MM-DD]
+Uso: python -m src.avaliar --scenario saude [--hoje AAAA-MM-DD] [--conjunto retrieval_gold_novas]
 """
 
 from __future__ import annotations
@@ -44,8 +44,8 @@ class Item:
     metadata: dict[str, str]
 
 
-def carregar_gold(cenario: str, raiz: Path | None = None) -> list[Item]:
-    arquivo = (raiz or RAIZ) / "scenarios" / cenario / "eval" / "retrieval_gold.json"
+def carregar_gold(cenario: str, raiz: Path | None = None, conjunto: str = "retrieval_gold") -> list[Item]:
+    arquivo = (raiz or RAIZ) / "scenarios" / cenario / "eval" / f"{conjunto}.json"
     itens = []
     for bruto in json.loads(arquivo.read_text(encoding="utf-8"))["itens"]:
         rel = bruto["relevante"]
@@ -101,7 +101,7 @@ def metricas(ordem: list[str], relevantes: set[str]) -> dict[str, float]:
     }
 
 
-def avaliar(cenario: str, hoje: str | None = None) -> dict[str, Any]:
+def avaliar(cenario: str, hoje: str | None = None, conjunto: str = "retrieval_gold") -> dict[str, Any]:
     sys.path.insert(0, str(RAIZ))
     from config import Settings
     from src.fetch_corpus import pastas_do_cenario
@@ -110,7 +110,7 @@ def avaliar(cenario: str, hoje: str | None = None) -> dict[str, Any]:
     ctx = carregar_contexto(Settings(scenario=cenario), pastas_do_cenario(cenario))
     hoje = hoje or ctx.hoje
     niveis = list(ctx.cap.niveis_consultaveis)
-    itens = carregar_gold(cenario)
+    itens = carregar_gold(cenario, conjunto=conjunto)
     por_item: list[dict[str, Any]] = []
     invalidos: list[str] = []
     for item in itens:
@@ -147,9 +147,11 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="python -m src.avaliar", description=__doc__.split("\n\n")[0])
     p.add_argument("--scenario", required=True, choices=("rj", "saude", "pesquisa"))
     p.add_argument("--hoje", help="AAAA-MM-DD; padrão: hoje")
+    p.add_argument("--conjunto", default="retrieval_gold", help="arquivo de perguntas em scenarios/<id>/eval/ (sem .json); padrão: retrieval_gold")
     args = p.parse_args(argv)
-    r = avaliar(args.scenario, args.hoje)
-    destino = RAIZ / "logs" / f"avaliacao-recuperacao-{args.scenario}.json"
+    r = avaliar(args.scenario, args.hoje, args.conjunto)
+    sufixo = "" if args.conjunto == "retrieval_gold" else "-" + args.conjunto.removeprefix("retrieval_gold_")
+    destino = RAIZ / "logs" / f"avaliacao-recuperacao-{args.scenario}{sufixo}.json"
     destino.parent.mkdir(exist_ok=True)
     destino.write_text(json.dumps(r, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"{args.scenario}: {r['itens_validos']} perguntas válidas; inválidas: {r['itens_invalidos'] or 'nenhuma'}")

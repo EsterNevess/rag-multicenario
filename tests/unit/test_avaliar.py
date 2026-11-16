@@ -87,3 +87,14 @@ def test_o_conjunto_de_perguntas_do_cenario_esta_bem_formado(cenario):
     assert len(itens) >= 10 and len({i.id for i in itens}) == len(itens)
     for i in itens:
         assert i.pergunta.strip() and i.base and (i.texto or i.metadata), i.id
+
+
+@pytest.mark.parametrize("cenario", ["rj", "saude", "pesquisa"])
+def test_o_segundo_conjunto_de_perguntas_esta_bem_formado_e_nao_repete_ids_nem_perguntas_do_primeiro(cenario):
+    primeiro = carregar_gold(cenario)
+    novas = carregar_gold(cenario, conjunto="retrieval_gold_novas")
+    assert len(novas) >= 8 and len({i.id for i in novas}) == len(novas)
+    assert not {i.id for i in novas} & {i.id for i in primeiro}
+    assert not {i.pergunta for i in novas} & {i.pergunta for i in primeiro}
+    for i in novas:
+        assert i.pergunta.strip() and i.base and (i.texto or i.metadata), i.id

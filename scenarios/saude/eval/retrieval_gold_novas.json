@@ -1,0 +1,27 @@
+{
+  "descricao": "Segundo conjunto de perguntas de recuperação, escrito DEPOIS das decisões tomadas com o primeiro (RRF como padrão, k_rrf = 60) e sem olhar o ranking dos sistemas nelas: os critérios só foram ajustados quando uma pergunta não tinha nenhum trecho relevante no índice. Mesmo formato de retrieval_gold.json.",
+  "itens": [
+    {"id": "SA-N01", "pergunta": "Como acompanhar o fígado e o sangue de quem usa leflunomida?", "base": "pcdt_normativo",
+     "filtros": {"doenca__contem": "artrite", "vigente_em": "$hoje"},
+     "relevante": {"texto": ["leflunomida", "(hemograma|transaminases|tgo|tgp|alt|ast)"], "metadata": {"versao": "33/2026"}}},
+    {"id": "SA-N02", "pergunta": "Quem não pode ser tratado segundo o protocolo de Parkinson?", "base": "pcdt_normativo",
+     "filtros": {"doenca__contem": "parkinson", "vigente_em": "$hoje"},
+     "relevante": {"texto": ["criterios de exclusao"]}},
+    {"id": "SA-N03", "pergunta": "O que o protocolo de diabetes tipo 1 diz sobre cetoacidose?", "base": "pcdt_normativo",
+     "filtros": {"doenca__contem": "diabetes", "vigente_em": "$hoje"},
+     "relevante": {"texto": ["cetoacidose"]}},
+    {"id": "SA-N04", "pergunta": "Que remédios ajudam no tremor da doença de Parkinson?", "base": "pcdt_normativo",
+     "filtros": {"doenca__contem": "parkinson", "vigente_em": "$hoje"},
+     "relevante": {"texto": ["tremor", "(biperideno|triexifenidil|anticolinergico|pramipexol)"]}},
+    {"id": "SA-N05", "pergunta": "Quando a hidroxicloroquina é indicada na artrite reumatoide?", "base": "pcdt_normativo",
+     "filtros": {"doenca__contem": "artrite", "vigente_em": "$hoje"},
+     "relevante": {"texto": ["hidroxicloroquina"], "metadata": {"versao": "33/2026"}}},
+    {"id": "SA-N06", "pergunta": "Quais eram os critérios de inclusão da artrite reumatoide em meados de 2018?", "base": "pcdt_normativo",
+     "filtros": {"doenca__contem": "artrite", "vigente_em": "2018-06-01"},
+     "relevante": {"texto": ["criterios de inclusao"], "metadata": {"versao": "15/2017"}}},
+    {"id": "SA-N07", "pergunta": "Alguém reclamou da dificuldade para marcar consulta?", "base": "ouvidoria_conversacional",
+     "relevante": {"texto": ["(agendar|agendamento|marcar|marcacao)"]}},
+    {"id": "SA-N08", "pergunta": "Há relato sobre o atendimento numa unidade básica de saúde?", "base": "ouvidoria_conversacional",
+     "relevante": {"texto": ["unidade basica"]}}
+  ]
+}

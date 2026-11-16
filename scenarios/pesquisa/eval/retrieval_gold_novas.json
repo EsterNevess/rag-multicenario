@@ -1,0 +1,21 @@
+{
+  "descricao": "Segundo conjunto de perguntas de recuperação, escrito DEPOIS das decisões tomadas com o primeiro (RRF como padrão, k_rrf = 60) e sem olhar o ranking dos sistemas nelas: os critérios só foram ajustados quando uma pergunta não tinha nenhum trecho relevante no índice. Mesmo formato de retrieval_gold.json.",
+  "itens": [
+    {"id": "PE-N01", "pergunta": "Em que casos o consentimento do participante pode ser dispensado?", "base": "editais_normas_normativo",
+     "relevante": {"texto": ["dispens", "consentimento"]}},
+    {"id": "PE-N02", "pergunta": "Qual o prazo para entregar a prestação de contas final do auxílio?", "base": "editais_normas_normativo",
+     "relevante": {"texto": ["prestacao de contas", "(prazo|dias)"]}},
+    {"id": "PE-N03", "pergunta": "Posso pagar bolsistas ou pessoal com os recursos do auxílio?", "base": "editais_normas_normativo",
+     "relevante": {"texto": ["(bolsa|bolsista|pessoal|remuneracao)", "(vedad|nao poder|permit)"]}},
+    {"id": "PE-N04", "pergunta": "Quem pode ser proponente no edital Cientista do Nosso Estado?", "base": "editais_normas_normativo",
+     "relevante": {"texto": ["(proponente|pesquisador)"], "metadata": {"norma": "cientista do nosso estado"}}},
+    {"id": "PE-N05", "pergunta": "O que se exige sobre agradecer o financiador nas publicações?", "base": "editais_normas_normativo",
+     "relevante": {"texto": ["(agradecimento|agradecer|credito)", "(publicac|divulga)"]}},
+    {"id": "PE-N06", "pergunta": "Que critérios são usados para avaliar o mérito das propostas?", "base": "editais_normas_normativo",
+     "relevante": {"texto": ["(merito|julgamento)", "(criterio|avaliac)"]}},
+    {"id": "PE-N07", "pergunta": "Algum revisor recomenda rejeitar o manuscrito?", "base": "pareceres_conversacional",
+     "relevante": {"texto": ["(rejei|reprov|nao recomend)"]}},
+    {"id": "PE-N08", "pergunta": "Há algum e-mail do editor cobrando resposta do autor?", "base": "pareceres_conversacional",
+     "relevante": {"texto": ["(resposta|autor)"], "metadata": {"doc_type": "correspondencia"}}}
+  ]
+}
