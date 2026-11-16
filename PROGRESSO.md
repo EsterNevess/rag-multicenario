@@ -315,12 +315,13 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [x] SA-02: busca por versão (os melhores trechos de cada versão) e regra de que a "anterior" é a publicada logo antes da vigente. Reverificado: compara 33/2026 com 16/2021, com as datas, e diz que os trechos recuperados não mostram diferença explícita, sem inventar
 - [x] SA-10: tabela `pcdt_medicamento` (69 linhas) com a marca de constar na RENAME, entidade e dica declaradas, testes (655 passando). Consulta conferida sem o modelo
 - [x] SA-02: afirmações "acrescenta" conferidas contra o texto das duas versões: 5 de 6 estavam também na versão anterior (ver AVALIACAO.md); regra de resposta endurecida
-- [x] Comparação de versões seção por seção em código (`src/pcdt_versoes.py`, tabela `pcdt_secao`, 76 linhas, testes com mutação conferida)
+- [x] Comparação de versões seção por seção em código (`src/pcdt_versoes.py`, tabela `pcdt_secao`, 88 linhas, testes com mutação conferida)
+- [x] Casamento de seções conferido à mão nos 4 pares da artrite: 8 títulos falsos, 1 par errado e ~10 seções renomeadas corrigidos; partes que viraram várias seções continuam sem casar 1 para 1
 - [ ] SA-02: repetir com o modelo depois da regra nova e da tabela `pcdt_secao` (a pergunta deve usar a rota híbrida com a entidade `pcdt_secao`)
 - [ ] SA-10: repetir a pergunta com o modelo (3 repetições) quando o limite da Groq voltar
 - [x] Lista de fármacos da artrite de 2026 (por classe, sem apresentação) e do diabetes tipo 1 (sem dois-pontos): 89 linhas nas cinco versões, todas na RENAME; duas insulinas por correspondência aproximada, registradas no relatório
 - [x] OCR para PDFs escaneados: não foi preciso, os 7 PDFs têm camada de texto
-- [x] Corpus v2 (19,6 MB, 9 arquivos): Relatório Conitec 551 (Portaria Conjunta 14/2020 da artrite, sem mais intervalo entre versões) e PCDT de diabetes tipo 2 (Portaria SCTIE/MS 13/2026, decisão de atualizar; não confirmado como texto em vigor). 900 trechos, 119 medicamentos de protocolo (todos na RENAME), 105 linhas de comparação por seção
+- [x] Corpus v2 (19,6 MB, 9 arquivos): Relatório Conitec 551 (Portaria Conjunta 14/2020 da artrite, sem mais intervalo entre versões) e PCDT de diabetes tipo 2 (Portaria SCTIE/MS 13/2026, decisão de atualizar; não confirmado como texto em vigor). 900 trechos, 119 medicamentos de protocolo (todos na RENAME), 88 linhas de comparação por seção
 - [ ] Repetir com o modelo as perguntas da saúde no corpus v2 (a rodada medida foi no v1; o SA-X1 agora tem resposta: a PC 14/2020)
 
 **Publicação e portfólio**
