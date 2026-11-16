@@ -268,7 +268,8 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [x] Coleta versionada com inventário e SHA-256, ingestão, índice (BM25 + vetores + RRF), normalização em SQL, roteador com guardrails, geração com citações conferidas, CLI
 - [x] Capacidades por cenário em `capacidades.yaml` (campos, valores codificados, regras de recusa, textos dos prompts)
 - [x] Rerank por cross-encoder (opcional, desligado por padrão): bge-reranker-v2-m3 em ONNX int8; MRR +0,10 nas 59 perguntas, ~19 s por busca em CPU
-- [ ] Memória de conversa (PE-02 e PE-08 dizem "desses")
+- [x] Memória de conversa de um turno (pergunta e plano anteriores no analisador; app e modo interativo), com testes e mutação conferida
+- [ ] Memória de conversa: conferir com o modelo real se o PE-02 ("desses") e o PE-08 passam a funcionar
 - [ ] Conferir se cada número do texto bate com a evidência (hoje só as citações são conferidas)
 - [x] Rota agregada (indicadores calculados em SQL) no roteador
 - [x] Rota conversacional (pareceres, atas) com a recusa de identidade e de dado pessoal

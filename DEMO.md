@@ -63,7 +63,7 @@ Respostas capturadas:
 
 Respostas: todas a capturar.
 
-**Limite conhecido:** "Desses, quais declaram financiamento da FAPERJ ou do CNPq?" não funciona, porque o sistema não guarda o contexto da conversa. Não use perguntas encadeadas.
+**Limite conhecido:** "Desses, quais declaram financiamento da FAPERJ ou do CNPq?" usa a memória de um turno (a pergunta e o plano anteriores), implementada mas **ainda não conferida com o modelo real**. Antes de mostrar, rode a pergunta anterior e a de continuação e confira o resultado.
 
 ## Para fechar a captura
 

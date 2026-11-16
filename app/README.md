@@ -12,7 +12,9 @@ cobertura dos dados. O painel "Como o sistema decidiu" mostra a rota e o plano d
 executa; o modelo nunca escreve SQL). Recusas aparecem como aviso, com o motivo. Se o provedor do modelo falhar (por exemplo, o limite do plano
 gratuito da Groq), a tela mostra uma mensagem em vez de um erro.
 
-O que ela **não** faz: login, histórico entre sessões, memória de conversa (cada pergunta é independente) nem API HTTP. Os dados são os que o
+**Continuar a conversa.** A caixa "Continuar a conversa" (ligada por padrão) manda ao analisador a pergunta anterior e o plano que ela gerou, para resolver "desses, quais..." ou "e em 2025?". A memória é de **um turno**, não inclui o texto da resposta (ele traz trechos de documentos, e um documento não deve poder dar instruções ao analisador), e só vale para respostas que não foram recusa. Trocar de cenário a apaga. Funciona também no modo interativo da linha de comando (`/nova` começa um assunto novo). Está testada com um modelo simulado; **não foi conferida com o modelo real**.
+
+O que ela **não** faz: login, histórico entre sessões nem API HTTP. Os dados são os que o
 cenário tem carregados em `data/` (veja o README da raiz para coletar, ingerir e indexar), e o modelo é o do `.env`.
 
 - `nucleo.py`: a lógica, sem Streamlit (criar o contexto, perguntar, formatar o plano e as fontes).
