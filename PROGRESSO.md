@@ -291,7 +291,8 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [x] Conversacional sintética: 20 atas e e-mails, com 5 armadilhas (dado pessoal, pedido de "confirmar a fraude", senha, dado bancário)
 - [ ] Reindexar a normativa a partir da v3 (o índice atual veio da v2, e antes das mudanças de leitura de PDF em duas colunas)
 - [x] RJ-04 (contratações diretas e proporção): plano de reserva sem o modelo para quando o analisador esgota as tentativas (`palavras_de_recorte` evita responder outro recorte). Testado; falta repetir com o modelo
-- [ ] RJ-04: conferir com o modelo se o plano de reserva entra e se o número bate (25.005 de 35.423 = 70,6%)
+- [x] RJ-04 com o modelo, 1 execução (16/11): **respondeu certo** (25.005 de 35.423 = 70,6%, conferido no banco). O analisador errou a 1ª tentativa (rota híbrida), a guarda o devolveu, e acertou na 3ª; o plano de reserva não precisou entrar, então segue sem teste com o modelo. Uma execução não mede estabilidade
+- [ ] SA-10: na única tentativa, o analisador já montou o plano certo (entidade `pcdt_medicamento` filtrada por Parkinson), mas a geração caiu no limite diário da Groq (HTTP 429); falta a resposta
 
 **Cenário pesquisa acadêmica**
 - [x] Normativa: 8 documentos, 453 trechos indexados

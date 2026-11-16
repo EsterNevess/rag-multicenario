@@ -102,7 +102,7 @@ O que isso sustenta:
 
 `python -m src.avaliar_respostas --scenario <id> --repeticoes 3 [--retomar]` roda cada pergunta N vezes com o modelo (Groq, `openai/gpt-oss-120b`) e mede o que muda entre as repetições. A rodada anda uma repetição de cada vez sobre todas as perguntas e grava em `logs/` (fora do Git) o texto de cada resposta. O modelo varia de uma repetição para outra, e é isso que se quer ver.
 
-**O que foi medido: só a saúde, 13 perguntas × 3 repetições (185 mil tokens).** O RJ parou no RJ-04 da primeira repetição e a pesquisa não começou, porque o plano gratuito da Groq esgotou o limite diário. Para continuar sem refazer o que já deu certo: `--retomar`. Depois dessa rodada entrou um plano de reserva sem o modelo para o RJ-04 (ver PROGRESSO.md); ele ainda não foi medido.
+**O que foi medido: só a saúde, 13 perguntas × 3 repetições (185 mil tokens).** O RJ parou no RJ-04 da primeira repetição e a pesquisa não começou, porque o plano gratuito da Groq esgotou o limite diário. Para continuar sem refazer o que já deu certo: `--retomar`. Depois dessa rodada entrou um plano de reserva sem o modelo para o RJ-04 (ver PROGRESSO.md). Numa execução posterior com o modelo (16/11) o RJ-04 respondeu certo (25.005 de 35.423, 70,6%) sem precisar dele; o limite diário esgotou de novo em seguida.
 
 | Medida (saúde) | Resultado |
 |---|---|
