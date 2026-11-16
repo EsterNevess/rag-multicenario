@@ -30,8 +30,8 @@ def _plano(**kw) -> PlanoConsulta:
 # ----------------------------------------------------------------- capacidades
 
 
-def test_o_cenario_declara_as_duas_entidades_os_tres_indicadores_e_o_filtro_de_doenca():
-    assert sorted(SAUDE.entidades) == ["medicamento", "pcdt_versao"]
+def test_o_cenario_declara_as_tres_entidades_os_tres_indicadores_e_o_filtro_de_doenca():
+    assert sorted(SAUDE.entidades) == ["medicamento", "pcdt_medicamento", "pcdt_versao"]
     assert sorted(SAUDE.catalogo_de_indicadores.indicadores) == ["medicamentos_por_componente", "medicamentos_por_grupo_atc", "versoes_de_pcdt_por_doenca"]
     assert list(SAUDE.filtros_de_documentos) == ["doenca"]
     assert SAUDE.niveis_consultaveis == ("publico", "restrito")
@@ -332,3 +332,15 @@ def test_buscar_por_versao_traz_trechos_de_cada_versao_da_mais_recente_para_a_ma
     assert set(versoes) == {"V2017", "V2021", "V2026"}  # nenhuma versão fica de fora
     assert versoes.index("V2026") < versoes.index("V2021") < versoes.index("V2017")
     assert versoes.count("V2021") == 1 and versoes.count("V2026") == 2
+
+
+def test_plano_de_cruzamento_pcdt_x_rename_valida_na_entidade_pcdt_medicamento():
+    cap = capacidades_do_cenario("saude")
+    plano = PlanoConsulta(
+        rota="estruturada", naturezas=["estruturada"], entidade="pcdt_medicamento",
+        filtros={"doenca__contem": "parkinson"}, operacoes=["listar"], limite=100,
+    )
+    validar_plano(plano, cap)  # não levanta
+    errado = plano.model_copy(update={"filtros": {"doenca__contem": "parkinson", "campo_que_nao_existe": "x"}})
+    with pytest.raises(PlanoInvalido):
+        validar_plano(errado, cap)

@@ -8,7 +8,16 @@ import pymupdf
 import pytest
 
 from src.fetch_corpus import Pastas
-from src.normalize_saude import extrair_medicamentos, limpar, linhas_de_pcdt, normalizar, papel_da_coluna
+from src.normalize_saude import (
+    componentes_do_nome,
+    extrair_medicamentos,
+    limpar,
+    linhas_de_pcdt,
+    marcar_constar_na_rename,
+    medicamentos_do_pcdt,
+    normalizar,
+    papel_da_coluna,
+)
 
 CABECALHO = ["Denominação Comum (DCB)", "Concentração", "Forma Farmacêutica", "Componente de Financiamento", "Código ATC"]
 COLUNAS_X = [40, 190, 280, 390, 500, 570]
@@ -163,7 +172,7 @@ def test_normalizar_grava_as_duas_tabelas_e_os_metadados(tmp_path):
     pastas = Pastas(cenario_id="saude", cenario=cenario, dados=tmp_path / "data")
     relatorio = normalizar(manifesto, "v1", pastas)
 
-    assert relatorio["tabelas"] == {"medicamento": 1, "pcdt_versao": 1}
+    assert relatorio["tabelas"] == {"medicamento": 1, "pcdt_versao": 1, "pcdt_medicamento": 0}
     conexao = sqlite3.connect(tmp_path / "data" / "normalized" / "saude" / "v1.sqlite")
     assert conexao.execute("SELECT dcb, componente, atc FROM medicamento").fetchall() == [("lactulose", "Básico", "A06AD11")]
     assert conexao.execute("SELECT valor FROM metadados WHERE chave='cenario'").fetchone() == ("saude",)
@@ -184,3 +193,81 @@ def test_normalizar_recusa_versao_sem_pdf_da_rename(tmp_path):
     pastas = Pastas(cenario_id="saude", cenario=cenario, dados=tmp_path / "data")
     with pytest.raises(FileNotFoundError):
         normalizar(manifesto, "v1", pastas)
+
+
+def _trecho(texto, versao="PC 10/2017", doenca="Parkinson", parte=None, fim=None):
+    return {"metadata": {"versao": versao, "doenca": doenca, "data_publicacao": "2017-11-09", "data_vigencia_fim": fim, "parte": parte}, "texto": "titulo - Item 6.3\n" + texto}
+
+
+def test_componentes_do_nome_ignora_sal_parenteses_acento_e_separador():
+    assert componentes_do_nome("Levodopa/carbidopa") == componentes_do_nome("levodopa + carbidopa")
+    assert componentes_do_nome("Cloridrato de amantadina") == componentes_do_nome("amantadina")
+    assert componentes_do_nome("Metilprednisolona (acetato) (intra-articular)") == frozenset({"metilprednisolona"})
+    assert componentes_do_nome("Fosfato sódico de prednisolona") == frozenset({"prednisolona"})
+    assert componentes_do_nome("insulina humana NPH") != componentes_do_nome("insulina humana regular")
+
+
+def test_medicamentos_do_pcdt_le_lista_em_linha_e_em_topicos_e_descarta_texto_corrido():
+    em_linha = "6.3   FÁRMACOS    Pramipexol: comprimidos de 0,125 e 1 mg.    Amantadina: comprimidos de 100 mg.    Entacapona: comprimidos de 200 mg. "
+    em_topicos = "8.4 FÁRMACOS Anti-inflamatórios (AINE)\n- Ibuprofeno: comprimidos de 200 mg.\n- Metotrexato: comprimidos de 2,5 mg; frascos de 50 mg/2 ml.\n- Observação: ver item 9."
+    linhas, sem_secao = medicamentos_do_pcdt([_trecho(em_linha), _trecho(em_topicos, versao="PC 15/2017", doenca="Artrite")])
+    assert [(l["versao"], l["medicamento"]) for l in linhas] == [
+        ("PC 10/2017", "Pramipexol"), ("PC 10/2017", "Amantadina"), ("PC 10/2017", "Entacapona"),
+        ("PC 15/2017", "Ibuprofeno"), ("PC 15/2017", "Metotrexato"),
+    ]  # "Observação: ver item 9." não tem forma farmacêutica nem dose
+    assert linhas[0]["apresentacao"] == "comprimidos de 0,125 e 1 mg"
+    assert sem_secao == []
+
+
+def test_medicamentos_do_pcdt_so_le_o_primeiro_trecho_da_secao_e_aponta_versao_sem_secao():
+    primeiro = "8. FÁRMACOS E ESQUEMA DE ADMINISTRAÇÃO\n- Ibuprofeno: comprimidos de 200 mg."
+    continuacao = "- Metotrexato: dose de 7,5 mg por semana, por via oral."
+    sem_lista = "7 TRATAMENTO O tratamento inclui educação e insulinoterapia."
+    linhas, sem_secao = medicamentos_do_pcdt([
+        _trecho(primeiro, versao="A", parte=1), _trecho(continuacao, versao="A", parte=2), _trecho(sem_lista, versao="B", doenca="Diabetes"),
+    ])
+    assert [l["medicamento"] for l in linhas] == ["Ibuprofeno"]
+    assert sem_secao == ["B"]
+
+
+def test_medicamentos_do_pcdt_marca_versao_substituida():
+    linhas, _ = medicamentos_do_pcdt([_trecho("6.3 FÁRMACOS    Pramipexol: comprimidos de 1 mg.", fim="2020-01-01")])
+    assert linhas[0]["situacao"] == "substituída"
+
+
+def test_marcar_constar_na_rename_compara_principio_ativo_e_registra_o_nome_da_rename():
+    linhas = [{"medicamento": "Pramipexol"}, {"medicamento": "Levodopa/carbidopa"}, {"medicamento": "Rasagilina"}]
+    marcar_constar_na_rename(linhas, ["dicloridrato de pramipexol", "levodopa + carbidopa", "levodopa + benserazida"])
+    assert [(l["na_rename"], l["dcb_na_rename"]) for l in linhas] == [
+        ("sim", "dicloridrato de pramipexol"), ("sim", "levodopa + carbidopa"), ("não", None),
+    ]
+    assert [l["id"] for l in linhas] == [1, 2, 3]
+
+
+def test_normalizar_grava_pcdt_medicamento_a_partir_dos_trechos_ingeridos(tmp_path):
+    import json
+
+    cenario = tmp_path / "scenarios" / "saude"
+    cenario.mkdir(parents=True)
+    manifesto = cenario / "corpus_manifest.yaml"
+    manifesto.write_text(
+        "scenario_id: saude\nversion: '1'\nstatus: x\ndescription: x\nbases:\n"
+        "  - base_id: rename_estruturado\n    natureza: estruturada\n    fonte: f\n    acesso: {tipo: http_pdf, urls: [{url: 'http://x/r.pdf', rotulo: r, doc_type: rename}]}\n"
+        "    selecao_deterministica: true\n    volume_alvo: 1\n    formato: pdf\n    licenca: l\n    sensitivity_default: publico\n    campo_vigencia: ano_edicao\n",
+        encoding="utf-8",
+    )
+    pasta = tmp_path / "data" / "raw" / "saude" / "v1" / "rename_estruturado"
+    pasta.mkdir(parents=True)
+    origem = _pdf(tmp_path, [_pagina_a("A: Aparelho digestivo e metabolismo", [["cloridrato de amantadina", "100 mg", "comprimido", "Básico", "N04BB01"]])])
+    (pasta / "rename.pdf").write_bytes(origem.read_bytes())
+    processed = tmp_path / "data" / "processed" / "saude"
+    processed.mkdir(parents=True)
+    trecho = _trecho("6.3 FÁRMACOS    Amantadina: comprimidos de 100 mg.    Rasagilina: comprimidos de 1 mg.")
+    (processed / "v1_pcdt_normativo.jsonl").write_text(json.dumps(trecho, ensure_ascii=False) + "\n", encoding="utf-8")
+
+    relatorio = normalizar(manifesto, "v1", Pastas(cenario_id="saude", cenario=cenario, dados=tmp_path / "data"))
+
+    assert relatorio["tabelas"]["pcdt_medicamento"] == 2
+    conexao = sqlite3.connect(tmp_path / "data" / "normalized" / "saude" / "v1.sqlite")
+    assert conexao.execute("SELECT medicamento, na_rename FROM pcdt_medicamento ORDER BY id").fetchall() == [("Amantadina", "sim"), ("Rasagilina", "não")]
+    conexao.close()

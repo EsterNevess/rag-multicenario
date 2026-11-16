@@ -4,6 +4,7 @@ Gera `data/normalized/saude/<versão>.sqlite` com:
 
   medicamento   uma linha por medicamento + concentração + forma farmacêutica (Apêndice A da RENAME, por classificação ATC)
   pcdt_versao   uma linha por versão de PCDT do corpus, com a data de publicação e a de fim da vigência
+  pcdt_medicamento  uma linha por medicamento da seção "Fármacos" de cada versão de PCDT, com a marca de constar ou não na RENAME
   metadados     versão, cenário e o relatório da normalização
 
 mais um `<versão>.relatorio.json`. O Apêndice B da RENAME (os mesmos medicamentos reagrupados por anexo) não é lido: o
@@ -15,6 +16,7 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
+import unicodedata
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -26,12 +28,14 @@ from src.fsutil import com_repeticao
 
 COLUNAS_MEDICAMENTO = ["id", "dcb", "concentracao", "forma", "componente", "atc", "aware", "grupo_atc", "grupo_atc_nome", "pagina", "ano_edicao"]
 COLUNAS_PCDT = ["id", "doenca", "versao", "rotulo", "data_publicacao", "data_vigencia_fim", "situacao"]
+COLUNAS_PCDT_MEDICAMENTO = ["id", "doenca", "versao", "data_publicacao", "situacao", "medicamento", "apresentacao", "na_rename", "dcb_na_rename"]
 TIPOS_SQL = {"id": "INTEGER", "pagina": "INTEGER", "ano_edicao": "INTEGER"}
 INDICES = [
     "CREATE INDEX ix_medicamento_dcb ON medicamento (dcb)",
     "CREATE INDEX ix_medicamento_componente ON medicamento (componente)",
     "CREATE INDEX ix_medicamento_atc ON medicamento (atc)",
     "CREATE INDEX ix_pcdt_doenca ON pcdt_versao (doenca, data_publicacao)",
+    "CREATE INDEX ix_pcdt_med_doenca ON pcdt_medicamento (doenca, na_rename)",
 ]
 GRUPO_ATC = re.compile(r"^([A-Z]): (.+)$")
 CODIGO_ATC = re.compile(r"^[A-Z]\d{2}[A-Z]{2}\d{2}$")
@@ -141,6 +145,71 @@ def extrair_medicamentos(caminho: Path, ano_edicao: int | None = None) -> tuple[
     relatorio = {"paginas_com_tabela": paginas_com_tabela, "linhas_sem_codigo_atc": sem_atc, "primeira_pagina_de_cada_grupo": inicio_por_grupo}
     return linhas, relatorio
 
+SECAO_FARMACOS = re.compile(r"\b\d+(?:\.\d+)*\.?\s+F[ÁA]RMACOS\b")
+_ENTRADA_DE_FARMACO = re.compile(r"(?:^|\n|\s{2,})-?\s*([A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ()/+ ,.-]{2,70}?):\s*([^\n]*?)(?=\s{3,}[A-ZÁÉÍÓÚ]|\n|$)")
+_USO_PRIVADO = re.compile("[" + chr(0xE000) + "-" + chr(0xF8FF) + "]")  # o PDF usa um caractere de uso privado como marcador de lista
+_FORMA_FARMACEUTICA = re.compile(r"(?i)comprimid|c[áa]psula|frasco|seringa|solu[çc][ãa]o|ampola|caneta|injet|\d\s?(mg|ml|mcg|ui)\b")
+_SAIS = {
+    "cloridrato", "dicloridrato", "mesilato", "lactato", "sulfato", "acetato", "succinato", "fosfato", "citrato", "maleato", "tartarato",
+    "besilato", "bromidrato", "nitrato", "fumarato", "valerato", "propionato", "hemissuccinato", "sodico", "calcico", "potassico",
+    "difosfato", "dipropionato", "dimesilato", "hidrocloreto", "tartrato", "bitartarato", "oxalato", "gluconato", "carbonato", "estearato",
+}
+
+
+def _sem_acento(texto: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFD", texto) if unicodedata.category(c) != "Mn").lower()
+
+
+def componentes_do_nome(nome: str) -> frozenset[str]:
+    """Os princípios ativos de um nome de medicamento, sem sal, sem parênteses e sem acento: 'Levodopa/carbidopa' e 'levodopa + carbidopa' dão o mesmo conjunto."""
+    t = re.sub(r"\([^)]*\)", " ", _sem_acento(nome))
+    saida = set()
+    for parte in re.split(r"\s*(?:/|\+|\be\b)\s*", t):
+        palavras = [w for w in re.split(r"[\s,;]+", parte) if w and w != "de" and w not in _SAIS]
+        if palavras:
+            saida.add(" ".join(palavras))
+    return frozenset(saida)
+
+
+def medicamentos_do_pcdt(chunks: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[str]]:
+    """Lê a seção "Fármacos" de cada versão de PCDT (só o primeiro trecho dela) e devolve (medicamentos, versões sem a seção).
+
+    Cada linha: doença, versão, medicamento e a apresentação, como o protocolo escreve ('Pramipexol: comprimidos de 1 mg'). Entradas
+    sem forma farmacêutica ou dose na apresentação são descartadas, para não confundir texto corrido com a lista.
+    """
+    achados: list[dict[str, Any]] = []
+    versoes = set()
+    for c in chunks:
+        m = c.get("metadata", {})
+        versoes.add(m.get("versao"))
+        texto = c.get("texto", "")
+        corpo = texto.split("\n", 1)[1] if "\n" in texto else texto
+        achado = SECAO_FARMACOS.search(corpo[:400])
+        if not achado or m.get("parte") not in (None, 1):
+            continue
+        for nome, apresentacao in _ENTRADA_DE_FARMACO.findall(corpo[achado.end():]):
+            apresentacao = _USO_PRIVADO.sub(" ", apresentacao).strip()  # marcador de lista do PDF
+            apresentacao = re.split(r"\.\s+(?=[A-ZÁÉÍÓÚ])", apresentacao)[0].rstrip(". ")
+            if not _FORMA_FARMACEUTICA.search(apresentacao):
+                continue
+            achados.append({
+                "doenca": m.get("doenca"), "versao": m.get("versao"), "data_publicacao": m.get("data_publicacao"),
+                "situacao": "substituída" if m.get("data_vigencia_fim") else "vigente",
+                "medicamento": re.sub(r"\s+", " ", nome).strip(), "apresentacao": re.sub(r"\s+", " ", apresentacao),
+            })
+    com_secao = {a["versao"] for a in achados}
+    return achados, sorted(str(v) for v in versoes if v not in com_secao)
+
+
+def marcar_constar_na_rename(medicamentos_pcdt: list[dict[str, Any]], dcbs_da_rename: list[str]) -> None:
+    """Preenche na_rename ('sim' ou 'não') e dcb_na_rename comparando os princípios ativos; os nomes da RENAME vêm com sal (cloridrato de ...)."""
+    por_conjunto: dict[frozenset[str], str] = {}
+    for dcb in dcbs_da_rename:
+        por_conjunto.setdefault(componentes_do_nome(dcb), dcb)
+    for i, linha in enumerate(medicamentos_pcdt, 1):
+        achado = por_conjunto.get(componentes_do_nome(linha["medicamento"]))
+        linha.update({"id": i, "na_rename": "sim" if achado else "não", "dcb_na_rename": achado})
+
 
 def linhas_de_pcdt(manifesto: dict[str, Any]) -> list[dict[str, Any]]:
     """Uma linha por versão de PCDT declarada no manifesto. 'vigente' = sem data de fim na data da coleta."""
@@ -156,6 +225,14 @@ def linhas_de_pcdt(manifesto: dict[str, Any]) -> list[dict[str, Any]]:
                 "situacao": "substituída" if fim else "vigente",
             })
     return saida
+
+
+def _chunks_de_pcdt(pastas: Pastas, versao: str) -> list[dict[str, Any]]:
+    """Trechos já ingeridos dos PCDT (a ingestão roda antes); sem eles, não há lista de fármacos."""
+    caminho = pastas.dados / "processed" / pastas.cenario_id / f"{versao}_pcdt_normativo.jsonl"
+    if not caminho.exists():
+        return []
+    return [json.loads(l) for l in caminho.read_text(encoding="utf-8").splitlines() if l.strip()]
 
 
 def _pdf_da_rename(pasta_versao: Path, base_id: str) -> Path:
@@ -175,6 +252,9 @@ def normalizar(manifesto_path: Path, versao: str, pastas: Pastas) -> dict[str, A
     if not medicamentos:
         raise FileNotFoundError(f"nenhuma linha de medicamento lida em {pdf.name}")
     versoes = linhas_de_pcdt(manifesto)
+    chunks_pcdt = _chunks_de_pcdt(pastas, versao)
+    farmacos, sem_secao = medicamentos_do_pcdt(chunks_pcdt)
+    marcar_constar_na_rename(farmacos, sorted({m["dcb"] for m in medicamentos if m.get("dcb")}))
 
     saida = pastas.dados / "normalized" / pastas.cenario_id
     saida.mkdir(parents=True, exist_ok=True)
@@ -187,15 +267,16 @@ def normalizar(manifesto_path: Path, versao: str, pastas: Pastas) -> dict[str, A
     try:
         conexao.execute(_ddl("medicamento", COLUNAS_MEDICAMENTO))
         conexao.execute(_ddl("pcdt_versao", COLUNAS_PCDT))
+        conexao.execute(_ddl("pcdt_medicamento", COLUNAS_PCDT_MEDICAMENTO))
         conexao.execute("CREATE TABLE metadados (chave TEXT PRIMARY KEY, valor TEXT)")
-        for nome, colunas, linhas in (("medicamento", COLUNAS_MEDICAMENTO, medicamentos), ("pcdt_versao", COLUNAS_PCDT, versoes)):
+        for nome, colunas, linhas in (("medicamento", COLUNAS_MEDICAMENTO, medicamentos), ("pcdt_versao", COLUNAS_PCDT, versoes), ("pcdt_medicamento", COLUNAS_PCDT_MEDICAMENTO, farmacos)):
             conexao.executemany(
                 f"INSERT INTO {nome} ({','.join(colunas)}) VALUES ({','.join('?' * len(colunas))})",
                 [tuple(l.get(c) for c in colunas) for l in linhas],
             )
         for comando in INDICES:
             conexao.execute(comando)
-        total = {t: conexao.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] for t in ("medicamento", "pcdt_versao")}
+        total = {t: conexao.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] for t in ("medicamento", "pcdt_versao", "pcdt_medicamento")}
         por_componente = dict(conexao.execute("SELECT componente, COUNT(*) FROM medicamento GROUP BY componente ORDER BY 2 DESC").fetchall())
         distintos = conexao.execute("SELECT COUNT(DISTINCT dcb) FROM medicamento").fetchone()[0]
         por_grupo = dict(conexao.execute("SELECT grupo_atc, COUNT(*) FROM medicamento GROUP BY grupo_atc ORDER BY 1").fetchall())
@@ -210,6 +291,7 @@ def normalizar(manifesto_path: Path, versao: str, pastas: Pastas) -> dict[str, A
             "linhas_por_componente": por_componente,
             "linhas_por_grupo_atc": por_grupo,
             "linhas_sem_forma": sem_forma,
+            "pcdt_versoes_sem_secao_farmacos": sem_secao,  # a lista de fármacos não foi lida nestas versões (o cruzamento com a RENAME não as cobre)
             "rejeitados": {},
             "periodo_de_publicacao": {"de": min(datas), "ate": max(datas)},  # das portarias dos protocolos e da RENAME
             **rel_pdf,
