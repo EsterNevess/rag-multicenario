@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     embedding_batch_size: int = 4
     embedding_pause_seconds: float = 0.0
 
+    # Rerank por cross-encoder (opcional, desligado): exige os arquivos do modelo em data/models (veja src/rerank.py). Em CPU, +15 a 20 s por busca.
+    rerank: bool = False
+
     log_dir: Path = Path("logs")
 
     @field_validator("scenario")

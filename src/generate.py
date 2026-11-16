@@ -26,6 +26,7 @@ from src.index import EmbeddingIndisponivel, IndiceCarregado, carregar_indice, c
 from src.llm import LLM, LLMIndisponivel, criar_llm
 from src.obs import PipelineLogger, Stage, Tokens
 from src.pii import mascarar_dados_pessoais
+from src.rerank import RerankerIndisponivel, carregar_reranker
 from src.retrieve import buscar_por_bases, buscar_por_versao
 from src.indicadores import conferir_atualizacao, ler_ficha, localizar_agregado
 from src.router import _sem_acento, PlanoInvalido, avaliar_resposta, usa_base_agregada, ResultadoSQL, avaliar_pergunta, consultar, localizar_banco, validar_plano
@@ -56,6 +57,7 @@ class Contexto:
     banco_agregado: Path | None = None
     indices: dict[str, IndiceCarregado] = field(default_factory=dict)
     embedder: Any = None
+    reranker: Any = None  # cross-encoder opcional (Settings.rerank); sem ele, a busca é só BM25 + vetores + RRF
     hoje: str = field(default_factory=lambda: date.today().isoformat())
     cobertura: str | None = None
     bases: list[str] = field(default_factory=list)
@@ -379,9 +381,9 @@ def coletar(plano: PlanoConsulta, pergunta: str, ctx: Contexto) -> tuple[list[Ev
         indices = {b: i for b, i in ctx.indices.items() if ctx.natureza_da_base(b) in alvo}
         achados = []
         if indices and "vigente_em" not in filtros_docs and plano.filtros_documentos.get("vigente_em") == "todas":
-            achados = buscar_por_versao(indices, ctx.embedder, consulta, filtros=filtros_docs, logger=ctx.logger)  # comparar versões
+            achados = buscar_por_versao(indices, ctx.embedder, consulta, filtros=filtros_docs, logger=ctx.logger, reranker=ctx.reranker)  # comparar versões
         if indices and not achados:
-            achados = buscar_por_bases(indices, ctx.embedder, consulta, k=5, filtros=filtros_docs, logger=ctx.logger)
+            achados = buscar_por_bases(indices, ctx.embedder, consulta, k=5, filtros=filtros_docs, logger=ctx.logger, reranker=ctx.reranker)
         evidencias += evidencias_documentos(achados, len(evidencias) + 1)
         if not achados:
             avisos.append("Nenhum trecho de documento foi encontrado para a pergunta.")
@@ -610,7 +612,13 @@ def carregar_contexto(config: Settings, pastas: Pastas) -> Contexto:
     valores = listar_valores_existentes(banco, cap) if banco is not None else {}
     if banco_agregado is not None:
         valores.update(listar_valores_existentes(banco_agregado, cap, entidades=cap.entidades_agregadas()))
-    return Contexto(llm=criar_llm(config), logger=logger, cap=cap, banco=banco, banco_agregado=banco_agregado, indices=indices, embedder=embedder,
+    reranker = None
+    if config.rerank:
+        try:
+            reranker = carregar_reranker()
+        except RerankerIndisponivel as erro:
+            print(f"Aviso: rerank ligado, mas indisponível ({erro}); seguindo sem ele.", file=sys.stderr)
+    return Contexto(llm=criar_llm(config), logger=logger, cap=cap, banco=banco, banco_agregado=banco_agregado, indices=indices, embedder=embedder, reranker=reranker,
                     cobertura=cobertura, bases=sorted(indices), natureza_das_bases=naturezas, valores_conhecidos=valores)
 
 

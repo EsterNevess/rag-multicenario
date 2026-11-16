@@ -11,8 +11,8 @@ Para cada pergunta:
 Cada base é pesquisada separadamente e os resultados são juntados depois, com uma garantia mínima
 de representação por base. Em um índice único, uma base grande afoga uma pequena.
 
-O reranqueamento por cross-encoder (a etapa `rerank`) não está aqui: depende de um modelo próprio e
-entra na fase de avaliação, onde a sua contribuição pode ser medida.
+O reranqueamento por cross-encoder (a etapa `rerank`) é opcional: o modelo está em `src/rerank.py` e `buscar_hibrido`
+recebe um `reranker` para reordenar os melhores candidatos da fusão. Sem ele, nada muda.
 """
 
 from __future__ import annotations
@@ -59,7 +59,13 @@ class Resultado:
     denso_rank: int | None = None
     bm25_nota: float | None = None
     denso_nota: float | None = None
+    nota_rerank: float | None = None  # logit do cross-encoder, quando o rerank está ligado
     extras: dict[str, Any] = field(default_factory=dict)
+
+
+def nota_de_ordenacao(r: "Resultado") -> float:
+    """Com rerank, a nota do cross-encoder; sem, a nota RRF. Os resultados de uma busca nunca misturam as duas."""
+    return r.nota_rerank if r.nota_rerank is not None else r.score_rrf
 
 
 # --------------------------------------------------------------------------- consulta e filtros
@@ -214,8 +220,13 @@ def buscar_hibrido(
     filtros: dict[str, Any] | None = None,
     k_busca: int = 50,
     logger: PipelineLogger | None = None,
+    reranker: Any = None,
+    n_rerank: int = 20,
 ) -> list[Resultado]:
-    """BM25 + FAISS + RRF em uma base. Devolve os k melhores, com o texto e a posição em cada busca."""
+    """BM25 + FAISS + RRF em uma base. Devolve os k melhores, com o texto e a posição em cada busca.
+
+    Com `reranker`, o cross-encoder reordena os `n_rerank` primeiros da fusão (no mínimo k) e a lista vem na ordem dele.
+    """
 
     def etapa(stage: Stage, entrada: str):
         # Sem logger, um contexto vazio aceita as atribuições abaixo e não registra nada.
@@ -231,9 +242,19 @@ def buscar_hibrido(
         e.modelo = embedder.identity
         e.extra = {"k": k_busca, "filtros": filtros or {}}
     with etapa(Stage.FUSAO_RRF, consulta) as e:
-        fundidos = fundir_rrf({"bm25": bm25, "denso": denso})[:k]
+        fundidos = fundir_rrf({"bm25": bm25, "denso": denso})[: max(k, n_rerank) if reranker else k]
         e.output = f"{len(fundidos)} resultados"
         e.extra = {"k_rrf": K_RRF, "k": k}
+    notas_rerank: dict[str, float] = {}
+    if reranker is not None and fundidos:
+        with etapa(Stage.RERANK, consulta) as e:
+            textos_candidatos = _textos(indice, [cid for cid, _, _ in fundidos])
+            notas = reranker.pontuar(consulta, [textos_candidatos[cid] for cid, _, _ in fundidos])
+            notas_rerank = {cid: nota for (cid, _, _), nota in zip(fundidos, notas)}
+            posicao = {cid: i for i, (cid, _, _) in enumerate(fundidos)}
+            fundidos = sorted(fundidos, key=lambda f: (-notas_rerank[f[0]], posicao[f[0]]))[:k]
+            e.output = f"{len(fundidos)} resultados"
+            e.extra = {"candidatos": len(notas_rerank), "k": k}
 
     notas_bm25 = {c.chunk_id: c.nota for c in bm25}
     notas_denso = {c.chunk_id: c.nota for c in denso}
@@ -249,6 +270,7 @@ def buscar_hibrido(
             denso_rank=pos.get("denso"),
             bm25_nota=notas_bm25.get(cid),
             denso_nota=notas_denso.get(cid),
+            nota_rerank=notas_rerank.get(cid),
         )
         for cid, nota, pos in fundidos
     ]
@@ -263,20 +285,21 @@ def buscar_por_bases(
     garantir_por_base: int = 1,
     filtros: dict[str, Any] | None = None,
     logger: PipelineLogger | None = None,
+    reranker: Any = None,
 ) -> list[Resultado]:
     """Pesquisa cada base separadamente e junta. Garante até `garantir_por_base` trechos de cada base
     que tenha resultado, para uma base grande não afogar uma pequena; o resto é preenchido pela nota RRF."""
     por_base = {
-        base_id: buscar_hibrido(indice, embedder, consulta, k=k_por_base, filtros=filtros, logger=logger)
+        base_id: buscar_hibrido(indice, embedder, consulta, k=k_por_base, filtros=filtros, logger=logger, reranker=reranker)
         for base_id, indice in indices.items()
     }
     garantidos: list[Resultado] = []
     for resultados in por_base.values():
         garantidos.extend(resultados[:garantir_por_base])
     restantes = [r for resultados in por_base.values() for r in resultados[garantir_por_base:]]
-    restantes.sort(key=lambda r: (-r.score_rrf, r.chunk_id))
+    restantes.sort(key=lambda r: (-nota_de_ordenacao(r), r.chunk_id))
     escolhidos = garantidos[:k] if len(garantidos) >= k else garantidos + restantes[: k - len(garantidos)]
-    escolhidos.sort(key=lambda r: (-r.score_rrf, r.chunk_id))
+    escolhidos.sort(key=lambda r: (-nota_de_ordenacao(r), r.chunk_id))
     return escolhidos
 
 
@@ -287,6 +310,7 @@ def buscar_por_versao(
     filtros: dict[str, Any] | None = None,
     por_versao: int = 2,
     logger: PipelineLogger | None = None,
+    reranker: Any = None,
 ) -> list[Resultado]:
     """Para comparar versões de um documento: os melhores trechos de CADA versão que casa com os filtros.
 
@@ -300,6 +324,6 @@ def buscar_por_versao(
             if meta.get("versao") and casa_filtro(meta, filtros):
                 versoes[meta["versao"]] = meta.get("data_publicacao") or ""
         for versao in versoes:
-            achados += buscar_hibrido(indice, embedder, consulta, k=por_versao, filtros={**(filtros or {}), "versao": versao}, logger=logger)
-    achados.sort(key=lambda r: (r.metadata.get("data_publicacao") or "", r.score_rrf), reverse=True)
+            achados += buscar_hibrido(indice, embedder, consulta, k=por_versao, filtros={**(filtros or {}), "versao": versao}, logger=logger, reranker=reranker)
+    achados.sort(key=lambda r: (r.metadata.get("data_publicacao") or "", nota_de_ordenacao(r)), reverse=True)
     return achados

@@ -266,3 +266,54 @@ def test_por_bases_respeita_k_final(tmp_path):
         "b": _indice(tmp_path, [_chunk(f"b{i}", f"texto beta {i}", base="b") for i in range(6)], "b", embedder)[0],
     }
     assert len(buscar_por_bases(indices, embedder, "texto", k=4)) == 4
+
+
+# ----------------------------------------------------------------- rerank (opcional)
+
+
+class _RerankerFalso:
+    """Dá nota alta ao trecho que contém a palavra-alvo; conta as chamadas."""
+
+    def __init__(self, alvo):
+        self.alvo, self.chamadas = alvo, []
+
+    def pontuar(self, consulta, textos):
+        self.chamadas.append((consulta, list(textos)))
+        return [10.0 if self.alvo in t else -5.0 for t in textos]
+
+
+def test_sem_reranker_a_busca_e_a_de_sempre_e_nao_tem_nota_de_rerank(tmp_path):
+    indice, embedder = _indice(tmp_path, CORPUS)
+    assert all(r.nota_rerank is None for r in buscar_hibrido(indice, embedder, "dispensa de licitação", k=3))
+
+
+def test_reranker_reordena_os_candidatos_da_fusao_e_registra_a_nota(tmp_path):
+    indice, embedder = _indice(tmp_path, CORPUS)
+    sem = buscar_hibrido(indice, embedder, "dispensa de licitação", k=3)
+    assert sem[0].chunk_id == "c1"
+    reranker = _RerankerFalso("prazo de vigência")  # só o c4 tem a palavra-alvo
+    com = buscar_hibrido(indice, embedder, "dispensa de licitação", k=3, reranker=reranker)
+    assert com[0].chunk_id == "c4" and com[0].nota_rerank == 10.0
+    assert len(com) == 3 and all(r.nota_rerank is not None for r in com)
+    assert [r.nota_rerank for r in com] == sorted((r.nota_rerank for r in com), reverse=True)
+
+
+def test_reranker_ve_mais_candidatos_que_k_mas_a_lista_final_tem_k(tmp_path):
+    indice, embedder = _indice(tmp_path, CORPUS)
+    reranker = _RerankerFalso("zzz")
+    com = buscar_hibrido(indice, embedder, "licitação", k=2, reranker=reranker, n_rerank=5)
+    assert len(com) == 2 and len(reranker.chamadas[0][1]) == 5  # cinco trechos lidos, dois devolvidos
+
+
+def test_empate_de_nota_do_reranker_mantem_a_ordem_da_fusao(tmp_path):
+    indice, embedder = _indice(tmp_path, CORPUS)
+    sem = [r.chunk_id for r in buscar_hibrido(indice, embedder, "dispensa de licitação", k=5)]
+    com = [r.chunk_id for r in buscar_hibrido(indice, embedder, "dispensa de licitação", k=5, reranker=_RerankerFalso("inexistente-xyz"))]
+    assert com == sem  # todas as notas iguais
+
+
+def test_busca_por_bases_ordena_pela_nota_do_reranker_quando_ela_existe(tmp_path):
+    indice, embedder = _indice(tmp_path, CORPUS)
+    resultados = buscar_por_bases({"a": indice}, embedder, "dispensa de licitação", k=3, k_por_base=5, garantir_por_base=1,
+                                  reranker=_RerankerFalso("prazo de vigência"))
+    assert resultados[0].chunk_id == "c4"
