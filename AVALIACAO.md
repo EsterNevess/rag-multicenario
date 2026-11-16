@@ -128,17 +128,22 @@ O que as repetições mostraram:
 
 ## Redação de dados pessoais em texto novo
 
-A ingestão de registros conversacionais troca por uma marca as frases que identificam pessoas ou trazem dado clínico individual (regras em `scenarios/saude/capacidades.yaml`) e mascara documentos, e-mails e telefones. As regras foram escritas junto com os registros sintéticos, então medir nesses registros diz pouco. Para medir em texto novo, escrevi 42 frases de ouvidoria depois de ler as regras e **sem usá-las para ajustá-las**: 30 com dado sensível (nome, CPF, RG, cartão SUS, telefone, e-mail, endereço, data de nascimento, diagnóstico, dose, exame) e 12 reclamações comuns. `python -m src.avaliar_redacao --scenario saude` aplica à mão o que a ingestão faz e confere se cada valor sensível sumiu.
+A ingestão de registros conversacionais troca por uma marca as frases que identificam pessoas ou trazem dado clínico individual (regras em `scenarios/saude/capacidades.yaml`) e mascara documentos, e-mails e telefones. Para medir em texto novo, escrevi três conjuntos de frases de ouvidoria, cada um com 30 frases sensíveis (nome, CPF, RG, cartão SUS, telefone, e-mail, endereço, nascimento, diagnóstico, dose, exame) e 12 reclamações comuns que não devem mudar. `python -m src.avaliar_redacao --scenario saude --conjunto <redacao_holdout | redacao_holdout_b | redacao_holdout_c>` aplica à mão o que a ingestão faz e confere se cada valor sensível sumiu.
 
-| Medida (saúde, 42 frases) | Resultado |
-|---|---|
-| Frases sensíveis em que nenhum valor sobrou | **17 de 30 (57%)** |
-| Valores sensíveis protegidos | 20 de 35 (57%) |
-| Frases comuns alteradas (falso alarme) | 0 de 12 |
+| Conjunto | Quando foi escrito | Regras | Frases sensíveis protegidas | Comuns alteradas |
+|---|---|---|---|---|
+| A | depois das regras originais, sem ajustá-las | originais | **17 de 30 (57%)** | 0 de 12 |
+| B | depois do A, antes de qualquer ajuste | originais | **11 de 30 (37%)** | 0 de 12 |
+| A e B | os dois foram vistos ao ajustar as regras | ajustadas | 30 de 30 e 30 de 30 | 0 de 12 |
+| **C** | **depois do ajuste, sem alterar regra por causa dele** | ajustadas | **13 de 30 (43%)**; 18 de 37 valores | **0 de 12** |
 
-O que escapa: nome sem gatilho que as regras conheçam ("Eu, José Ricardo da Silva", "o seu Antônio Carlos Neves", "Dra. Fernanda Lopes", "seu Jorge"); condição de saúde dita sem a construção esperada ("Sou hipertenso e diabético", "tem asma", "Estou com câncer de mama", "cirurgia de catarata", "grávida de 30 semanas", "tem leucemia"); dose com outro verbo ("tomava 40 unidades"); data de nascimento e RG. Telefone, CPF, cartão SUS, e-mail e as construções que as regras já listam foram pegos. **Conclusão: a redação é uma primeira camada, e perde cerca de 4 em cada 10 frases sensíveis em texto novo.** Ela não basta para dados reais; os registros daqui são sintéticos. Quem for ingerir dados reais precisa de uma camada própria (por exemplo, reconhecimento de nomes) e de revisão humana.
+**O número que vale é o do conjunto C: 43% das frases sensíveis protegidas em texto novo.** O 30 de 30 em A e B não mede nada: as regras foram escritas olhando para as frases que vazavam (e eu vi a lista de vazamentos do B antes de ajustar), então são conjuntos de desenvolvimento. O ajuste acrescentou cerca de 15 padrões (nomes depois de "eu,", "seu", "Dr.", parentes sem vírgula; léxico de doenças com marcador de pessoa; verbos de dose; RG, data de nascimento e telefone fixo; "meu nome" em qualquer forma) e corrigiu o corte de frase depois de "Dr." e "Dra.", que separava o nome do título. **Em texto realmente novo, a cobertura ficou na mesma faixa de antes (57% e 37% sem ajuste, 43% com ele): regras e léxico escritos à mão não generalizam.**
 
-Limites: as 42 frases são minhas, num único cenário, e o conjunto agora é uma linha de base: se eu ajustar as regras a estas frases, ele deixa de medir. Para medir uma melhoria, é preciso escrever frases novas.
+O que escapou no conjunto C: doenças fora do léxico (psoríase, enxaqueca, osteoporose, covid, obesidade, labirintite, anemia, miopia, pneumonia), apelidos e nomes soltos ("a Rosinha", "a Neide", "o Zé Maria", "a Vera Lúcia Andrade"), identificadores que as regras não conhecem (prontuário, matrícula, CEP), endereço sem o verbo "moro" ("Sou da Rua Teodoro da Silva"), medicamento com dose por extenso ("dois comprimidos de captopril") e telefone com espaços ("21 98765 4321"). Não houve falso alarme em nenhum conjunto, nem nas frases comuns que citam doenças e hospitais com nome de pessoa.
+
+**Conclusão: a redação é uma primeira camada e perde mais da metade das frases sensíveis em texto novo.** Ela não serve para dados reais; os registros daqui são sintéticos. Quem for ingerir dados reais precisa de outra abordagem (reconhecimento de nomes e de termos clínicos treinado para isso, ou nunca indexar o texto livre) e de revisão humana. Ampliar as regras com base no C o invalidaria: uma nova tentativa exige um conjunto D.
+
+Limites: as 126 frases são minhas, num único cenário, e escritas por quem conhecia as regras.
 
 ## O que não foi medido
 
