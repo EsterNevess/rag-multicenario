@@ -172,7 +172,7 @@ def test_normalizar_grava_as_duas_tabelas_e_os_metadados(tmp_path):
     pastas = Pastas(cenario_id="saude", cenario=cenario, dados=tmp_path / "data")
     relatorio = normalizar(manifesto, "v1", pastas)
 
-    assert relatorio["tabelas"] == {"medicamento": 1, "pcdt_versao": 1, "pcdt_medicamento": 0}
+    assert relatorio["tabelas"] == {"medicamento": 1, "pcdt_versao": 1, "pcdt_medicamento": 0, "pcdt_secao": 0}
     conexao = sqlite3.connect(tmp_path / "data" / "normalized" / "saude" / "v1.sqlite")
     assert conexao.execute("SELECT dcb, componente, atc FROM medicamento").fetchall() == [("lactulose", "Básico", "A06AD11")]
     assert conexao.execute("SELECT valor FROM metadados WHERE chave='cenario'").fetchone() == ("saude",)

@@ -30,8 +30,8 @@ def _plano(**kw) -> PlanoConsulta:
 # ----------------------------------------------------------------- capacidades
 
 
-def test_o_cenario_declara_as_tres_entidades_os_tres_indicadores_e_o_filtro_de_doenca():
-    assert sorted(SAUDE.entidades) == ["medicamento", "pcdt_medicamento", "pcdt_versao"]
+def test_o_cenario_declara_as_quatro_entidades_os_tres_indicadores_e_o_filtro_de_doenca():
+    assert sorted(SAUDE.entidades) == ["medicamento", "pcdt_medicamento", "pcdt_secao", "pcdt_versao"]
     assert sorted(SAUDE.catalogo_de_indicadores.indicadores) == ["medicamentos_por_componente", "medicamentos_por_grupo_atc", "versoes_de_pcdt_por_doenca"]
     assert list(SAUDE.filtros_de_documentos) == ["doenca"]
     assert SAUDE.niveis_consultaveis == ("publico", "restrito")

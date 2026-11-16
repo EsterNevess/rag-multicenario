@@ -11,6 +11,7 @@ dicas_do_analisador:
   - "O corpus de protocolos cobre só: diabetes mellitus tipo 1, doença de Parkinson e artrite reumatoide (esta com quatro versões, de 2017 a 2026). Outras doenças não têm dados. Entre setembro de 2020 e setembro de 2021 o corpus não tem versão da artrite reumatoide."
   - "A RENAME 2024 está na entidade medicamento (uma linha por medicamento + concentração + forma). O nome é a denominação comum brasileira (DCB) em minúsculas: use dcb__contem (por exemplo insulina). O componente de financiamento é Básico, Estratégico ou Especializado (há combinações). Atenção: a RENAME 2024 tem 541 medicamentos distintos em 996 linhas; para contar medicamentos distintos, conte pelo nome, não pelas linhas."
   - "A entidade pcdt_versao lista as versões de protocolo do corpus, com data de publicação, fim da vigência e situação (vigente ou substituída). Use para perguntas sobre desde quando uma versão vale e qual a vigente."
+  - "Para \"o que mudou entre versões\" de um protocolo, use hibrida: a entidade pcdt_secao traz a comparação seção por seção, calculada sobre o texto inteiro das duas versões (presenca: nas duas versões, só na versão nova ou só na versão anterior; frases_novas e frases_removidas por seção; frases_mantidas_pct; até três exemplos de frases novas). Filtre por doenca__contem e, para o par mais recente, pela versao_nova vigente (a de data_nova mais recente). Ela diz ONDE o texto mudou e quanto, não o que mudou clinicamente: use os exemplos e os trechos dos documentos para descrever, e não afirme mudança clínica só pelos números. \"Só na versão anterior\" pode ser conteúdo de outro documento do mesmo PDF (a versão de 2021 inclui também a artrite idiopática juvenil), e uma frase \"nova\" pode ser a mesma ideia reescrita. Só a artrite reumatoide tem mais de uma versão no corpus (quatro, três pares)."
   - "Registros de ouvidoria (documentos sintéticos) estão disponíveis: perguntas sobre reclamações, falta de medicamento ou o que as pessoas relatam usam rota documentos com naturezas [conversacional]."
   - "A entidade pcdt_medicamento traz os medicamentos da seção Fármacos de cada versão de protocolo (medicamento e apresentação como o protocolo escreve), com na_rename = sim ou não (se o princípio ativo consta na RENAME 2024; sais e formas não entram na comparação) e dcb_na_rename (o nome na RENAME). Para \"quais medicamentos do protocolo de X não estão na RENAME\", use estruturada em pcdt_medicamento com doenca__contem e SEM filtrar na_rename (listar, limite 100): a coluna na_rename mostra cada caso, e uma lista sem nenhum \"não\" significa que todos os medicamentos da seção constam na RENAME. Se a consulta voltar sem linhas, o corpus não tem a lista daquela versão: diga que a comparação não é possível, e nunca que nenhum medicamento falta. Cobertura: as cinco versões do corpus (Parkinson 2017, artrite reumatoide 2017, 2019, 2021 e 2026, diabetes tipo 1 2019). Só entram os medicamentos que o protocolo lista na seção Fármacos ou, na artrite de 2026, nas listas por classe do tratamento (coluna classe: MMCDs sintéticos, MMCDbio biológicos, MMCDsae alvo específico); essa versão não traz apresentação, e o corpus não traz anti-inflamatórios nem glicocorticoides dela."
   - "Não há dados de dispensação, cobertura nem internações: o corpus não os coleta. Perguntas por quantidades dispensadas ou internadas usam fora_do_escopo."
@@ -137,6 +138,25 @@ entidades:
       - { nome: classe, tipo: categoria, agrupavel: true }
       - { nome: na_rename, tipo: categoria, agrupavel: true, listar_valores: true }
       - { nome: dcb_na_rename, tipo: texto }
+  pcdt_secao:
+    tabela: pcdt_secao
+    exibir: [doenca, versao_nova, versao_anterior, secao, presenca, frases_novas, frases_removidas, frases_mantidas_pct, exemplos_de_frases_novas]
+    ordem_padrao: id
+    campos:
+      - { nome: id, tipo: id }
+      - { nome: doenca, tipo: categoria, agrupavel: true, listar_valores: true }
+      - { nome: versao_nova, tipo: categoria, agrupavel: true }
+      - { nome: data_nova, tipo: data }
+      - { nome: versao_anterior, tipo: categoria, agrupavel: true }
+      - { nome: data_anterior, tipo: data }
+      - { nome: secao, tipo: texto }
+      - { nome: presenca, tipo: categoria, agrupavel: true, listar_valores: true }
+      - { nome: caracteres_nova, tipo: inteiro }
+      - { nome: caracteres_anterior, tipo: inteiro }
+      - { nome: frases_novas, tipo: inteiro }
+      - { nome: frases_removidas, tipo: inteiro }
+      - { nome: frases_mantidas_pct, tipo: valor }
+      - { nome: exemplos_de_frases_novas, tipo: texto }
   pcdt_versao:
     tabela: pcdt_versao
     exibir: [doenca, versao, data_publicacao, data_vigencia_fim, situacao]

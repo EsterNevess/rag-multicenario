@@ -4,6 +4,7 @@ Gera `data/normalized/saude/<versão>.sqlite` com:
 
   medicamento   uma linha por medicamento + concentração + forma farmacêutica (Apêndice A da RENAME, por classificação ATC)
   pcdt_versao   uma linha por versão de PCDT do corpus, com a data de publicação e a de fim da vigência
+  pcdt_secao    comparação seção por seção entre versões consecutivas de um PCDT (ver src/pcdt_versoes.py)
   pcdt_medicamento  uma linha por medicamento da seção "Fármacos" de cada versão de PCDT, com a marca de constar ou não na RENAME
   metadados     versão, cenário e o relatório da normalização
 
@@ -25,17 +26,20 @@ import pymupdf
 
 from src.fetch_corpus import Pastas, carregar_manifesto
 from src.fsutil import com_repeticao
+from src.pcdt_versoes import COLUNAS_SECAO, tabela_de_secoes
 
 COLUNAS_MEDICAMENTO = ["id", "dcb", "concentracao", "forma", "componente", "atc", "aware", "grupo_atc", "grupo_atc_nome", "pagina", "ano_edicao"]
 COLUNAS_PCDT = ["id", "doenca", "versao", "rotulo", "data_publicacao", "data_vigencia_fim", "situacao"]
 COLUNAS_PCDT_MEDICAMENTO = ["id", "doenca", "versao", "data_publicacao", "situacao", "medicamento", "apresentacao", "classe", "na_rename", "dcb_na_rename"]
-TIPOS_SQL = {"id": "INTEGER", "pagina": "INTEGER", "ano_edicao": "INTEGER"}
+TIPOS_SQL = {"id": "INTEGER", "pagina": "INTEGER", "ano_edicao": "INTEGER", "caracteres_nova": "INTEGER", "caracteres_anterior": "INTEGER",
+             "frases_novas": "INTEGER", "frases_removidas": "INTEGER", "frases_mantidas_pct": "REAL"}
 INDICES = [
     "CREATE INDEX ix_medicamento_dcb ON medicamento (dcb)",
     "CREATE INDEX ix_medicamento_componente ON medicamento (componente)",
     "CREATE INDEX ix_medicamento_atc ON medicamento (atc)",
     "CREATE INDEX ix_pcdt_doenca ON pcdt_versao (doenca, data_publicacao)",
     "CREATE INDEX ix_pcdt_med_doenca ON pcdt_medicamento (doenca, na_rename)",
+    "CREATE INDEX ix_pcdt_secao_versoes ON pcdt_secao (doenca, versao_nova)",
 ]
 GRUPO_ATC = re.compile(r"^([A-Z]): (.+)$")
 CODIGO_ATC = re.compile(r"^[A-Z]\d{2}[A-Z]{2}\d{2}$")
@@ -322,6 +326,7 @@ def normalizar(manifesto_path: Path, versao: str, pastas: Pastas) -> dict[str, A
     versoes = linhas_de_pcdt(manifesto)
     chunks_pcdt = _chunks_de_pcdt(pastas, versao)
     farmacos, sem_secao = medicamentos_do_pcdt(chunks_pcdt)
+    secoes, rel_secoes = tabela_de_secoes(chunks_pcdt)
     aproximadas = marcar_constar_na_rename(farmacos, sorted({m["dcb"] for m in medicamentos if m.get("dcb")}))
 
     saida = pastas.dados / "normalized" / pastas.cenario_id
@@ -336,15 +341,16 @@ def normalizar(manifesto_path: Path, versao: str, pastas: Pastas) -> dict[str, A
         conexao.execute(_ddl("medicamento", COLUNAS_MEDICAMENTO))
         conexao.execute(_ddl("pcdt_versao", COLUNAS_PCDT))
         conexao.execute(_ddl("pcdt_medicamento", COLUNAS_PCDT_MEDICAMENTO))
+        conexao.execute(_ddl("pcdt_secao", COLUNAS_SECAO))
         conexao.execute("CREATE TABLE metadados (chave TEXT PRIMARY KEY, valor TEXT)")
-        for nome, colunas, linhas in (("medicamento", COLUNAS_MEDICAMENTO, medicamentos), ("pcdt_versao", COLUNAS_PCDT, versoes), ("pcdt_medicamento", COLUNAS_PCDT_MEDICAMENTO, farmacos)):
+        for nome, colunas, linhas in (("medicamento", COLUNAS_MEDICAMENTO, medicamentos), ("pcdt_versao", COLUNAS_PCDT, versoes), ("pcdt_medicamento", COLUNAS_PCDT_MEDICAMENTO, farmacos), ("pcdt_secao", COLUNAS_SECAO, secoes)):
             conexao.executemany(
                 f"INSERT INTO {nome} ({','.join(colunas)}) VALUES ({','.join('?' * len(colunas))})",
                 [tuple(l.get(c) for c in colunas) for l in linhas],
             )
         for comando in INDICES:
             conexao.execute(comando)
-        total = {t: conexao.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] for t in ("medicamento", "pcdt_versao", "pcdt_medicamento")}
+        total = {t: conexao.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] for t in ("medicamento", "pcdt_versao", "pcdt_medicamento", "pcdt_secao")}
         por_componente = dict(conexao.execute("SELECT componente, COUNT(*) FROM medicamento GROUP BY componente ORDER BY 2 DESC").fetchall())
         distintos = conexao.execute("SELECT COUNT(DISTINCT dcb) FROM medicamento").fetchone()[0]
         por_grupo = dict(conexao.execute("SELECT grupo_atc, COUNT(*) FROM medicamento GROUP BY grupo_atc ORDER BY 1").fetchall())
@@ -359,6 +365,7 @@ def normalizar(manifesto_path: Path, versao: str, pastas: Pastas) -> dict[str, A
             "linhas_por_componente": por_componente,
             "linhas_por_grupo_atc": por_grupo,
             "linhas_sem_forma": sem_forma,
+            "pcdt_comparacao_de_versoes": rel_secoes,
             "pcdt_correspondencias_aproximadas": aproximadas,  # nome do protocolo contido num único nome da RENAME (ex.: insulina NPH e insulina humana NPH)
             "pcdt_versoes_sem_secao_farmacos": sem_secao,  # a lista de fármacos não foi lida nestas versões (o cruzamento com a RENAME não as cobre)
             "rejeitados": {},
