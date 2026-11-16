@@ -277,6 +277,7 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [x] Guardrails em camadas: entrada, mascaramento e redação na ingestão, níveis de acesso, regras no prompt e guarda de saída
 - [~] Avaliação (fase 5), ver [AVALIACAO.md](AVALIACAO.md):
   - [x] Recuperação: BM25 x vetores x RRF em 34 perguntas, sem modelo, com intervalo de confiança (o RRF tem a maior média de MRR, mas não é conclusivo)
+  - [x] Segundo conjunto de 25 perguntas de recuperação, escrito depois das decisões: a vantagem do k_rrf = 10 não se repetiu (+0,005) e o filtro de vigência e de doença é o efeito mais firme (+0,054 nas 59, sem zero no intervalo)
   - [x] Resposta final com 3 repetições na saúde (13 perguntas)
   - [ ] Resposta final com 3 repetições no RJ (parou no RJ-04) e na pesquisa (não começou): limite diário da Groq, retomar com `python -m src.avaliar_respostas --scenario <id> --retomar`
   - [ ] RRF + rerank (precisa baixar um modelo de reranking)

@@ -42,6 +42,32 @@ Diferenças pareadas no MRR@10, com intervalo de confiança de 95% por bootstrap
 - **O filtro de doença e de vigência ajuda, pouco e sem folga estatística.** Nas 9 perguntas de saúde que o usam, o MRR vai de 0,611 (sem filtro) para 0,722 (com filtro). Em 32 das 34 perguntas o resultado é idêntico.
 - **k_rrf = 10 parece melhor que 60** (2 vitórias, 0 derrotas), mas escolhi esse valor olhando as mesmas perguntas em que ele é medido. Não alterei o padrão do motor por isso.
 
+## Segundo conjunto: 25 perguntas novas
+
+Para testar o que foi decidido com as 34 primeiras, escrevi 25 perguntas novas (RJ 9, saúde 8, pesquisa 8) em `scenarios/<id>/eval/retrieval_gold_novas.json`, depois de tomar as decisões abaixo e sem olhar o ranking dos sistemas nelas. Os critérios de relevância só poderiam ser ajustados se uma pergunta ficasse sem nenhum trecho relevante no índice; isso não aconteceu: as 25 foram válidas de primeira. Roda com `python -m src.avaliar --scenario <id> --conjunto retrieval_gold_novas`.
+
+| Sistema (25 novas) | hit@1 | hit@5 | MRR@10 | P@5 |
+|---|---|---|---|---|
+| BM25 | 0,560 | 0,800 | 0,666 | 0,552 |
+| Denso | 0,560 | **0,880** | 0,683 | 0,504 |
+| RRF (k=60, padrão) | **0,640** | **0,880** | 0,731 | **0,560** |
+| RRF (k=10) | **0,640** | 0,840 | **0,737** | 0,544 |
+| RRF sem filtro de vigência | 0,520 | 0,840 | 0,645 | 0,464 |
+
+| Comparação (MRR@10) | Novas (25) | Todas (59) |
+|---|---|---|
+| RRF - BM25 | +0,065 [-0,038; +0,178] | +0,055 [-0,011; +0,125] |
+| RRF - denso | +0,049 [-0,078; +0,179] | +0,057 [-0,026; +0,145] |
+| RRF k=10 - RRF k=60 | +0,005 [-0,004; +0,020] | +0,022 [-0,001; +0,053] |
+| RRF - RRF sem filtro | +0,086 [+0,002; +0,187] | +0,054 [+0,013; +0,104] |
+
+O que o conjunto novo mostra:
+
+- **A vantagem do k_rrf = 10 não se repetiu.** Nas perguntas novas a diferença é +0,005 (1 vitória, 1 derrota, 23 empates). O +0,034 do primeiro conjunto era em grande parte efeito de ter escolhido o valor olhando aquelas perguntas. Manter k = 60.
+- **O RRF continua à frente de BM25 e denso, no mesmo tamanho (+0,05 a +0,07), mas o intervalo ainda inclui zero** nos dois conjuntos e nos 59 juntos (o de RRF contra BM25 por pouco: [-0,011; +0,125]). A direção é consistente; a prova estatística, não.
+- **O filtro de doença e de vigência é a diferença mais firme.** Nas 25 novas (+0,086, intervalo sem zero) e nos 59 juntos (+0,054 [+0,013; +0,104], 6 vitórias, 0 derrotas, 53 empates). Ajuda em perguntas de saúde; nas demais não muda nada. Na saúde, sem o filtro o MRR das novas cai de 0,806 para 0,537.
+- **Os conjuntos não são independentes do meu olhar.** Eu escrevi todas as perguntas e todos os critérios, e já conhecia o corpus e os pontos fracos dos sistemas. O conjunto novo é mais honesto para decidir o k do que o primeiro, mas continua sendo meu.
+
 ## Resposta final com repetições (fase 5, parte 2)
 
 `python -m src.avaliar_respostas --scenario <id> --repeticoes 3 [--retomar]` roda cada pergunta N vezes com o modelo (Groq, `openai/gpt-oss-120b`) e mede o que muda entre as repetições. A rodada anda uma repetição de cada vez sobre todas as perguntas e grava em `logs/` (fora do Git) o texto de cada resposta. O modelo varia de uma repetição para outra, e é isso que se quer ver.
@@ -75,7 +101,7 @@ O que as repetições mostraram:
 
 ## Limites desta avaliação
 
-- **São 34 perguntas.** Uma pergunta muda uma média em 0,03. Diferenças pequenas não devem ser lidas como ranking.
+- **São 59 perguntas (34 + 25).** Uma pergunta muda uma média em 0,02 a 0,03. Diferenças pequenas não devem ser lidas como ranking.
 - **Eu escrevi as perguntas e os critérios.** Um critério por expressão regular pode marcar como relevante um trecho que não responde bem, ou deixar de fora um que responde com outras palavras. A precisão@5 é a métrica mais sensível a isso.
 - **O embedding é pequeno** (0,6 bilhão de parâmetros, em CPU). Com outro modelo de embedding o denso pode subir.
 - **Os índices do RJ e da pesquisa foram reconstruídos** com a ingestão atual (leitura de PDF em duas colunas e cabeçalhos de página). Na pesquisa os trechos saíram idênticos (mesmo SHA-256); no RJ a base de editais foi de 1.458 para 1.456 trechos (versão v2), e as métricas de recuperação não mudaram (MRR@10: BM25 0,687, denso 0,745, RRF 0,722). A v3 dos editais do RJ não foi reindexada.
@@ -83,7 +109,7 @@ O que as repetições mostraram:
 ## Decisões
 
 1. **Manter o RRF como busca padrão.** Tem o melhor MRR entre os sistemas de k=60 e um hit@5 (0,94) próximo ao do denso. Não é imune a falha: quando o BM25 não traz nada relevante, ele pode atrapalhar (as duas perguntas acima).
-2. **Não trocar k_rrf por 10 ainda.** O sinal é fraco e foi escolhido nos mesmos dados. Reavaliar com um conjunto maior, escrito antes de olhar os resultados.
-3. **Manter o filtro de vigência e de doença**, que já é necessário por correção (não misturar versões), e que nos dados também não piorou nada.
-4. **Próximos passos para fechar a fase 5:** continuar a rodada de respostas do RJ e da pesquisa com `--retomar` quando o limite da Groq voltar; autorizar o download de um modelo de rerank e medir "RRF + rerank"; ampliar o conjunto de perguntas.
+2. **Manter k_rrf = 60.** O sinal a favor do 10 vinha do primeiro conjunto, em que o valor foi escolhido; no conjunto novo (25 perguntas) a diferença some (+0,005).
+3. **Manter o filtro de vigência e de doença**, que já é necessário por correção (não misturar versões) e é o efeito mais firme medido: +0,054 de MRR nas 59 perguntas, intervalo sem zero, sem nenhuma derrota.
+4. **Próximos passos para fechar a fase 5:** continuar a rodada de respostas do RJ e da pesquisa com `--retomar` quando o limite da Groq voltar; autorizar o download de um modelo de rerank e medir "RRF + rerank". O conjunto de perguntas foi ampliado (segundo conjunto, acima).
 5. **Falha conhecida:** o SA-10. A causa (comparar sem ter extraído os medicamentos do protocolo) foi tratada com a tabela `pcdt_medicamento`, mas a pergunta só será dada como corrigida depois de repetida com o modelo, e a artrite de 2026 e o diabetes continuam sem a lista.
