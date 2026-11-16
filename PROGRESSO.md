@@ -238,7 +238,7 @@ Depois dos defeitos abaixo, **as correções estão testadas por teste unitário
 - **Regra com `(?i)` global casando qualquer palavra** ("sou muito grato" lido como nome). Passou a usar a caixa-insensível só nas palavras-gatilho.
 - **Data de vigência que nunca chegava ao modelo.** O título da fonte só trazia a norma e a seção, embora a regra de resposta exigisse citar a data. Agora o título traz "publicada em ...; vigência encerrada em ...". Achado na primeira resposta real, que citou a data da portaria e disse que a versão "permanece em vigor" só por não haver prova de substituição; a regra de resposta passou a proibir essa conclusão.
 
-**Redação na ouvidoria.** Nos 6 registros plantados nenhum valor sensível sobra e os 24 comuns não são alterados. Em 8 frases escritas depois das regras, a cobertura foi de **3 de 8**; depois de generalizar as regras, 8 de 8, mas esse número é otimista porque as frases já eram conhecidas. A cobertura real em texto novo é desconhecida, e há um teste que documenta uma lacuna conhecida.
+**Redação na ouvidoria.** Nos 6 registros plantados nenhum valor sensível sobra e os 24 comuns não são alterados. Em 8 frases escritas depois das regras, a cobertura foi de **3 de 8**; depois de generalizar as regras, 8 de 8, mas esse número é otimista porque as frases já eram conhecidas. A cobertura real em texto novo foi medida depois: 17 de 30 frases sensíveis protegidas (57%), 0 de 12 comuns alteradas (ver AVALIACAO.md).
 
 **Rodada real (Groq, 2026-11-16), 13 perguntas.** Uma primeira tentativa, dias antes, foi barrada pelo limite diário de tokens; esta rodou inteira (51,6 mil tokens de entrada). Conferido a olho contra o corpus e, onde há número, contra o SQL:
 

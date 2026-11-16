@@ -125,6 +125,20 @@ O que as repetições mostraram:
 
 **Limites.** A conferência de rota é grossa (tipo de evidência, não o plano exato) e não há juiz automático de qualidade: o texto das respostas precisa de leitura. Só uma pergunta da saúde tem número conferível por SQL. As 13 perguntas são poucas para estimar taxas.
 
+## Redação de dados pessoais em texto novo
+
+A ingestão de registros conversacionais troca por uma marca as frases que identificam pessoas ou trazem dado clínico individual (regras em `scenarios/saude/capacidades.yaml`) e mascara documentos, e-mails e telefones. As regras foram escritas junto com os registros sintéticos, então medir nesses registros diz pouco. Para medir em texto novo, escrevi 42 frases de ouvidoria depois de ler as regras e **sem usá-las para ajustá-las**: 30 com dado sensível (nome, CPF, RG, cartão SUS, telefone, e-mail, endereço, data de nascimento, diagnóstico, dose, exame) e 12 reclamações comuns. `python -m src.avaliar_redacao --scenario saude` aplica à mão o que a ingestão faz e confere se cada valor sensível sumiu.
+
+| Medida (saúde, 42 frases) | Resultado |
+|---|---|
+| Frases sensíveis em que nenhum valor sobrou | **17 de 30 (57%)** |
+| Valores sensíveis protegidos | 20 de 35 (57%) |
+| Frases comuns alteradas (falso alarme) | 0 de 12 |
+
+O que escapa: nome sem gatilho que as regras conheçam ("Eu, José Ricardo da Silva", "o seu Antônio Carlos Neves", "Dra. Fernanda Lopes", "seu Jorge"); condição de saúde dita sem a construção esperada ("Sou hipertenso e diabético", "tem asma", "Estou com câncer de mama", "cirurgia de catarata", "grávida de 30 semanas", "tem leucemia"); dose com outro verbo ("tomava 40 unidades"); data de nascimento e RG. Telefone, CPF, cartão SUS, e-mail e as construções que as regras já listam foram pegos. **Conclusão: a redação é uma primeira camada, e perde cerca de 4 em cada 10 frases sensíveis em texto novo.** Ela não basta para dados reais; os registros daqui são sintéticos. Quem for ingerir dados reais precisa de uma camada própria (por exemplo, reconhecimento de nomes) e de revisão humana.
+
+Limites: as 42 frases são minhas, num único cenário, e o conjunto agora é uma linha de base: se eu ajustar as regras a estas frases, ele deixa de medir. Para medir uma melhoria, é preciso escrever frases novas.
+
 ## O que não foi medido
 
 - **Rerank na resposta final.** O rerank foi medido na ordenação dos trechos (seção acima), mas não na resposta escrita pelo modelo, que espera o limite da Groq. Está implementado como opção desligada por padrão.
