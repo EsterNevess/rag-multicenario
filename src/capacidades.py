@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 import unicodedata
 from dataclasses import dataclass, field
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 from typing import Any
 
@@ -245,7 +245,7 @@ def carregar_capacidades(cenario_id: str, raiz: Path | None = None) -> Capacidad
     return cap
 
 
-@lru_cache(maxsize=None)
+@cache
 def capacidades_do_cenario(cenario_id: str) -> Capacidades:
     """Versão com cache, para o uso normal; os testes passam `carregar_capacidades` com uma pasta própria."""
     return carregar_capacidades(cenario_id)

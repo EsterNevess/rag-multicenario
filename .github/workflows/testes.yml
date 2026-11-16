@@ -17,5 +17,9 @@ jobs:
           cache-dependency-path: requirements*.txt
       - name: Instalar as dependências (o núcleo; a interface e o rerank são opcionais)
         run: pip install -r requirements-dev.txt
-      - name: Rodar os testes
-        run: python -m pytest -q
+      - name: Lint (ruff)
+        run: ruff check .
+      - name: Rodar os testes com cobertura
+        run: |
+          coverage run -m pytest -q
+          coverage report --fail-under=85

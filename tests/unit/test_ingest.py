@@ -86,7 +86,7 @@ def test_pdf_remove_cabecalho_e_rodape_de_navegador(tmp_path):
             "Leis Estaduais",
             "Rio de Janeiro",
             "18/09/26, 17:44",
-            f"Decreto 48820 2023 de Rio de Janeiro RJ",
+            "Decreto 48820 2023 de Rio de Janeiro RJ",
             "https://leisestaduais.com.br/rj/decreto-n-48820",
             f"Art. {n} O conteudo do artigo numero {n}.",
             f"{n}/3",
@@ -195,7 +195,7 @@ def test_texto_longo_respeita_o_limite_e_tem_sobreposicao():
     partes = dividir_texto("\n".join(paragrafos), max_chars=800, overlap=100)
     assert len(partes) > 3
     assert all(len(p) <= 800 + 100 for p in partes)
-    for anterior, seguinte in zip(partes, partes[1:]):
+    for anterior, seguinte in zip(partes, partes[1:], strict=False):
         cauda = anterior[-40:]
         assert cauda in seguinte, "cada parte deve começar repetindo o final da anterior"
 

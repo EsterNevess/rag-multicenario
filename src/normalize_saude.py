@@ -18,7 +18,6 @@ import json
 import re
 import sqlite3
 import unicodedata
-from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -85,7 +84,7 @@ def _tem_codigo_atc(linha: list[str | None], papeis: dict[int, str | None]) -> b
     return coluna is not None and bool(CODIGO_ATC.match(limpar(linha[coluna]) or ""))
 
 
-def _celulas_da_linha(pagina: "pymupdf.Page", linha: Any) -> list[str | None]:
+def _celulas_da_linha(pagina: pymupdf.Page, linha: Any) -> list[str | None]:
     """O texto de cada célula da linha, lido por recorte da área, que preserva os espaços e as vírgulas decimais."""
     saida: list[str | None] = []
     for caixa in linha.cells:
@@ -93,7 +92,7 @@ def _celulas_da_linha(pagina: "pymupdf.Page", linha: Any) -> list[str | None]:
     return saida
 
 
-def _grupo_da_pagina(pagina: "pymupdf.Page") -> tuple[str, str] | None:
+def _grupo_da_pagina(pagina: pymupdf.Page) -> tuple[str, str] | None:
     for linha in pagina.get_text("text").splitlines():
         achado = GRUPO_ATC.match(linha.strip())
         if achado:

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import pytest
-
 from pathlib import Path
+
+import pytest
 
 from app import nucleo
 from src.llm import LLMIndisponivel
@@ -83,8 +83,8 @@ def test_cada_cenario_tem_nome_e_exemplos_e_os_exemplos_passam_na_guarda_de_entr
 @pytest.fixture()
 def tela(monkeypatch):
     pytest.importorskip("streamlit")  # a interface é opcional (requirements-app.txt)
-    from streamlit.testing.v1 import AppTest
     import streamlit as st
+    from streamlit.testing.v1 import AppTest
 
     st.cache_resource.clear()
     chamadas = []
@@ -141,8 +141,8 @@ def test_trocar_de_cenario_carrega_o_outro_e_limpa_a_pergunta(tela):
 
 def test_falha_ao_carregar_o_cenario_vira_mensagem(monkeypatch):
     pytest.importorskip("streamlit")
-    from streamlit.testing.v1 import AppTest
     import streamlit as st
+    from streamlit.testing.v1 import AppTest
 
     st.cache_resource.clear()
 

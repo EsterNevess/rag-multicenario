@@ -7,15 +7,16 @@ import sqlite3
 
 import pytest
 import requests
+from pydantic import ValidationError
 
 from config import Settings
 from src.capacidades import capacidades_do_cenario
+from src.generate import Contexto, formatar, responder
 from src.index import CacheDeEmbeddings, carregar_indice, construir_indice
 from src.llm import ClienteLLM, Completacao, LLMIndisponivel, criar_llm
-from src.generate import Contexto, analisar, formatar, responder
 from src.normalize import COLUNAS_CONTRATACAO, _ddl
 from src.obs import PipelineLogger, Tokens
-from src.schema import Natureza, Rota
+from src.schema import Rota
 from tests.fakes import EmbedderPalavras
 
 
@@ -295,7 +296,7 @@ def test_groq_exige_chave_usa_o_modelo_e_o_endereco_certos(monkeypatch):
 
 
 def test_groq_nao_serve_para_embeddings():
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         Settings(_env_file=None, embedding_provider="groq")
 
 

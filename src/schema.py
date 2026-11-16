@@ -107,7 +107,7 @@ class PlanoConsulta(BaseModel):
         return dados
 
     @model_validator(mode="after")
-    def _coerente_com_a_rota(self) -> "PlanoConsulta":
+    def _coerente_com_a_rota(self) -> PlanoConsulta:
         if self.rota not in (Rota.CATALOGO, Rota.FORA_DO_ESCOPO) and not self.naturezas:
             raise ValueError("informe ao menos uma natureza")
         if self.rota in (Rota.ESTRUTURADA, Rota.AGREGADA) and not self.entidade:
@@ -153,7 +153,7 @@ class RAGResponse(BaseModel):
     plano: PlanoConsulta | None = None  # o plano que o analisador montou (só existe depois dessa etapa); a interface o mostra
 
     @model_validator(mode="after")
-    def _recusa_nao_cita_fontes(self) -> "RAGResponse":
+    def _recusa_nao_cita_fontes(self) -> RAGResponse:
         if self.is_refusal:
             if self.sources_used:
                 raise ValueError("uma recusa não pode citar fontes")

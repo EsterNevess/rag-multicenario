@@ -8,19 +8,18 @@ import sqlite3
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-import faiss
 import numpy as np
 import pytest
 
 from config import Settings
 from src.index import (
-    _com_repeticao,
     INSTRUCAO_CONSULTA_QWEN3,
     CacheDeEmbeddings,
     EmbedderCompativelComOpenAI,
     EmbeddingIncompativel,
     EmbeddingIndisponivel,
     IndiceIncompativel,
+    _com_repeticao,
     carregar_indice,
     construir_indice,
     criar_embedder,

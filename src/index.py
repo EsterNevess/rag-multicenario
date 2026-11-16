@@ -29,10 +29,11 @@ import shutil
 import sqlite3
 import sys
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Protocol
+from typing import Any, Protocol
 
 import faiss
 import numpy as np
@@ -190,7 +191,7 @@ class CacheDeEmbeddings:
         self.conexao.commit()
 
     def _chave(self, texto: str) -> str:
-        return hashlib.sha256(f"{self.identity}\0{texto}".encode("utf-8")).hexdigest()
+        return hashlib.sha256(f"{self.identity}\0{texto}".encode()).hexdigest()
 
     def obter(self, textos: list[str]) -> dict[int, np.ndarray]:
         achados: dict[int, np.ndarray] = {}
@@ -203,7 +204,7 @@ class CacheDeEmbeddings:
     def guardar(self, textos: list[str], vetores: np.ndarray) -> None:
         self.conexao.executemany(
             "INSERT OR REPLACE INTO emb (chave, dim, vec) VALUES (?, ?, ?)",
-            [(self._chave(t), int(v.shape[0]), v.astype(np.float32).tobytes()) for t, v in zip(textos, vetores)],
+            [(self._chave(t), int(v.shape[0]), v.astype(np.float32).tobytes()) for t, v in zip(textos, vetores, strict=False)],
         )
         self.conexao.commit()
 
@@ -232,7 +233,7 @@ def vetorizar_com_cache(
         lote = [textos[i] for i in indices]
         vetores = embedder.embed_documentos(lote)
         cache.guardar(lote, vetores)  # grava já: uma queda no próximo lote não perde este
-        for i, vetor in zip(indices, vetores):
+        for i, vetor in zip(indices, vetores, strict=False):
             resultado[i] = vetor
         escrever(f"  vetorizados {min(inicio + tamanho_lote, len(faltando))}/{len(faltando)}")
         if pausa and inicio + tamanho_lote < len(faltando):

@@ -228,7 +228,7 @@ def tabela_de_secoes(chunks: list[dict[str, Any]]) -> tuple[list[dict[str, Any]]
         if len(ordenadas) < 2:
             relatorio["doencas_com_uma_so_versao"].append(doenca)
             continue
-        for (v_ant, dados_ant), (v_nova, dados_nova) in zip(ordenadas, ordenadas[1:]):
+        for (v_ant, dados_ant), (v_nova, dados_nova) in zip(ordenadas, ordenadas[1:], strict=False):
             partes, resumo = comparar_versoes(dados_nova["chunks"], dados_ant["chunks"])
             for p in partes:
                 linhas.append({"id": len(linhas) + 1, "doenca": doenca, "versao_nova": v_nova, "data_nova": dados_nova["data"],

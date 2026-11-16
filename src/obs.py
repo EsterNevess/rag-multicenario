@@ -10,12 +10,13 @@ from __future__ import annotations
 import json
 import time
 import uuid
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 from src.pii import mascarar_dados_pessoais
 
@@ -46,7 +47,7 @@ class Tokens:
     def total(self) -> int:
         return self.prompt + self.completion
 
-    def somar(self, outro: "Tokens") -> None:
+    def somar(self, outro: Tokens) -> None:
         self.prompt += outro.prompt
         self.completion += outro.completion
 

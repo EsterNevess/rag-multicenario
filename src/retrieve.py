@@ -63,7 +63,7 @@ class Resultado:
     extras: dict[str, Any] = field(default_factory=dict)
 
 
-def nota_de_ordenacao(r: "Resultado") -> float:
+def nota_de_ordenacao(r: Resultado) -> float:
     """Com rerank, a nota do cross-encoder; sem, a nota RRF. Os resultados de uma busca nunca misturam as duas."""
     return r.nota_rerank if r.nota_rerank is not None else r.score_rrf
 
@@ -181,7 +181,7 @@ def buscar_denso(
     notas, posicoes = indice.indice.search(consulta, quantos)
     meta = _metadados(indice) if filtros else None
     candidatos: list[Candidato] = []
-    for nota, pos in zip(notas[0], posicoes[0]):
+    for nota, pos in zip(notas[0], posicoes[0], strict=False):
         if pos < 0:
             continue
         chunk_id = indice.chunk_ids[pos]
@@ -250,7 +250,7 @@ def buscar_hibrido(
         with etapa(Stage.RERANK, consulta) as e:
             textos_candidatos = _textos(indice, [cid for cid, _, _ in fundidos])
             notas = reranker.pontuar(consulta, [textos_candidatos[cid] for cid, _, _ in fundidos])
-            notas_rerank = {cid: nota for (cid, _, _), nota in zip(fundidos, notas)}
+            notas_rerank = {cid: nota for (cid, _, _), nota in zip(fundidos, notas, strict=False)}
             posicao = {cid: i for i, (cid, _, _) in enumerate(fundidos)}
             fundidos = sorted(fundidos, key=lambda f: (-notas_rerank[f[0]], posicao[f[0]]))[:k]
             e.output = f"{len(fundidos)} resultados"

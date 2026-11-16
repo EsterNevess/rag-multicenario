@@ -61,7 +61,7 @@ def cpf_valido(texto: str) -> bool:
     if len(digitos) != 11 or len(set(digitos)) == 1:
         return False
     for tamanho in (9, 10):
-        soma = sum(d * peso for d, peso in zip(digitos[:tamanho], range(tamanho + 1, 1, -1)))
+        soma = sum(d * peso for d, peso in zip(digitos[:tamanho], range(tamanho + 1, 1, -1), strict=False))
         resto = (soma * 10) % 11 % 10
         if resto != digitos[tamanho]:
             return False

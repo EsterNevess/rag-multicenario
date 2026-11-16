@@ -5,8 +5,8 @@ from __future__ import annotations
 import hashlib
 import json
 import threading
-from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 import pytest

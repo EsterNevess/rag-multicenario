@@ -10,7 +10,7 @@ import pytest
 import yaml
 
 from src.fetch_corpus import Pastas
-from src.normalize import linha_contrato, linha_contratacao, normalizar
+from src.normalize import linha_contratacao, linha_contrato, normalizar
 
 
 @pytest.fixture()

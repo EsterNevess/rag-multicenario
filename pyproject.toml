@@ -12,3 +12,27 @@ addopts = "-m 'not llm'"
 markers = [
     "llm: teste de integração que chama um modelo de linguagem (precisa de rede e pode ter custo)",
 ]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 170
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = [
+    "E501",  # linhas longas: prompts, regras e textos em português ficam inteiros de propósito
+    "E741",  # `l` e `O` como nome de variável em compreensões curtas
+    "UP042",  # (str, Enum) em vez de StrEnum: mudaria a formatação dos valores usados nos prompts e nos logs
+]
+
+[tool.ruff.lint.per-file-ignores]
+# nas importações de fixtures do pytest, o parâmetro da função "redefine" o nome importado
+"tests/**" = ["F811"]
+
+[tool.coverage.run]
+source = ["src", "app", "config"]
+omit = ["*/__init__.py"]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true

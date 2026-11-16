@@ -29,10 +29,11 @@ import shutil
 import sqlite3
 import sys
 import time
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 from urllib.parse import urlencode, urlparse
 
 import requests
@@ -490,7 +491,7 @@ class Coleta:
             return [("", {})]
         combinacoes = []
         for valores in itertools.product(*listas.values()):
-            extras = dict(zip(listas.keys(), valores))
+            extras = dict(zip(listas.keys(), valores, strict=False))
             sufixo = "_".join(f"{k}-{v}" for k, v in extras.items())
             combinacoes.append((sufixo, extras))
         return combinacoes

@@ -32,6 +32,7 @@ from typing import Any
 
 import pymupdf
 
+from src.capacidades import carregar_capacidades
 from src.fetch_corpus import (
     Pastas,
     RegistroDaVersao,
@@ -39,7 +40,6 @@ from src.fetch_corpus import (
     pastas_do_cenario,
     versoes_existentes,
 )
-from src.capacidades import carregar_capacidades
 from src.pii import mascarar_dados_pessoais
 from src.redacao import compilar as compilar_redacoes
 from src.redacao import redigir
@@ -168,7 +168,7 @@ def _vao_entre_colunas(palavras: list[tuple], largura: float) -> float | None:
     return melhor[1] if melhor[0] <= 0.02 * len(palavras) else None
 
 
-def _texto_da_pagina(pagina: "pymupdf.Page") -> str:
+def _texto_da_pagina(pagina: pymupdf.Page) -> str:
     """Texto de uma página; em página de duas colunas, lê a coluna da esquerda inteira e depois a da direita.
 
     Em alguns PDFs cada linha de texto atravessa as duas colunas, e `sort=True` (que ordena só pela altura) as

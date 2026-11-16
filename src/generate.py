@@ -23,13 +23,13 @@ from config import Settings
 from src.capacidades import Capacidades, capacidades_do_cenario
 from src.fetch_corpus import Pastas, pastas_do_cenario
 from src.index import EmbeddingIndisponivel, IndiceCarregado, carregar_indice, criar_embedder
+from src.indicadores import conferir_atualizacao, ler_ficha, localizar_agregado
 from src.llm import LLM, LLMIndisponivel, criar_llm
 from src.obs import PipelineLogger, Stage, Tokens
 from src.pii import mascarar_dados_pessoais
 from src.rerank import RerankerIndisponivel, carregar_reranker
 from src.retrieve import buscar_por_bases, buscar_por_versao
-from src.indicadores import conferir_atualizacao, ler_ficha, localizar_agregado
-from src.router import _sem_acento, PlanoInvalido, avaliar_resposta, usa_base_agregada, ResultadoSQL, avaliar_pergunta, consultar, localizar_banco, validar_plano
+from src.router import PlanoInvalido, ResultadoSQL, _sem_acento, avaliar_pergunta, avaliar_resposta, consultar, localizar_banco, usa_base_agregada, validar_plano
 from src.schema import Fonte, Natureza, PlanoConsulta, RAGResponse, Rota
 
 MAX_LINHAS_NA_EVIDENCIA = 25
