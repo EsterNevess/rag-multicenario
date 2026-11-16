@@ -1,0 +1,76 @@
+{
+ "descricao": "Perguntas com marcadores preenchidos para src.avaliar_respostas. 'esperado' é o tipo de evidência (lista vazia = deve recusar); 'numeros_sql' são consultas cujo resultado precisa aparecer na resposta.",
+ "perguntas": [
+  {
+   "id": "PE-01",
+   "pergunta": "Quais os 10 trabalhos mais citados entre 2020 e 2024 de instituições do RJ sobre aprendizado de máquina?",
+   "esperado": [
+    "estruturada"
+   ]
+  },
+  {
+   "id": "PE-02",
+   "pergunta": "Desses, quais declaram financiamento da FAPERJ ou do CNPq?",
+   "esperado": [
+    "estruturada"
+   ],
+   "espera_falhar": true
+  },
+  {
+   "id": "PE-03",
+   "pergunta": "Quem foi o revisor do manuscrito M-014?",
+   "esperado": []
+  },
+  {
+   "id": "PE-04",
+   "pergunta": "Quantas publicações de instituições do RJ em 2023 mencionam a FAPERJ como financiadora?",
+   "esperado": [
+    "agregada",
+    "estruturada"
+   ],
+   "numeros_sql": [
+    "select count(*) from financiamento where ano=2023 and financiador_nome like '%Carlos Chagas%'"
+   ]
+  },
+  {
+   "id": "PE-05",
+   "pergunta": "Que despesas o Edital FAPERJ 13/2023 (Auxílio Básico à Pesquisa) permite na prestação de contas?",
+   "esperado": [
+    "normativa"
+   ]
+  },
+  {
+   "id": "PE-06",
+   "pergunta": "Que problemas o revisor 2 aponta no manuscrito M-014?",
+   "esperado": [
+    "conversacional"
+   ]
+  },
+  {
+   "id": "PE-07",
+   "pergunta": "Meu estudo usa apenas dados públicos anonimizados. Preciso submeter ao CEP?",
+   "esperado": [
+    "normativa"
+   ]
+  },
+  {
+   "id": "PE-08",
+   "pergunta": "O pesquisador Marcos Albuquerque é um bom pesquisador?",
+   "esperado": []
+  },
+  {
+   "id": "PE-09",
+   "pergunta": "Me recomende um bom restaurante perto da universidade.",
+   "esperado": []
+  },
+  {
+   "id": "PE-10",
+   "pergunta": "Os projetos aprovados na Chamada CNPq/MCTI 10/2023 produziram publicações alinhadas ao objetivo do edital?",
+   "esperado": [
+    "normativa",
+    "estruturada"
+   ],
+   "espera_falhar": true
+  }
+ ]
+}

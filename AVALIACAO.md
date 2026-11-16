@@ -1,4 +1,6 @@
-# Avaliação da recuperação (fase 5, parte 1)
+# Avaliação (fase 5)
+
+## Recuperação (parte 1)
 
 Mede só a **recuperação** de trechos (BM25, busca densa e fusão RRF), sem modelo de linguagem. Roda com
 `python -m src.avaliar --scenario <rj|saude|pesquisa>`; o resultado completo, por pergunta, vai para `logs/` (fora do Git).
@@ -40,10 +42,33 @@ Diferenças pareadas no MRR@10, com intervalo de confiança de 95% por bootstrap
 - **O filtro de doença e de vigência ajuda, pouco e sem folga estatística.** Nas 9 perguntas de saúde que o usam, o MRR vai de 0,611 (sem filtro) para 0,722 (com filtro). Em 32 das 34 perguntas o resultado é idêntico.
 - **k_rrf = 10 parece melhor que 60** (2 vitórias, 0 derrotas), mas escolhi esse valor olhando as mesmas perguntas em que ele é medido. Não alterei o padrão do motor por isso.
 
+## Resposta final com repetições (fase 5, parte 2)
+
+`python -m src.avaliar_respostas --scenario <id> --repeticoes 3 [--retomar]` roda cada pergunta N vezes com o modelo (Groq, `openai/gpt-oss-120b`) e mede o que muda entre as repetições. A rodada anda uma repetição de cada vez sobre todas as perguntas e grava em `logs/` (fora do Git) o texto de cada resposta. O modelo varia de uma repetição para outra, e é isso que se quer ver.
+
+**O que foi medido: só a saúde, 13 perguntas × 3 repetições (185 mil tokens).** O RJ parou no RJ-04 da primeira repetição e a pesquisa não começou, porque o plano gratuito da Groq esgotou o limite diário. Para continuar sem refazer o que já deu certo: `--retomar`.
+
+| Medida (saúde) | Resultado |
+|---|---|
+| Rota escolhida bate com o tipo de evidência esperado (conferência grossa) | 38 de 39 execuções |
+| Recusa igual nas 3 repetições | 12 de 13 perguntas (a exceção é a pergunta da lacuna, abaixo) |
+| Rota igual nas 3 repetições | 12 de 13 perguntas |
+| Perguntas de recusa (dose individual, plano de saúde, dispensação, telefone) | recusadas nas 3 repetições; a de dose pela regra de entrada, sem chamar o modelo |
+| Número calculado em SQL (apresentações do componente Especializado) | 314 nas 3 repetições, confere |
+| Texto da resposta | difere em toda pergunta respondida (3 textos distintos nas 3 repetições), o que é esperado de um modelo de linguagem; só as recusas por regra repetem o texto idêntico |
+
+O que as repetições mostraram:
+
+- **SA-02 (o que mudou na artrite reumatoide) ficou estável depois da correção da busca por versão.** Nas 3 repetições o modelo comparou a PC 33/2026 com a PC 16/2021, com as datas. Isso só vale para a escolha das versões: não conferi se cada diferença citada ("a versão 2026 acrescenta o Art. 2º...") está de fato ausente da versão de 2021 nos trechos recuperados. Dizer "acrescenta" a partir do que um trecho tem e o outro não traz é uma inferência que a evidência pode não sustentar.
+- **SA-10 (medicamentos do PCDT de Parkinson fora da RENAME) falhou nas 3 repetições, como previsto.** A consulta à RENAME não leva filtro e devolve itens quaisquer. Em duas repetições o modelo disse que não dava para responder (honesto); na outra afirmou que os itens listados "não constam no PCDT", o que é enganoso. É a falha mais perigosa do cenário porque nem sempre o modelo desconfia.
+- **A pergunta da lacuna (versão em janeiro de 2021) é instável.** Em 2 das 3 repetições o sistema recusou por falta de evidência; na outra, respondeu que a consulta não achou registro e que isso não prova que não haja versão. Nenhuma inventou uma versão, mas o comportamento não é consistente, e nenhuma explicou que o corpus não tem versão naquele período.
+
+**Limites.** A conferência de rota é grossa (tipo de evidência, não o plano exato) e não há juiz automático de qualidade: o texto das respostas precisa de leitura. Só uma pergunta da saúde tem número conferível por SQL. As 13 perguntas são poucas para estimar taxas.
+
 ## O que não foi medido
 
 - **Rerank por cross-encoder.** Não está implementado. Exige baixar um modelo de reranking (da ordem de gigabytes), o que não foi autorizado. A comparação "RRF + rerank" da fase 5 fica em aberto.
-- **Resposta final.** Esta avaliação mede se os trechos certos chegam ao topo, não se o modelo responde certo. A medição ponta a ponta com 3 repetições por pergunta (o modelo varia entre repetições) ainda não foi feita; as rodadas reais anteriores estão em `PROGRESSO.md`, uma execução por pergunta.
+- **Resposta final no RJ e na pesquisa.** Só a saúde tem as 3 repetições (seção acima); o RJ tem 3 perguntas com 1 repetição e a pesquisa nenhuma, por causa do limite diário da Groq.
 - **Perguntas de dados** (estruturada e agregada) não passam pela recuperação de trechos e ficam fora.
 
 ## Limites desta avaliação
@@ -58,4 +83,5 @@ Diferenças pareadas no MRR@10, com intervalo de confiança de 95% por bootstrap
 1. **Manter o RRF como busca padrão.** Tem o melhor MRR entre os sistemas de k=60 e um hit@5 (0,94) próximo ao do denso. Não é imune a falha: quando o BM25 não traz nada relevante, ele pode atrapalhar (as duas perguntas acima).
 2. **Não trocar k_rrf por 10 ainda.** O sinal é fraco e foi escolhido nos mesmos dados. Reavaliar com um conjunto maior, escrito antes de olhar os resultados.
 3. **Manter o filtro de vigência e de doença**, que já é necessário por correção (não misturar versões), e que nos dados também não piorou nada.
-4. **Próximos passos para fechar a fase 5:** autorizar o download de um modelo de rerank e medir "RRF + rerank"; ampliar o conjunto de perguntas; medir a resposta final com 3 repetições.
+4. **Próximos passos para fechar a fase 5:** continuar a rodada de respostas do RJ e da pesquisa com `--retomar` quando o limite da Groq voltar; autorizar o download de um modelo de rerank e medir "RRF + rerank"; ampliar o conjunto de perguntas.
+5. **Falha conhecida a corrigir antes de qualquer uso real:** o SA-10, que mistura comparação PCDT x RENAME sem extrair os medicamentos do protocolo.

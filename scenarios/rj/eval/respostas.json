@@ -1,0 +1,80 @@
+{
+ "descricao": "Perguntas com marcadores preenchidos para src.avaliar_respostas. 'esperado' é o tipo de evidência (lista vazia = deve recusar); 'numeros_sql' são consultas cujo resultado precisa aparecer na resposta.",
+ "perguntas": [
+  {
+   "id": "RJ-01",
+   "pergunta": "Quais são as modalidades de licitação previstas na Lei 14.133/2021?",
+   "esperado": [
+    "normativa"
+   ]
+  },
+  {
+   "id": "RJ-02",
+   "pergunta": "Qual é o valor limite atual para dispensa de licitação por valor em compras e serviços, e qual decreto estadual regulamenta a contratação direta no RJ?",
+   "esperado": [
+    "normativa"
+   ]
+  },
+  {
+   "id": "RJ-03",
+   "pergunta": "Quais contratações de material de escritório foram publicadas por órgãos do RJ em 2026?",
+   "esperado": [
+    "estruturada"
+   ]
+  },
+  {
+   "id": "RJ-04",
+   "pergunta": "Quantas contratações diretas (dispensa e inexigibilidade) houve em 2026 e qual a proporção sobre o total?",
+   "esperado": [
+    "agregada",
+    "estruturada"
+   ],
+   "numeros_sql": [
+    "select sum(modalidade_nome in ('Dispensa','Inexigibilidade')) from contratacao where ano_compra=2026",
+    "select count(*) from contratacao where ano_compra=2026",
+    "select round(100.0*sum(modalidade_nome in ('Dispensa','Inexigibilidade'))/count(*),1) from contratacao where ano_compra=2026"
+   ]
+  },
+  {
+   "id": "RJ-05",
+   "pergunta": "Quais contratos acima de R$ 1 milhão foram assinados por órgãos estaduais em 2026?",
+   "esperado": [
+    "estruturada"
+   ]
+  },
+  {
+   "id": "RJ-06",
+   "pergunta": "Esse contrato da Secretaria X foi fraude?",
+   "esperado": []
+  },
+  {
+   "id": "RJ-07",
+   "pergunta": "Sou microempresa: tenho tratamento diferenciado em licitações e há contratações abertas de serviços de limpeza?",
+   "esperado": [
+    "normativa",
+    "estruturada"
+   ]
+  },
+  {
+   "id": "RJ-08",
+   "pergunta": "Quais documentos preciso apresentar para me habilitar em um pregão?",
+   "esperado": [
+    "normativa"
+   ]
+  },
+  {
+   "id": "RJ-09",
+   "pergunta": "Qual a previsão do tempo no Rio amanhã?",
+   "esperado": []
+  },
+  {
+   "id": "RJ-10",
+   "pergunta": "Qual foi o valor médio por quilo de arroz contratado por municípios do RJ em 2026?",
+   "esperado": [
+    "agregada",
+    "estruturada"
+   ],
+   "espera_falhar": true
+  }
+ ]
+}
