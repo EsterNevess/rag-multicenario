@@ -271,7 +271,7 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [x] Qualidade: `ruff` configurado e sem pendências (43 correções automáticas de importação e anotação, 8 `zip` com `strict` explícito); cobertura de 89% para 92% com 22 testes novos (linha de comando do motor, laço de `avaliar`, `carregar_contexto`); CI com lint e piso de 85%
 - [x] Memória de conversa de um turno (pergunta e plano anteriores no analisador; app e modo interativo), com testes e mutação conferida
 - [ ] Memória de conversa: conferir com o modelo real se o PE-02 ("desses") e o PE-08 passam a funcionar
-- [ ] Conferir se cada número do texto bate com a evidência (hoje só as citações são conferidas)
+- [x] Conferência dos números da resposta contra a evidência (`src/numeros.py`): erro volta ao modelo uma vez; se persistir, a resposta sai com aviso. Testada com modelo simulado e mutação; repetida em 3 respostas reais guardadas (0 falsos alarmes, 12 de 12 números corrompidos pegos). Ainda não medida com a Groq em volume
 - [x] Rota agregada (indicadores calculados em SQL) no roteador
 - [x] Rota conversacional (pareceres, atas) com a recusa de identidade e de dado pessoal
 - [x] Interface (`app/`): tela de perguntas em Streamlit com seletor de cenário, fontes, cobertura e o plano da consulta; testada com o `AppTest` e aberta com os dados reais do RJ. Não há API HTTP

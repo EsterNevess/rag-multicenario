@@ -145,6 +145,18 @@ O que escapou no conjunto C: doenças fora do léxico (psoríase, enxaqueca, ost
 
 Limites: as 126 frases são minhas, num único cenário, e escritas por quem conhecia as regras.
 
+## Conferência dos números da resposta
+
+O código já conferia as citações (`[1]` precisa apontar para uma fonte que existe), mas um modelo pode citar a fonte certa e escrever um número que a fonte não traz. `src/numeros.py` extrai cada número do texto da resposta e o procura na evidência recebida e na pergunta, aceitando as formas de escrever o mesmo valor: milhar (25.005, 25 005, 25005), vírgula ou ponto decimal, percentual de uma fração (70,6% para 0,7059), arredondamento ao número de casas escrito, "milhão" e "mil", e as partes de uma data. Se algum não for encontrado, o modelo recebe uma segunda chance, com o número apontado; se o erro persistir, a resposta sai **com aviso** (`numeros_nao_conferidos` na resposta, "Atenção" na linha de comando e um aviso na tela) em vez de ser recusada, e quem lê decide. Os números se conferem no texto já mascarado, para o aviso nunca repetir um CPF ou telefone.
+
+| O que foi medido | Resultado |
+|---|---|
+| Testes unitários e de integração (modelo simulado) | 35 testes, com 5 mutações do código conferidas |
+| Respostas reais guardadas, evidência recoletada com o plano salvo (1 da Groq, 2 do modelo local) | 0 números não conferidos nas respostas certas |
+| Mesmas respostas com o último dígito de cada número maior que 10 trocado | **12 de 12** corrupções apontadas |
+
+**Limites.** (1) A amostra de respostas reais é de 3, porque só essas têm o plano e a evidência para recoletar; a taxa de falso alarme em volume só sai com a Groq. (2) Não confere o sentido: "25.005 é o total de quê?" passa. (3) Inteiros de 0 a 10 não são conferidos (são contagens e ordinais demais), então um "o total é 1" errado passa; foi o que aconteceu com o modelo local de 4 bilhões de parâmetros no RJ-04 ("o total de contratações é 1", com o total real de 35.423 na evidência). (4) Uma conta que o modelo faz (soma, diferença) não está na evidência e aparece como não conferida, o que é o desejado, mas também sinaliza contas certas. (5) Cada segunda tentativa custa uma chamada a mais ao modelo, só quando há número sem apoio.
+
 ## O que não foi medido
 
 - **Rerank na resposta final.** O rerank foi medido na ordenação dos trechos (seção acima), mas não na resposta escrita pelo modelo, que espera o limite da Groq. Está implementado como opção desligada por padrão.

@@ -20,7 +20,7 @@ Cada estágio emite uma linha de log JSONL com o mesmo nome (campo `stage`).
 | 6 | `fusao_rrf` | Fusão das duas buscas por Reciprocal Rank Fusion, em código. |
 | 7 | `rerank` | Cross-encoder (`bge-reranker-v2-m3`, ONNX int8) sobre os 20 melhores da fusão. **Opcional, desligado por padrão** (`RERANK=true`): melhora o MRR, custa ~19 s por busca em CPU (veja AVALIACAO.md). |
 | 8 | `geracao` | A LLM redige a resposta só com as evidências recuperadas, com fontes numeradas. |
-| 9 | `validacao` | Confere citações, cobertura, dado pessoal e recusas. |
+| 9 | `validacao` | Confere citações, **números** (cada número da resposta tem de estar na evidência ou na pergunta; um erro volta ao modelo uma vez e, se persistir, a resposta sai com aviso), cobertura, dado pessoal e recusas. |
 | 10 | `feedback` | Registra a avaliação do usuário. |
 
 Rotas possíveis: estruturada, agregada, documentos, híbrida e catálogo.
@@ -59,6 +59,7 @@ Estas decisões vêm de problemas observados no projeto em equipe `rag-contratac
 | `src/retrieve.py` | BM25, FAISS, RRF, filtros e a aplicação opcional do rerank. |
 | `src/rerank.py` | Cross-encoder em ONNX (`onnxruntime` + `tokenizers`), sem PyTorch; não baixa nada. |
 | `src/generate.py` | Síntese com citações e guardrails de saída. |
+| `src/numeros.py` | Conferência dos números da resposta contra a evidência. |
 | `src/schema.py` | Modelos Pydantic (plano, resposta, chunk). |
 | `src/obs.py` | Logs estruturados e contagem de tokens por estágio. |
 | `src/capacidades.py` | Lê `scenarios/<id>/capacidades.yaml`: entidades, campos, filtros de documentos, regras de entrada e de saída. |
