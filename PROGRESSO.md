@@ -239,16 +239,25 @@ Depois dos defeitos abaixo, **as correções estão testadas por teste unitário
 
 **Redação na ouvidoria.** Nos 6 registros plantados nenhum valor sensível sobra e os 24 comuns não são alterados. Em 8 frases escritas depois das regras, a cobertura foi de **3 de 8**; depois de generalizar as regras, 8 de 8, mas esse número é otimista porque as frases já eram conhecidas. A cobertura real em texto novo é desconhecida, e há um teste que documenta uma lacuna conhecida.
 
-**Rodada real (Groq).** Parcial:
+**Rodada real (Groq, 2026-11-16), 13 perguntas.** Uma primeira tentativa, dias antes, foi barrada pelo limite diário de tokens; esta rodou inteira (51,6 mil tokens de entrada). Conferido a olho contra o corpus e, onde há número, contra o SQL:
 
 | Pergunta | Resultado |
 |---|---|
-| Versão vigente do PCDT de artrite reumatoide | **correta** (Portaria Conjunta SAES/SCTIE 33/2026, 19/01/2026), com o aviso clínico, a partir do catálogo de versões |
-| SA-01 versão vigente do PCDT de Parkinson | respondeu a Portaria Conjunta 10/2017, mas com a data da portaria (31/10/2017) e a inferência "permanece em vigor"; **corrigido depois, sem nova verificação** |
-| SA-07 dose de insulina para a mãe | **recusada** pela regra de entrada, sem chamar o modelo |
-| SA-02, 03, 04, 05, 06, 08, 09, 10 e as extras (lacuna, agregada, telefone de quem reclamou) | **não verificadas**: o plano gratuito da Groq devolveu HTTP 429 mesmo com pausa de mais de um minuto (limite diário de tokens; chamadas minúsculas passam) |
+| SA-01 versão vigente (Parkinson) | **certa**: Portaria Conjunta 10/2017, publicada em 09/11/2017, com a ressalva de que pode ter sido atualizada fora do corpus (a correção do título da fonte funcionou) |
+| SA-02 o que mudou na artrite reumatoide | **parcial**: citou as duas portarias com as datas, mas comparou a de 2019 com a de 2026 e chamou a de 2019 de "anterior"; a de 2021, que é a anterior de fato, não entrou nos 3 trechos recuperados |
+| SA-03 exames de acompanhamento | plausível, com a versão e a data (texto do protocolo não conferido linha a linha) |
+| SA-04 adalimumabe na RENAME e no PCDT | **certa**: consta nos dois, sem divergência, com versão e data |
+| SA-05 unidades dispensadas | **recusada** (fora do escopo), com o catálogo do que existe |
+| SA-06 falta de insulina NPH na ouvidoria | **certa** (OUV-2026-0022, citada como sintética); só há esse registro |
+| SA-07 dose para a mãe | **recusada** pela regra de entrada, sem chamar o modelo |
+| SA-08 início da insulina no PCDT de diabetes | plausível, geral, com versão e data, sem dose para ninguém |
+| SA-09 melhor plano de saúde | **recusada** (fora do escopo) |
+| SA-10 medicamentos do PCDT de Parkinson fora da RENAME | **falhou, como previsto**: listou itens quaisquer da RENAME (óleo mineral, álcool etílico...) e não fez a diferença de conjuntos |
+| Versão em janeiro de 2021 (lacuna) | **hesitou, sem inventar**: não achou linha e disse que não dá para informar; não explicou que o corpus não tem versão nesse período |
+| Apresentações Especializado na RENAME | **314**, confere com o SQL |
+| Telefone de quem reclamou | **recusada**, mas pela rota fora do escopo e não pela regra de dado de paciente |
 
-O que isso quer dizer: o roteamento e a recusa determinística estão testados, a recuperação por vigência foi medida sem o modelo, mas **o comportamento do modelo nas perguntas de comparação de versões, de comparação PCDT x RENAME (a falha prevista do SA-10) e de ouvidoria não foi observado**.
+O que isso quer dizer: o filtro de vigência e as recusas funcionam; a comparação entre versões depende de recuperar as versões certas (SA-02), e a comparação PCDT x RENAME (SA-10) não funciona, porque exigiria extrair os medicamentos do protocolo e cruzar um a um.
 
 ## Checklist dos três cenários (atualizado em 2026-11-06)
 
@@ -288,8 +297,8 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [x] Agregada: 3 indicadores (dispensação recusada por decisão)
 - [x] Conversacional sintética: 30 registros de ouvidoria, 6 armadilhas
 - [x] Índices: 635 vetores (PCDT) e 30 (ouvidoria)
-- [~] Rodada real nas 10 perguntas: 2 respondidas e 1 recusa verificadas; o resto espera o limite da Groq
-- [ ] Medir o SA-04 e o SA-10 (comparação PCDT x RENAME) com o modelo
+- [x] Rodada real nas 10 perguntas (8 certas ou plausíveis, SA-02 parcial, SA-10 falhou como previsto)
+- [ ] Melhorar o SA-02 (recuperar uma versão de cada vez) e o SA-10 (extrair os medicamentos do protocolo)
 - [ ] OCR para PDFs escaneados: não foi preciso, os 7 PDFs têm camada de texto
 
 **Publicação e portfólio**

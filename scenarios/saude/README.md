@@ -1,6 +1,6 @@
 # Cenário: saúde pública e protocolos clínicos
 
-**Estado:** construído (fase 3). Coleta, ingestão, índices, normalização, indicadores, ouvidoria sintética e regras de segurança prontos e testados; a rodada real com o modelo foi parcial (limite diário da Groq).
+**Estado:** construído (fase 3). Coleta, ingestão, índices, normalização, indicadores, ouvidoria sintética e regras de segurança prontos e testados; rodada real feita em 2026-11-16 (ver PROGRESSO.md).
 
 ## O problema
 
