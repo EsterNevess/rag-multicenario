@@ -22,12 +22,15 @@ from pathlib import Path
 from typing import Any
 
 from src.index import IndiceCarregado
-from src.retrieve import _metadados, buscar_bm25, buscar_denso, casa_filtro, fundir_rrf
+from src.rerank import RerankerIndisponivel, carregar_reranker
+from src.retrieve import _metadados, _textos, buscar_bm25, buscar_denso, casa_filtro, fundir_rrf
 
 RAIZ = Path(__file__).resolve().parent.parent
 K_BUSCA = 50
 REPETICOES = 3
 SISTEMAS = ("bm25", "denso", "rrf", "rrf_k10", "rrf_sem_filtro")
+SISTEMA_RERANK = "rrf_rerank"  # só entra se os arquivos do modelo estiverem em data/models (ver src/rerank.py)
+N_RERANK = 20  # quantos candidatos da fusão o cross-encoder reordena
 
 
 def _simples(texto: str) -> str:
@@ -76,7 +79,7 @@ def _filtros(item: Item, hoje: str, niveis: list[str]) -> dict[str, Any]:
     return f
 
 
-def ranking(sistema: str, indice: IndiceCarregado, embedder: Any, item: Item, hoje: str, niveis: list[str]) -> list[str]:
+def ranking(sistema: str, indice: IndiceCarregado, embedder: Any, item: Item, hoje: str, niveis: list[str], reranker: Any = None) -> list[str]:
     """Os chunk_id em ordem, do melhor ao pior, até K_BUSCA."""
     filtros = _filtros(item, hoje, niveis)
     if sistema == "rrf_sem_filtro":
@@ -88,7 +91,14 @@ def ranking(sistema: str, indice: IndiceCarregado, embedder: Any, item: Item, ho
     if sistema == "denso":
         return [c.chunk_id for c in denso]
     k_rrf = 10 if sistema == "rrf_k10" else 60
-    return [cid for cid, _, _ in fundir_rrf({"bm25": bm25, "denso": denso}, k_rrf=k_rrf)]
+    ordem = [cid for cid, _, _ in fundir_rrf({"bm25": bm25, "denso": denso}, k_rrf=k_rrf)]
+    if sistema == SISTEMA_RERANK:
+        if reranker is None:
+            raise ValueError("rrf_rerank exige um reranker carregado")
+        topo = ordem[:N_RERANK]
+        textos = _textos(indice, topo)
+        return reranker.reordenar(item.pergunta, [(c, textos[c]) for c in topo]) + ordem[N_RERANK:]
+    return ordem
 
 
 def metricas(ordem: list[str], relevantes: set[str]) -> dict[str, float]:
@@ -111,6 +121,11 @@ def avaliar(cenario: str, hoje: str | None = None, conjunto: str = "retrieval_go
     hoje = hoje or ctx.hoje
     niveis = list(ctx.cap.niveis_consultaveis)
     itens = carregar_gold(cenario, conjunto=conjunto)
+    try:
+        reranker = carregar_reranker()
+    except RerankerIndisponivel:
+        reranker = None
+    sistemas = list(SISTEMAS) + ([SISTEMA_RERANK] if reranker else [])
     por_item: list[dict[str, Any]] = []
     invalidos: list[str] = []
     for item in itens:
@@ -125,16 +140,16 @@ def avaliar(cenario: str, hoje: str | None = None, conjunto: str = "retrieval_go
             invalidos.append(f"{item.id}: nenhum trecho cumpre o critério")
             continue
         linha: dict[str, Any] = {"id": item.id, "pergunta": item.pergunta, "base": item.base, "relevantes": len(relevantes), "relevantes_apos_filtro": len(pool), "sistemas": {}}
-        for sistema in SISTEMAS:
+        for sistema in sistemas:
             rodadas, tempos = [], []
             for _ in range(REPETICOES):
                 t = time.perf_counter()
-                rodadas.append(ranking(sistema, indice, ctx.embedder, item, hoje, niveis))
+                rodadas.append(ranking(sistema, indice, ctx.embedder, item, hoje, niveis, reranker))
                 tempos.append(time.perf_counter() - t)
             linha["sistemas"][sistema] = {**metricas(rodadas[0], relevantes), "deterministico": all(r == rodadas[0] for r in rodadas), "ms": round(1000 * min(tempos))}
         por_item.append(linha)
     resumo: dict[str, dict[str, float]] = {}
-    for sistema in SISTEMAS:
+    for sistema in sistemas:
         valores = [l["sistemas"][sistema] for l in por_item]
         resumo[sistema] = {m: round(sum(v[m] for v in valores) / len(valores), 3) for m in ("hit@1", "hit@5", "mrr@10", "p@5")} if valores else {}
         if valores:

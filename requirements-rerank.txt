@@ -1,0 +1,4 @@
+# Opcional: reranqueamento por cross-encoder (src/rerank.py). Sem isto, o motor e a avaliação seguem sem a etapa de rerank.
+-r requirements.txt
+onnxruntime==1.31.1
+tokenizers==0.23.3

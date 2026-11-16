@@ -36,6 +36,8 @@ data/processed/
 data/synthetic/
 data/normalized/
 data/aggregated/
+# Modelo de reranking (baixado à mão, ~590 MB; veja src/rerank.py)
+data/models/
 
 # Logs
 logs/
