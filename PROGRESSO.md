@@ -303,10 +303,9 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [ ] OCR para PDFs escaneados: não foi preciso, os 7 PDFs têm camada de texto
 
 **Publicação e portfólio**
-- [ ] Revogar a chave da Groq que foi colada no chat e criar outra no `.env`
 - [ ] Revisar os textos, escolher a licença e tornar o `rag-multicenario` público
 - [ ] README final com o estado real dos três cenários e uma demonstração
-- [ ] Vídeo do `rag-contratacoes` e link no README; slides da Ana e login dela no Drive
+- [ ] Vídeo do `rag-contratacoes` e link no README
 - [ ] Deck opcional de posicionamento
 
 ## Fase 0: desenho (concluída)
