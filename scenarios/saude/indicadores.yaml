@@ -49,7 +49,7 @@ indicadores:
       - pergunta: "Quantas versões do PCDT de artrite reumatoide o corpus tem?"
         filtros: {doenca: Artrite reumatoide}
     ressalvas:
-      - O corpus é um recorte de três doenças; o número não é a quantidade de versões que o Ministério já publicou.
+      - O corpus é um recorte de quatro doenças (diabetes tipo 1 e tipo 2, Parkinson e artrite reumatoide); o número não é a quantidade de versões que o Ministério já publicou.
       - Entre as versões da artrite reumatoide falta a Portaria Conjunta 14/2020, que não está no corpus.
 
 limites:

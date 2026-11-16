@@ -150,7 +150,9 @@ def extrair_medicamentos(caminho: Path, ano_edicao: int | None = None) -> tuple[
     return linhas, relatorio
 
 SECAO_FARMACOS = re.compile(r"\b\d+(?:\.\d+)*\.?\s+F[ÁA]RMACOS\b")
-_ENTRADA_DE_FARMACO = re.compile(r"(?:^|\n|\s{2,})-?\s*([A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ()/+ ,.-]{2,70}?):\s*([^\n]*?)(?=\s{3,}[A-ZÁÉÍÓÚ]|\n|$)")
+SECAO_MEDICAMENTOS = re.compile(r"\b\d+(?:\.\d+)*\.?\s+Medicamentos\b")  # DM2 2026: "8.7. Medicamentos Biguanidas: - Cloridrato de metformina: ..."
+_CLASSE_NO_FIM = re.compile(r";?\s+[A-ZÁÉÍÓÚ][\wÀ-ÿ ]*:$")  # "...850 mg; Sulfonilureias:" (o título da classe seguinte colado ao fim)
+_ENTRADA_DE_FARMACO = re.compile(r"(?:^|\n|\s{2,})-?\s*([A-ZÁÉÍÓÚÂÊÔÃÕÇ][A-Za-zÀ-ÿ()/+ ,.-]{2,70}?):[ \t]*([^\n]*?)(?=\s{3,}[A-ZÁÉÍÓÚ]|\n|$)")
 _USO_PRIVADO = re.compile("[" + chr(0xE000) + "-" + chr(0xF8FF) + "]")  # o PDF usa um caractere de uso privado como marcador de lista
 _FORMA_FARMACEUTICA = re.compile(r"(?i)comprimid|c[áa]psula|frasco|seringa|solu[çc][ãa]o|ampola|caneta|injet|\d\s?(mg|ml|mcg|ui)\b")
 _SAIS = {
@@ -193,18 +195,18 @@ def _corpo(chunk: dict[str, Any]) -> str:
     return texto.split("\n", 1)[1] if "\n" in texto else texto
 
 
-def _lista_com_dois_pontos(grupo: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _lista_com_dois_pontos(grupo: list[dict[str, Any]], titulo: re.Pattern[str] = SECAO_FARMACOS) -> list[dict[str, Any]]:
     """'Pramipexol: comprimidos de 1 mg.' na seção Fármacos (só no primeiro trecho dela): Parkinson 2017 e artrite 2017 a 2021."""
     saida: list[dict[str, Any]] = []
     for c in grupo:
         m = c.get("metadata", {})
         corpo = _corpo(c)
-        achado = SECAO_FARMACOS.search(corpo[:400])
+        achado = titulo.search(corpo[:400])
         if not achado or m.get("parte") not in (None, 1):
             continue
         for nome, apresentacao in _ENTRADA_DE_FARMACO.findall(corpo[achado.end():]):
             apresentacao = _USO_PRIVADO.sub(" ", apresentacao).strip()  # marcador de lista do PDF
-            apresentacao = re.split(r"\.\s+(?=[A-ZÁÉÍÓÚ])", apresentacao)[0].rstrip(". ")
+            apresentacao = _CLASSE_NO_FIM.sub("", re.split(r"\.\s+(?=[A-ZÁÉÍÓÚ])", apresentacao)[0]).rstrip(". ;")
             if _FORMA_FARMACEUTICA.search(apresentacao):
                 saida.append(_linha_de_pcdt(m, nome, apresentacao))
     return saida
@@ -242,8 +244,9 @@ def _lista_sem_dois_pontos(grupo: list[dict[str, Any]]) -> list[dict[str, Any]]:
 def medicamentos_do_pcdt(chunks: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[str]]:
     """Lê a lista de medicamentos de cada versão de PCDT e devolve (medicamentos, versões em que nenhuma lista foi lida).
 
-    Há três formatos, cada um com seu leitor (a primeira que achar algo vale para a versão): 'nome: apresentação' na seção Fármacos,
-    listas por classe no texto do tratamento (sem apresentação) e 'nome dose forma' sem dois-pontos. Cada leitor serve ao formato de
+    Há quatro formatos, cada um com seu leitor (o primeiro que achar algo vale para a versão): 'nome: apresentação' na seção Fármacos,
+    listas por classe no texto do tratamento (sem apresentação), 'nome dose forma' sem dois-pontos e 'nome: apresentação' sob um item
+    'Medicamentos' (diabetes tipo 2). Cada leitor serve ao formato de
     documentos conhecidos: se um protocolo mudar de formato, a versão aparece como sem lista no relatório, em vez de sair uma lista errada.
     """
     por_versao: dict[Any, list[dict[str, Any]]] = {}
@@ -252,7 +255,8 @@ def medicamentos_do_pcdt(chunks: list[dict[str, Any]]) -> tuple[list[dict[str, A
     achados: list[dict[str, Any]] = []
     sem_lista: list[str] = []
     for versao, grupo in por_versao.items():
-        linhas = _lista_com_dois_pontos(grupo) or _lista_por_classe(grupo) or _lista_sem_dois_pontos(grupo)
+        linhas = (_lista_com_dois_pontos(grupo) or _lista_por_classe(grupo) or _lista_sem_dois_pontos(grupo)
+                  or _lista_com_dois_pontos(grupo, SECAO_MEDICAMENTOS))
         if linhas:
             achados += linhas
         else:

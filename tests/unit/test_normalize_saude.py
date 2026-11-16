@@ -316,3 +316,24 @@ def test_correspondencia_aproximada_so_vale_se_um_unico_nome_da_rename_contem_o_
         ("sim", "difosfato de cloroquina"),
     ]
     assert aprox == [("Insulina NPH", "insulina humana NPH")]
+
+
+def test_lista_sob_item_medicamentos_do_dm2_ignora_titulos_de_classe_e_tira_ponto_e_virgula():
+    texto = (
+        "8.7. Medicamentos Biguanidas:\n- Cloridrato de metformina: comprimido de 500 mg e 850 mg; Sulfonilureias:\n"
+        "- Glibenclamida: comprimido de 5 mg;\n- Gliclazida: comprimido de 80 mg. Inibidores de SGLT2:\n- Dapagliflozina: comprimidos de 10 mg. Insulinas:\n"
+        "- Insulina humana NPH: suspensão injetável de 100 U/mL;"
+    )
+    linhas, sem_lista = medicamentos_do_pcdt([_trecho(texto, versao="PC 13/2026", doenca="Diabetes tipo 2")])
+    assert [(l["medicamento"], l["apresentacao"]) for l in linhas] == [
+        ("Cloridrato de metformina", "comprimido de 500 mg e 850 mg"), ("Glibenclamida", "comprimido de 5 mg"), ("Gliclazida", "comprimido de 80 mg"),
+        ("Dapagliflozina", "comprimidos de 10 mg"), ("Insulina humana NPH", "suspensão injetável de 100 U/mL"),
+    ]
+    assert sem_lista == []
+
+
+def test_item_medicamentos_so_vale_se_nenhum_outro_formato_achou_lista():
+    com_farmacos = "8 FÁRMACOS    Pramipexol: comprimidos de 1 mg."
+    outra_secao = "8.7. Medicamentos Biguanidas:\n- Cloridrato de metformina: comprimido de 500 mg"
+    linhas, _ = medicamentos_do_pcdt([_trecho(com_farmacos), _trecho(outra_secao)])
+    assert [l["medicamento"] for l in linhas] == ["Pramipexol"]

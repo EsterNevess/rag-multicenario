@@ -8,7 +8,7 @@
      "filtros": {"doenca__contem": "parkinson", "vigente_em": "$hoje"},
      "relevante": {"texto": ["criterios de exclusao"]}},
     {"id": "SA-N03", "pergunta": "O que o protocolo de diabetes tipo 1 diz sobre cetoacidose?", "base": "pcdt_normativo",
-     "filtros": {"doenca__contem": "diabetes", "vigente_em": "$hoje"},
+     "filtros": {"doenca__contem": "tipo 1", "vigente_em": "$hoje"},
      "relevante": {"texto": ["cetoacidose"]}},
     {"id": "SA-N04", "pergunta": "Que remédios ajudam no tremor da doença de Parkinson?", "base": "pcdt_normativo",
      "filtros": {"doenca__contem": "parkinson", "vigente_em": "$hoje"},
