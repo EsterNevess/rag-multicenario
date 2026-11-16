@@ -293,7 +293,7 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [x] Normativa: 8 documentos, 453 trechos indexados
 - [x] Estruturada: 5.000 artigos do OpenAlex (3 tabelas)
 - [x] Rodada real nas 10 perguntas
-- [ ] Reindexar a normativa e as bases com as mudanças de leitura de PDF (os índices são anteriores a elas)
+- [x] Reindexar RJ e pesquisa com as mudanças de leitura de PDF (pesquisa: trechos idênticos; RJ editais v2: 1.458 → 1.456 trechos, métricas iguais). Falta reindexar a v3 dos editais do RJ
 - [~] Agregada: 6 indicadores bibliométricos sobre a amostra do OpenAlex. Faltam os resumos do arXiv e do SciELO
 - [x] Conversacional sintética: 17 pareceres e 4 e-mails editoriais, com 7 armadilhas (pistas de identidade do revisor, pedido para revelá-lo, e-mail de autor)
 
@@ -307,7 +307,9 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [x] Índices: 635 vetores (PCDT) e 30 (ouvidoria)
 - [x] Rodada real: 13 perguntas × 3 repetições (rota e recusa estáveis em 12 de 13; SA-10 falha nas 3, como previsto; a pergunta da lacuna de 2021 é instável)
 - [x] SA-02: busca por versão (os melhores trechos de cada versão) e regra de que a "anterior" é a publicada logo antes da vigente. Reverificado: compara 33/2026 com 16/2021, com as datas, e diz que os trechos recuperados não mostram diferença explícita, sem inventar
-- [ ] SA-10 (extrair os medicamentos do protocolo e cruzar com a RENAME)
+- [x] SA-10: tabela `pcdt_medicamento` (69 linhas) com a marca de constar na RENAME, entidade e dica declaradas, testes (655 passando). Consulta conferida sem o modelo
+- [ ] SA-10: repetir a pergunta com o modelo (3 repetições) quando o limite da Groq voltar
+- [ ] Lista de fármacos da artrite de 2026 e do diabetes tipo 1 (formato diferente do "nome: apresentação")
 - [x] OCR para PDFs escaneados: não foi preciso, os 7 PDFs têm camada de texto
 - [ ] Incluir a Portaria Conjunta 14/2020 da artrite reumatoide (só existe em HTML) e o PCDT de diabetes tipo 2, para fechar as lacunas do corpus
 

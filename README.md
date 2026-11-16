@@ -67,7 +67,7 @@ Ditas aqui porque o projeto é um portfólio e o que não funciona importa tanto
 
 - **Rerank não implementado.** A comparação "RRF + rerank" da avaliação não foi feita.
 - **Avaliação pequena.** A recuperação foi medida em 34 perguntas escritas por mim, e as diferenças entre BM25, vetores e RRF não são estatisticamente conclusivas. A resposta final foi medida com 3 repetições só no cenário de saúde; o RJ e a pesquisa esperam o limite diário da Groq.
-- **Falhas previstas que continuam.** A comparação entre o que um protocolo clínico cita e o que a RENAME lista (SA-10) não funciona, e o RJ-04 (contratações diretas e proporção) é instável. Sem memória de conversa, "desses" na segunda pergunta (PE-02) não funciona.
+- **Falhas previstas que continuam.** A comparação entre o que um protocolo clínico cita e o que a RENAME lista (SA-10) passou a ter uma tabela própria (`pcdt_medicamento`), testada na consulta mas ainda não repetida com o modelo; ela cobre só Parkinson e a artrite reumatoide de 2017 a 2021, e o RJ-04 (contratações diretas e proporção) é instável. Sem memória de conversa, "desses" na segunda pergunta (PE-02) não funciona.
 - **Redação de dado sensível.** A remoção de trechos que identificam pessoas em registros sintéticos só pega o que as regras conhecem; a cobertura em texto novo é desconhecida.
 - **Os cenários conversacionais são sintéticos.** Pessoas, órgãos e números são fictícios, gerados com semente fixa.
 - **Os dados são um recorte datado.** Três doenças na saúde, uma amostra de artigos na pesquisa, e a RENAME de dezembro de 2024. Nada aqui substitui orientação clínica, jurídica ou profissional.

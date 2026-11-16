@@ -40,5 +40,5 @@ O sistema explica o conteúdo do protocolo, mas **não** indica dose, troca ou s
 - O PCDT vigente de diabetes tipo 2 não foi localizado em PDF oficial confirmado e ficou de fora.
 - A RENAME é lida das tabelas do PDF. Um cruzamento com a contagem de códigos ATC do texto mostrou que as diferenças vêm de células com dois códigos; mesmo assim, não há garantia de cobrir toda forma de tabela. Medicamentos com dois códigos ficam com os dois na mesma célula.
 - A redação de dado clínico na ouvidoria só pega o que as regras conhecem: 3 de 8 frases novas na primeira medição, 8 de 8 depois de generalizar (número otimista, as frases já eram conhecidas). A cobertura real é desconhecida.
-- Comparar o que um PCDT cita com o que a RENAME lista (SA-04 e SA-10) exige ler o protocolo e a tabela; a falha prevista do SA-10 não foi medida.
+- Comparar o que um PCDT cita com o que a RENAME lista (SA-04 e SA-10) exige ler o protocolo e a tabela; o SA-10 falhou na rodada com o modelo e passou a contar com a tabela `pcdt_medicamento` (seção Fármacos de Parkinson e da artrite de 2017 a 2021, cruzada por princípio ativo com a RENAME), ainda sem nova rodada com o modelo.
 - Nada neste repositório substitui orientação de um profissional de saúde.
