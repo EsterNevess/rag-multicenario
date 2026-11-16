@@ -33,6 +33,8 @@ O cenário de pesquisa usa os mesmos comandos com `--scenario pesquisa` (a colet
 
 **Rerank (opcional).** `pip install -r requirements-rerank.txt` e baixar para `data/models/bge-reranker-v2-m3-onnx/` dois arquivos de [onnx-community/bge-reranker-v2-m3-ONNX](https://huggingface.co/onnx-community/bge-reranker-v2-m3-ONNX): `onnx/model_int8.onnx` (544 MB, salvo como `model_int8.onnx`) e `tokenizer.json` (16 MB). Com eles, `python -m src.avaliar` mede o sistema `rrf_rerank`, e `RERANK=true` no `.env` liga o rerank no motor. O modelo original é o BAAI/bge-reranker-v2-m3 (Apache-2.0).
 
+**Interface (opcional).** `pip install -r requirements-app.txt` e `streamlit run app/streamlit_app.py`: uma tela com seletor de cenário, fontes, cobertura e o plano da consulta (veja [app/README.md](app/README.md)).
+
 A geração usa a Groq por padrão (chave gratuita em console.groq.com, `GROQ_API_KEY` no `.env`); também funcionam a OpenAI (`LLM_PROVIDER=openai`) e um modelo local (`LLM_PROVIDER=ollama`). A Groq não oferece embeddings, então os vetores continuam no Ollama local. Sem pergunta na linha de comando, `src.generate` abre um modo interativo. Cada etapa fica registrada em `logs/pipeline-AAAA-MM-DD.jsonl`.
 
 ## Como o sistema pensa
@@ -73,7 +75,7 @@ Ditas aqui porque o projeto é um portfólio e o que não funciona importa tanto
 - **Redação de dado sensível.** A remoção de trechos que identificam pessoas em registros sintéticos só pega o que as regras conhecem; a cobertura em texto novo é desconhecida.
 - **Os cenários conversacionais são sintéticos.** Pessoas, órgãos e números são fictícios, gerados com semente fixa.
 - **Os dados são um recorte datado.** Quatro doenças na saúde, uma amostra de artigos na pesquisa, e a RENAME de dezembro de 2024. Nada aqui substitui orientação clínica, jurídica ou profissional.
-- **API e console (`app/`) não existem**: o uso é pela linha de comando.
+- **Interface mínima.** O `app/` é uma tela de perguntas em Streamlit, sem login, histórico, memória de conversa nem API HTTP.
 
 ## Estrutura do repositório
 
@@ -89,7 +91,7 @@ scenarios/<nome>/      tudo o que varia por cenário
     sensibilidade.yaml  capacidades.yaml  indicadores.yaml
     eval/questions.json  eval/retrieval_gold.json  eval/respostas.json
 src/                   motor único, sem nada específico de cenário
-app/                   API e console: **não implementados** (só o README)
+app/                   interface de perguntas em Streamlit (uma tela; sem API HTTP)
 tests/                 testes unitários e de contrato (648)
 data/inventory/        inventário de cada coleta (os dados em si não vão para o Git)
 ```

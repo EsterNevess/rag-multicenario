@@ -1,6 +1,6 @@
 # Arquitetura
 
-Este documento descreve o **desenho**. Ele foi escrito na fase 0 e nem tudo foi implementado: a API e o console (`app/`) não existem, e o estágio `rerank` é opcional e vem desligado. O que foi feito, o que falta e as medições estão em [PROGRESSO.md](PROGRESSO.md) e [AVALIACAO.md](AVALIACAO.md).
+Este documento descreve o **desenho**. Ele foi escrito na fase 0 e nem tudo foi implementado: a API HTTP não existe (o `app/` é só uma tela em Streamlit), e o estágio `rerank` é opcional e vem desligado. O que foi feito, o que falta e as medições estão em [PROGRESSO.md](PROGRESSO.md) e [AVALIACAO.md](AVALIACAO.md).
 
 ## Princípio
 

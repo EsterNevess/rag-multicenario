@@ -272,7 +272,7 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [ ] Conferir se cada número do texto bate com a evidência (hoje só as citações são conferidas)
 - [x] Rota agregada (indicadores calculados em SQL) no roteador
 - [x] Rota conversacional (pareceres, atas) com a recusa de identidade e de dado pessoal
-- [ ] API e console (`app/`), se for mostrar uma tela e não só a linha de comando (hoje o uso é pela linha de comando)
+- [x] Interface (`app/`): tela de perguntas em Streamlit com seletor de cenário, fontes, cobertura e o plano da consulta; testada com o `AppTest` e aberta com os dados reais do RJ. Não há API HTTP
 - [x] Filtros de documentos por metadado (`doenca`, `vigente_em`) e busca por versão para comparar versões de um documento
 - [x] Guardrails em camadas: entrada, mascaramento e redação na ingestão, níveis de acesso, regras no prompt e guarda de saída
 - [~] Avaliação (fase 5), ver [AVALIACAO.md](AVALIACAO.md):
@@ -323,7 +323,7 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 
 **Publicação e portfólio**
 - [x] Varredura de segredos e de dados pessoais no histórico inteiro (33 commits): limpo; só dados falsos de teste
-- [x] Licença MIT e README com o estado real, as limitações conhecidas e o que ainda não existe (rerank, `app/`)
+- [x] Licença MIT e README com o estado real, as limitações conhecidas e o que ainda não existe (então: rerank e `app/`, depois implementados)
 - [x] Itens de logística interna retirados do checklist
 - [ ] Tornar o `rag-multicenario` público (ação da Ester nas configurações do GitHub; conferir antes como o README aparece)
 - [x] Decisão (Ester): não haverá vídeo de demonstração. A demonstração é o roteiro escrito em [DEMO.md](DEMO.md), com respostas reais; faltam as respostas das perguntas marcadas "a capturar" (limite da Groq)
