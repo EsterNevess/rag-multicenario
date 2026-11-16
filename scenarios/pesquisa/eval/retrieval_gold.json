@@ -1,0 +1,25 @@
+{
+  "descricao": "Perguntas para medir a recuperação (sem modelo de linguagem). Um trecho é relevante se o texto casa com TODAS as expressões de 'texto' e os metadados casam com TODAS as de 'metadata' (comparação sem acento e sem caixa).",
+  "itens": [
+    {"id": "PE-R01", "pergunta": "O que é o termo de consentimento livre e esclarecido?", "base": "editais_normas_normativo",
+     "relevante": {"texto": ["consentimento livre e esclarecido"], "metadata": {"norma": "cns 466"}}},
+    {"id": "PE-R02", "pergunta": "Quais itens podem ser financiados no Auxílio Básico à Pesquisa da FAPERJ?", "base": "editais_normas_normativo",
+     "relevante": {"texto": ["(itens|despesas|rubricas)", "(capital|custeio)"], "metadata": {"norma": "apq1"}}},
+    {"id": "PE-R03", "pergunta": "Como prestar contas dos recursos recebidos da FAPERJ?", "base": "editais_normas_normativo",
+     "relevante": {"texto": ["prestacao de contas"], "metadata": {"norma": "prestacao de contas"}}},
+    {"id": "PE-R04", "pergunta": "Qual o valor do auxílio no edital Cientista do Nosso Estado?", "base": "editais_normas_normativo",
+     "relevante": {"texto": ["r\\$"], "metadata": {"norma": "cientista do nosso estado"}}},
+    {"id": "PE-R05", "pergunta": "Pesquisas em ciências humanas e sociais precisam de aprovação de comitê de ética?", "base": "editais_normas_normativo",
+     "relevante": {"texto": ["(cep|comite de etica)"], "metadata": {"norma": "510"}}},
+    {"id": "PE-R06", "pergunta": "Quem pode submeter proposta à Chamada Universal do CNPq?", "base": "editais_normas_normativo",
+     "relevante": {"texto": ["(proponente|coordenador)"], "metadata": {"norma": "cnpq/mcti 10/2023"}}},
+    {"id": "PE-R07", "pergunta": "Que requisitos o coordenador precisa cumprir no edital de Ciências Agrárias da FAPERJ?", "base": "editais_normas_normativo",
+     "relevante": {"texto": ["coordenador"], "metadata": {"norma": "agro"}}},
+    {"id": "PE-R08", "pergunta": "Como os riscos e benefícios da pesquisa com seres humanos devem ser tratados?", "base": "editais_normas_normativo",
+     "relevante": {"texto": ["riscos", "beneficios"], "metadata": {"norma": "466"}}},
+    {"id": "PE-R09", "pergunta": "Que problemas o revisor aponta sobre a amostra pequena e a falta do comitê de ética?", "base": "pareceres_conversacional",
+     "relevante": {"texto": ["amostra", "comite de etica"]}},
+    {"id": "PE-R10", "pergunta": "Há algum e-mail editorial sobre prazo para envio da revisão?", "base": "pareceres_conversacional",
+     "relevante": {"texto": ["prazo"], "metadata": {"doc_type": "correspondencia"}}}
+  ]
+}

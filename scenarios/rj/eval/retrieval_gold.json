@@ -1,0 +1,29 @@
+{
+  "descricao": "Perguntas para medir a recuperação (sem modelo de linguagem). Um trecho é relevante se o texto casa com TODAS as expressões de 'texto' e os metadados casam com TODAS as de 'metadata' (comparação sem acento e sem caixa).",
+  "itens": [
+    {"id": "RJ-R01", "pergunta": "Quais são as modalidades de licitação previstas na Lei 14.133?", "base": "editais_normativo",
+     "relevante": {"texto": ["pregao", "concorrencia", "concurso", "leilao", "dialogo competitivo"], "metadata": {"norma": "14.133"}}},
+    {"id": "RJ-R02", "pergunta": "Quem pode atuar como agente de contratação?", "base": "editais_normativo",
+     "relevante": {"texto": ["agente de contratacao", "(servidores|empregados)"]}},
+    {"id": "RJ-R03", "pergunta": "O que é inexigibilidade de licitação e quando ela ocorre?", "base": "editais_normativo",
+     "relevante": {"texto": ["inexigivel", "inviabilidade de competicao"]}},
+    {"id": "RJ-R04", "pergunta": "Qual a duração máxima dos contratos de serviços contínuos?", "base": "editais_normativo",
+     "relevante": {"texto": ["continuos", "(10 \\(dez\\) anos|dez anos)"]}},
+    {"id": "RJ-R05", "pergunta": "Como deve ser feita a pesquisa de preços para estimar o valor da contratação?", "base": "editais_normativo",
+     "relevante": {"texto": ["pesquisa de precos|pesquisa de preco", "(estimado|estimativa)"]}},
+    {"id": "RJ-R06", "pergunta": "Para que serve o plano de contratações anual dos órgãos do Estado?", "base": "editais_normativo",
+     "relevante": {"texto": ["plano de contratacoes"], "metadata": {"norma": "pca"}}},
+    {"id": "RJ-R07", "pergunta": "Como funciona o sistema de registro de preços?", "base": "editais_normativo",
+     "relevante": {"texto": ["registro de precos"], "metadata": {"norma": "registro de precos"}}},
+    {"id": "RJ-R08", "pergunta": "Que documentos de habilitação jurídica o licitante precisa apresentar?", "base": "editais_normativo",
+     "relevante": {"texto": ["habilitacao juridica"]}},
+    {"id": "RJ-R09", "pergunta": "Quais sanções podem ser aplicadas ao licitante que comete infração?", "base": "editais_normativo",
+     "relevante": {"texto": ["advertencia", "multa", "impedimento de licitar"]}},
+    {"id": "RJ-R10", "pergunta": "Como o fiscal do contrato deve acompanhar a execução?", "base": "editais_normativo",
+     "relevante": {"texto": ["fiscal"], "metadata": {"norma": "gestao e fiscalizacao"}}},
+    {"id": "RJ-R11", "pergunta": "Qual pregão foi declarado deserto por falta de propostas?", "base": "atas_conversacional",
+     "relevante": {"texto": ["deserto"]}},
+    {"id": "RJ-R12", "pergunta": "Alguém pediu reajuste de contrato?", "base": "atas_conversacional",
+     "relevante": {"texto": ["reajuste"]}}
+  ]
+}

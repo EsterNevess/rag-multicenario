@@ -272,7 +272,7 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [x] Rota agregada (indicadores calculados em SQL) no roteador
 - [x] Rota conversacional (pareceres, atas) com a recusa de identidade e de dado pessoal
 - [ ] API e console (`app/`), se for mostrar uma tela e não só a linha de comando
-- [ ] Avaliação (fase 5): ablação BM25 x vetores x RRF x RRF + rerank, 3 repetições por pergunta, documento de decisões
+- [~] Avaliação (fase 5): ablação BM25 x vetores x RRF feita em 34 perguntas, sem modelo de linguagem (ver [AVALIACAO.md](AVALIACAO.md)). Faltam o rerank por cross-encoder (precisa baixar um modelo) e a medição da resposta final com 3 repetições
 
 **Cenário RJ (contratações públicas)**
 - [x] Normativa: 1.458 trechos indexados (Lei 14.133, 7 decretos, 5 editais)
