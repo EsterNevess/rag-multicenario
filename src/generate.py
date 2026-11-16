@@ -194,6 +194,12 @@ def analisar(pergunta: str, ctx: Contexto) -> PlanoConsulta:
             if "existe um indicador pronto" not in ultimo:
                 ultimo += _dica_de_indicador(pergunta, ctx)
             usuario = f"{pergunta}\n\nSua resposta anterior foi recusada pelo validador: {ultimo}\nCorrija e responda só com o JSON."
+    reserva = plano_de_reserva(pergunta, ctx)  # o analisador não acertou: se há um indicador inequívoco, usa-o sem o modelo
+    if reserva is not None:
+        with ctx.logger.etapa(Stage.QUERY_ANALYSIS, pergunta) as e:
+            e.output = reserva.model_dump_json()
+            e.extra = {"plano_de_reserva": True}
+        return reserva
     raise PerguntaNaoEntendida(ultimo)
 
 
@@ -222,6 +228,43 @@ def _dica_de_indicador(pergunta: str, ctx: Contexto) -> str:
                         "campo_agregacao": None, "agrupar_por": [], "limite": None, "consulta_semantica": None}
         texto += f" Plano de exemplo, em que você só ajusta os filtros (use apenas dimensões do indicador): {json.dumps(plano_pronto, ensure_ascii=False)}"
     return texto
+
+
+_ANO_NA_PERGUNTA = re.compile(r"\b(20\d{2})\b")
+
+
+def plano_de_reserva(pergunta: str, ctx: Contexto) -> PlanoConsulta | None:
+    """Plano montado sem o modelo, para quando o analisador esgota as tentativas e há um indicador pronto para a pergunta.
+
+    É deliberadamente estreito, para nunca responder um recorte diferente do pedido: só vale quando (1) um único indicador
+    sem dimensão extra (além do ano) cobre o assunto, (2) nenhum indicador mais específico foi pedido (as palavras de recorte
+    dele não aparecem na pergunta, e todo indicador com dimensão extra declara essas palavras) e (3) a pergunta cita no máximo um ano.
+    """
+    sugeridos = indicadores_sugeridos(pergunta, ctx)
+    if not sugeridos:
+        return None
+    catalogo = ctx.cap.catalogo_de_indicadores.indicadores
+    q = _sem_acento(pergunta)
+    simples = []
+    for i in sugeridos:
+        ind = catalogo[i]
+        if all(d.startswith("ano") for d in ind.dimensoes):
+            simples.append(ind)
+        elif not ind.palavras_de_recorte or any(p in q for p in ind.palavras_de_recorte):
+            return None  # o recorte específico foi pedido, ou não dá para saber: melhor não responder do que responder outro recorte
+    anos = set(_ANO_NA_PERGUNTA.findall(q))
+    if len(simples) != 1 or len(anos) > 1:
+        return None
+    ind = simples[0]
+    filtros = {d: int(a) for d in ind.dimensoes for a in anos}
+    plano = PlanoConsulta(rota=Rota.AGREGADA, naturezas=[Natureza.AGREGADA], entidade=ind.id, filtros=filtros)
+    try:
+        validar_plano(plano, ctx.cap)
+        _conferir_disponibilidade(plano, ctx)
+        _conferir_valores(plano, ctx)
+    except PlanoInvalido:
+        return None
+    return plano
 
 
 def _conferir_indicador(pergunta: str, plano: PlanoConsulta, ctx: Contexto) -> None:

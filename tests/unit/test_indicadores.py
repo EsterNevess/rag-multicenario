@@ -179,6 +179,8 @@ def _base(**mudancas):
     ({"definicao": ""}, "falta `definicao`"),
     ({"palavras_chave": ["Contratação Direta"]}, "minúsculas e sem acento"),
     ({"palavras_chave": "contratacao direta"}, "lista de textos"),
+    ({"palavras_de_recorte": ["Estadual"]}, "minúsculas e sem acento"),
+    ({"palavras_de_recorte": "estadual"}, "palavras_de_recorte. é uma lista"),
     ({"exemplos": [{"pergunta": "x", "filtros": {"modalidade_nome": "Dispensa"}}]}, "não são dimensões"),
     ({"exemplos": [{"filtros": {}}]}, "precisa de `pergunta`"),
     ({"ressalvas": [{"o ano e o da compra": "ha casos de 2027"}]}, "ressalva precisa ser um texto"),
@@ -424,3 +426,66 @@ def test_quebra_de_linha_nao_conta_como_mudanca_do_catalogo(pastas, tmp_path):
     texto = open("scenarios/rj/indicadores.yaml", "rb").read().replace(b"\r\n", b"\n")
     (raiz / "scenarios" / "rj" / "indicadores.yaml").write_bytes(texto.replace(b"\n", b"\r\n"))
     conferir_atualizacao(banco, "rj", raiz)
+
+
+# ----------------------------------------------------------------- plano de reserva (sem o modelo)
+
+
+def test_plano_de_reserva_usa_o_indicador_sem_dimensao_extra_e_o_ano_da_pergunta(tmp_path, pastas):
+    from src.generate import plano_de_reserva
+
+    plano = plano_de_reserva(PERGUNTA, _ctx(tmp_path, None, _banco(pastas)))
+    assert plano.rota is Rota.AGREGADA and plano.entidade == "proporcao_contratacao_direta" and plano.filtros == {"ano_compra": 2026}
+
+
+def test_plano_de_reserva_sem_ano_na_pergunta_nao_inventa_filtro(tmp_path, pastas):
+    from src.generate import plano_de_reserva
+
+    plano = plano_de_reserva("Quantas contratações diretas houve?", _ctx(tmp_path, None, _banco(pastas)))
+    assert plano.entidade == "proporcao_contratacao_direta" and plano.filtros == {}
+
+
+@pytest.mark.parametrize("pergunta", [
+    "Qual a proporção de contratações diretas em 2026 só nos órgãos estaduais?",   # pede o recorte por esfera
+    "Qual a proporção de contratações diretas por esfera?",
+    "Qual a proporção de contratações diretas nos órgãos federais?",
+    "Qual a proporção de contratações diretas em 2025 e 2026?",                    # dois anos: o plano simples não saberia escolher
+    "Quais contratações diretas foram publicadas em 2026?",                        # não pede número
+    "Qual a previsão do tempo?",                                                   # sem indicador
+])
+def test_plano_de_reserva_nao_responde_outro_recorte_nem_o_que_nao_entende(tmp_path, pastas, pergunta):
+    from src.generate import plano_de_reserva
+
+    assert plano_de_reserva(pergunta, _ctx(tmp_path, None, _banco(pastas))) is None
+
+
+def test_plano_de_reserva_nao_age_se_o_indicador_com_recorte_nao_declara_palavras_de_recorte(tmp_path, pastas):
+    from dataclasses import replace
+
+    from src.generate import plano_de_reserva
+
+    ctx = _ctx(tmp_path, None, _banco(pastas))
+    catalogo = ctx.cap.catalogo_de_indicadores
+    por_esfera = catalogo.indicadores["proporcao_contratacao_direta_por_esfera"]
+    sem_palavras = replace(catalogo.indicadores["proporcao_contratacao_direta_por_esfera"], palavras_de_recorte=())
+    ctx.cap = replace(ctx.cap, catalogo_de_indicadores=replace(catalogo, indicadores={**catalogo.indicadores, por_esfera.id: sem_palavras}))
+    assert plano_de_reserva(PERGUNTA, ctx) is None  # sem saber se o recorte foi pedido, não responde
+
+
+def test_se_o_analisador_erra_tres_vezes_o_plano_de_reserva_responde_pelo_indicador(tmp_path, pastas):
+    from src.generate import responder
+    from tests.fakes import LLMRoteirizado
+
+    llm = LLMRoteirizado("isto não é json", "nem isto", "{}", "Em 2026, 70,6% das contratações foram diretas [1].")
+    r = responder(PERGUNTA, _ctx_com_dados(tmp_path, llm, pastas))
+    assert not r.is_refusal and r.rotas == [Rota.AGREGADA]
+    assert len(llm.chamadas) == 4  # três tentativas do analisador + a geração
+
+
+def test_se_o_analisador_erra_e_nao_ha_indicador_inequivoco_a_pergunta_continua_recusada(tmp_path, pastas):
+    from src.generate import responder
+    from tests.fakes import LLMRoteirizado
+
+    llm = LLMRoteirizado("isto não é json", "nem isto", "{}")
+    r = responder("Qual a proporção de contratações diretas em 2026 só nos órgãos estaduais?", _ctx_com_dados(tmp_path, llm, pastas))
+    assert r.is_refusal and r.refusal_reason == "pergunta_nao_entendida"

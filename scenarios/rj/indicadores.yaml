@@ -67,6 +67,7 @@ indicadores:
       - {campo: modalidade_nome, em: [Dispensa, Inexigibilidade]}
     definicao: Mesma definição de contratação direta de proporcao_contratacao_direta, calculada separadamente para cada esfera do órgão.
     palavras_chave: [contratacao direta, contratacoes diretas, dispensa e inexigibilidade, sem licitacao]   # sem acento e em minúsculas
+    palavras_de_recorte: [esfera, estadual, estaduais, municipal, municipais, federal, federais]   # quando a pergunta traz uma delas, ela quer este recorte
     exemplos:
       - pergunta: "Qual o percentual de contratação direta nos órgãos federais em 2026?"
         filtros: {ano_compra: 2026, esfera_id: F}

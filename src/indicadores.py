@@ -80,6 +80,7 @@ class Indicador:
     ressalvas: tuple[str, ...] = ()
     exemplos: tuple[tuple[str, dict[str, Any]], ...] = ()  # (pergunta, filtros): mostram ao analisador quando usar o indicador
     palavras_chave: tuple[str, ...] = ()  # assunto do indicador, sem acento e em minúsculas, para a guarda de roteamento
+    palavras_de_recorte: tuple[str, ...] = ()  # palavras que mostram que a pergunta quer o recorte extra deste indicador (por exemplo, a esfera)
 
 
 @dataclass(frozen=True)
@@ -108,10 +109,10 @@ def _predicado(bruto: Any, entidade: Entidade, onde: str) -> Predicado:
     return Predicado(bruto["campo"], em, bool(bruto.get("nao_nulo", False)), bruto.get("igual"))
 
 
-def _palavras(bruto: Any, onde: str) -> list[str]:
+def _palavras(bruto: Any, onde: str, campo: str = "palavras_chave") -> list[str]:
     palavras = bruto or []
     if not isinstance(palavras, list) or not all(isinstance(p, str) and p for p in palavras):
-        raise IndicadoresInvalidos(f"{onde}: `palavras_chave` é uma lista de textos")
+        raise IndicadoresInvalidos(f"{onde}: `{campo}` é uma lista de textos")
     for p in palavras:
         if p != p.lower() or any(ord(c) > 127 for c in p):
             raise IndicadoresInvalidos(f"{onde}: palavra-chave {p!r} deve estar em minúsculas e sem acento")
@@ -166,6 +167,7 @@ def interpretar_indicadores(dados: dict[str, Any], cap: Capacidades) -> Catalogo
             definicao=b["definicao"], ressalvas=tuple(b.get("ressalvas") or ()),
             exemplos=tuple(_exemplo(e, b["dimensoes"], onde) for e in b.get("exemplos") or ()),
             palavras_chave=tuple(_palavras(b.get("palavras_chave"), onde)),
+            palavras_de_recorte=tuple(_palavras(b.get("palavras_de_recorte"), onde, "palavras_de_recorte")),
         )
     limites = tuple(dados.get("limites") or ())
     for i, ind in saida.items():
