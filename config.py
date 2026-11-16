@@ -12,7 +12,7 @@ RAIZ = Path(__file__).resolve().parent
 CENARIOS_VALIDOS = ("rj", "saude", "pesquisa")
 PROVEDORES_LLM = ("openai", "groq", "ollama")
 PROVEDORES_EMBEDDING = ("openai", "ollama")  # a Groq não oferece embeddings
-MODELO_PADRAO_DO_LLM = {"openai": "gpt-4.1-mini", "groq": "openai/gpt-oss-120b", "ollama": "qwen3:4b"}
+MODELO_PADRAO_DO_LLM = {"openai": "gpt-4.1-mini", "groq": "openai/gpt-oss-120b", "ollama": "qwen3:4b-instruct-2507-q4_K_M"}
 
 
 class Settings(BaseSettings):
@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr | None = None
     groq_api_key: SecretStr | None = None
     ollama_url: str = "http://localhost:11434/v1"
+    ollama_reasoning_effort: str = "none"  # vazio: não manda o campo (para modelos que não o conhecem)
+    llm_timeout_seconds: float = 120.0  # um modelo local em CPU pode precisar de mais
 
     # Embeddings: Ollama local por padrão (gratuito, sem chave, reproduzível). Um servidor
     # compartilhado pede lotes pequenos e pausa entre eles (por exemplo 50 e 10 s).

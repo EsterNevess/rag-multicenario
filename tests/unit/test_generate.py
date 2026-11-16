@@ -369,3 +369,19 @@ def test_prompt_de_geracao_proibe_conclusao_que_a_evidencia_nao_sustenta():
     for cenario in ("rj", "pesquisa"):
         assert "Não tire conclusões que as evidências não sustentam" in sistema_geracao(capacidades_do_cenario(cenario))
     assert "não liga um artigo a um edital" in sistema_geracao(capacidades_do_cenario("pesquisa"))
+
+
+def test_cliente_manda_os_campos_extras_no_pedido_e_o_ollama_desliga_o_raciocinio_por_padrao():
+    from config import Settings
+    from src.llm import criar_llm
+
+    s = _Sessao(_ok())
+    ClienteLLM("ollama", "http://x/v1", "m", sessao=s, dormir=lambda _: None, corpo_extra={"reasoning_effort": "none"}).completar("a", "b")
+    assert s.pedidos[0][1]["reasoning_effort"] == "none"
+
+    local = criar_llm(Settings(llm_provider="ollama", _env_file=None))
+    assert local.corpo_extra == {"reasoning_effort": "none"} and local.timeout == 120.0
+    assert criar_llm(Settings(llm_provider="ollama", ollama_reasoning_effort="", llm_timeout_seconds=600, _env_file=None)).corpo_extra == {}
+    sem_campo = _Sessao(_ok())
+    ClienteLLM("groq", "https://x/v1", "m", api_key="k", sessao=sem_campo, dormir=lambda _: None).completar("a", "b")
+    assert "reasoning_effort" not in sem_campo.pedidos[0][1]  # só o provedor local recebe o campo

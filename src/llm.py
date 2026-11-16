@@ -45,6 +45,7 @@ class ClienteLLM:
         dormir: Dormir = time.sleep,
         tentativas: int = 3,
         timeout: float = 120.0,
+        corpo_extra: dict[str, Any] | None = None,
     ):
         self.provider = provider
         self.base_url = base_url.rstrip("/")
@@ -54,6 +55,7 @@ class ClienteLLM:
         self.dormir = dormir
         self.tentativas = tentativas
         self.timeout = timeout
+        self.corpo_extra = corpo_extra or {}  # campos a mais no pedido (por exemplo, reasoning_effort no Ollama)
 
     def completar(self, sistema: str, usuario: str, *, json: bool = False) -> Completacao:
         corpo: dict[str, Any] = {
@@ -61,6 +63,7 @@ class ClienteLLM:
             "temperature": 0,
             "messages": [{"role": "system", "content": sistema}, {"role": "user", "content": usuario}],
         }
+        corpo.update(self.corpo_extra)
         if json:
             corpo["response_format"] = {"type": "json_object"}
         cabecalhos = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
@@ -122,4 +125,7 @@ def criar_llm(config: Settings | None = None, **opcoes: Any) -> ClienteLLM:
                 "no arquivo .env (ele nunca vai para o Git)."
             )
         return ClienteLLM("groq", URL_GROQ, config.modelo_llm, api_key=config.groq_api_key.get_secret_value(), **opcoes)
-    return ClienteLLM("ollama", config.ollama_url, config.modelo_llm, **opcoes)
+    # Modelos que raciocinam (Qwen3) levam minutos numa pergunta simples em CPU se o raciocínio ficar ligado: o padrão o desliga.
+    extra = {"reasoning_effort": config.ollama_reasoning_effort} if config.ollama_reasoning_effort else {}
+    opcoes.setdefault("timeout", config.llm_timeout_seconds)
+    return ClienteLLM("ollama", config.ollama_url, config.modelo_llm, corpo_extra=extra, **opcoes)
