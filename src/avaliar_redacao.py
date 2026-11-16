@@ -29,8 +29,8 @@ def _simples(texto: str) -> str:
     return "".join(c for c in unicodedata.normalize("NFD", texto) if unicodedata.category(c) != "Mn").lower()
 
 
-def carregar_itens(cenario: str, raiz: Path | None = None) -> list[dict[str, Any]]:
-    arquivo = (raiz or RAIZ) / "scenarios" / cenario / "eval" / "redacao_holdout.json"
+def carregar_itens(cenario: str, raiz: Path | None = None, conjunto: str = "redacao_holdout") -> list[dict[str, Any]]:
+    arquivo = (raiz or RAIZ) / "scenarios" / cenario / "eval" / f"{conjunto}.json"
     return json.loads(arquivo.read_text(encoding="utf-8"))["itens"]
 
 
@@ -40,10 +40,10 @@ def processar(texto: str, regras: Any, doc_type: str = "ouvidoria") -> str:
     return mascarar_dados_pessoais(redigido)
 
 
-def avaliar(cenario: str, doc_type: str = "ouvidoria") -> dict[str, Any]:
+def avaliar(cenario: str, doc_type: str = "ouvidoria", conjunto: str = "redacao_holdout") -> dict[str, Any]:
     regras = compilar(list(capacidades_do_cenario(cenario).redacoes_na_ingestao))
     sensiveis, comuns = [], []
-    for item in carregar_itens(cenario):
+    for item in carregar_itens(cenario, conjunto=conjunto):
         saida = processar(item["texto"], regras, doc_type)
         if item["tipo"] == "sensivel":
             sobrou = [v for v in item["valores"] if _simples(v) in _simples(saida)]
@@ -70,9 +70,11 @@ def avaliar(cenario: str, doc_type: str = "ouvidoria") -> dict[str, Any]:
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="python -m src.avaliar_redacao", description=__doc__.split("\n\n")[0])
     p.add_argument("--scenario", required=True, choices=("rj", "saude", "pesquisa"))
+    p.add_argument("--conjunto", default="redacao_holdout", help="arquivo de frases em scenarios/<id>/eval/ (sem .json); padrão: redacao_holdout (conjunto A)")
     args = p.parse_args(argv)
-    r = avaliar(args.scenario)
-    destino = RAIZ / "logs" / f"avaliacao-redacao-{args.scenario}.json"
+    r = avaliar(args.scenario, conjunto=args.conjunto)
+    sufixo = "" if args.conjunto == "redacao_holdout" else "-" + args.conjunto.removeprefix("redacao_holdout_")
+    destino = RAIZ / "logs" / f"avaliacao-redacao-{args.scenario}{sufixo}.json"
     destino.parent.mkdir(exist_ok=True)
     destino.write_text(json.dumps(r, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"{args.scenario}: frases sensíveis protegidas {r['frases_protegidas']}/{r['frases_sensiveis']} ({r['recall_por_frase']}); "
