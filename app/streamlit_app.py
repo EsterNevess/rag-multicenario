@@ -40,6 +40,8 @@ def _mostrar(resultado: nucleo.Resultado) -> None:
         st.markdown("**Fontes**")
         for linha in fontes:
             st.markdown(f"- {linha}")
+    if r.numeros_nao_conferidos:
+        st.warning("Estes números da resposta não foram encontrados na evidência: " + ", ".join(r.numeros_nao_conferidos) + ". Confira nas fontes.")
     if r.cobertura and not r.is_refusal:
         st.caption(f"Cobertura dos dados: {r.cobertura}")
     with st.expander("Como o sistema decidiu"):

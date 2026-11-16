@@ -152,3 +152,19 @@ def test_falha_ao_carregar_o_cenario_vira_mensagem(monkeypatch):
     monkeypatch.setattr(nucleo, "criar_contexto", falha)
     at = AppTest.from_file(SCRIPT, default_timeout=30).run()
     assert "Não foi possível carregar o cenário: sem índice" in _textos(at.error)
+
+
+def test_numero_sem_apoio_na_evidencia_aparece_como_aviso_na_tela(monkeypatch):
+    pytest.importorskip("streamlit")
+    import streamlit as st
+    from streamlit.testing.v1 import AppTest
+
+    st.cache_resource.clear()
+    resposta = _ok().model_copy(update={"numeros_nao_conferidos": ["25.050", "71,9"]})
+    monkeypatch.setattr(nucleo, "criar_contexto", lambda cenario: object())
+    monkeypatch.setattr(nucleo, "responder", lambda p, c, a=None: resposta)
+    at = AppTest.from_file(SCRIPT, default_timeout=30).run()
+    at.text_area(key="pergunta").set_value("pergunta")
+    at.button[-1].click()
+    at.run()
+    assert "25.050, 71,9" in " ".join(w.value for w in at.warning) and "Confira nas fontes" in " ".join(w.value for w in at.warning)

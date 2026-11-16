@@ -174,6 +174,7 @@ def test_cpf_na_resposta_e_mascarado(tmp_path, banco):
     llm = LLMRoteirizado(_plano_json(operacoes=["contar"]), "Contratado: CPF 123.456.789-09 [1].")
     r = responder("Quantas?", _ctx(tmp_path, llm, banco))
     assert "123.456.789-09" not in r.answer
+    assert r.numeros_nao_conferidos == [] and len(llm.chamadas) == 2  # o CPF já está mascarado quando os números se conferem: sem aviso e sem segunda tentativa
 
 
 # ----------------------------------------------------------------- rotas de documentos, híbrida e catálogo

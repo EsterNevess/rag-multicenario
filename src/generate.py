@@ -25,6 +25,7 @@ from src.fetch_corpus import Pastas, pastas_do_cenario
 from src.index import EmbeddingIndisponivel, IndiceCarregado, carregar_indice, criar_embedder
 from src.indicadores import conferir_atualizacao, ler_ficha, localizar_agregado
 from src.llm import LLM, LLMIndisponivel, criar_llm
+from src.numeros import numeros_nao_conferidos
 from src.obs import PipelineLogger, Stage, Tokens
 from src.pii import mascarar_dados_pessoais
 from src.rerank import RerankerIndisponivel, carregar_reranker
@@ -468,11 +469,14 @@ def _tirar_citacoes_invalidas(texto: str, validos: set[int]) -> str:
     return _CITACAO.sub(trocar, texto).replace(" .", ".").strip()
 
 
-def gerar(pergunta: str, evidencias: list[Evidencia], avisos: list[str], ctx: Contexto) -> tuple[str, list[Evidencia]] | None:
-    """Escreve a resposta e confere as citações. Uma tentativa extra se citar errado ou não citar nada."""
+def gerar(pergunta: str, evidencias: list[Evidencia], avisos: list[str], ctx: Contexto) -> tuple[str, list[Evidencia], list[str]] | None:
+    """Escreve a resposta e confere as citações e os números. Uma tentativa extra se citar errado, não citar nada ou trouxer um número
+    que a evidência não tem. Devolve também os números que continuaram sem conferência na última tentativa."""
     validos = {e.numero for e in evidencias}
+    textos_da_evidencia = [f"{e.rotulo or ''} {e.texto}" for e in evidencias]
     correcao = ""
     texto = ""
+    suspeitos: list[str] = []
     for tentativa in range(1, 3):
         with ctx.logger.etapa(Stage.GERACAO, pergunta) as e:
             c = ctx.llm.completar(sistema_geracao(ctx.cap), _prompt_geracao(pergunta, evidencias, avisos, correcao))
@@ -483,10 +487,18 @@ def gerar(pergunta: str, evidencias: list[Evidencia], avisos: list[str], ctx: Co
         texto = c.texto.strip()
         citados = _citados(texto)
         ruins = sorted(set(citados) - validos)
+        # Os números se conferem no texto já mascarado: o aviso nunca repete um CPF ou telefone que a resposta final esconde.
+        suspeitos = numeros_nao_conferidos(mascarar_dados_pessoais(texto), textos_da_evidencia, pergunta) if citados and not ruins else []
         with ctx.logger.etapa(Stage.VALIDACAO, texto) as v:
-            v.output = f"citadas={sorted(set(citados))} invalidas={ruins}"
-        if citados and not ruins:
+            v.output = f"citadas={sorted(set(citados))} invalidas={ruins} numeros_nao_conferidos={suspeitos}"
+        if citados and not ruins and not suspeitos:
             break
+        if citados and not ruins:  # citações certas, mas há número sem apoio na evidência
+            correcao = (
+                f"Na sua resposta anterior, estes números não aparecem na evidência: {', '.join(suspeitos)}. Refaça usando só números que estejam "
+                "na evidência, copiados como estão; se uma conta for necessária e a evidência não a traz, diga que não dá para calcular."
+            )
+            continue
         correcao = (
             f"Sua resposta anterior citou fontes que não existem: {ruins}. " if ruins else "Sua resposta anterior não citou nenhuma evidência. "
         ) + f"Refaça citando apenas {sorted(validos)} com o formato [n]."
@@ -494,7 +506,7 @@ def gerar(pergunta: str, evidencias: list[Evidencia], avisos: list[str], ctx: Co
     usadas = sorted(set(_citados(texto)))
     if not usadas:
         return None
-    return mascarar_dados_pessoais(texto), [e for e in evidencias if e.numero in usadas]
+    return mascarar_dados_pessoais(texto), [e for e in evidencias if e.numero in usadas], suspeitos
 
 
 # --------------------------------------------------------------------------- pipeline
@@ -553,7 +565,7 @@ def responder(pergunta: str, ctx: Contexto, anterior: TurnoAnterior | None = Non
     gerado = gerar(pergunta, evidencias, avisos, ctx)
     if gerado is None:
         return _recusa("sem_fonte_verificavel", "Não consegui escrever uma resposta com fontes verificáveis. Tente reformular a pergunta.", ctx, [plano.rota])
-    texto, usadas = gerado
+    texto, usadas, nao_conferidos = gerado
     with ctx.logger.etapa(Stage.VALIDACAO, "guarda de saída") as v:
         saida = avaliar_resposta(texto, ctx.cap)
         v.output = "liberada" if saida.permitida else f"bloqueada: {saida.categoria}"
@@ -566,6 +578,7 @@ def responder(pergunta: str, ctx: Contexto, anterior: TurnoAnterior | None = Non
         cobertura=ctx.cobertura,
         trace_id=ctx.logger.query_id,
         plano=plano,
+        numeros_nao_conferidos=nao_conferidos,
     )
 
 
@@ -656,6 +669,8 @@ def formatar(resposta: RAGResponse) -> str:
         saida += ["", "Fontes:"] + [f"  [{f.numero}] {f.rotulo or f.chunk_id}" for f in resposta.sources_used]
     if resposta.cobertura and not resposta.is_refusal:
         saida.append(f"\nCobertura: {resposta.cobertura}")
+    if resposta.numeros_nao_conferidos:
+        saida.append(f"\nAtenção: estes números da resposta não foram encontrados na evidência: {', '.join(resposta.numeros_nao_conferidos)}. Confira nas fontes.")
     return "\n".join(saida)
 
 

@@ -475,7 +475,7 @@ def test_se_o_analisador_erra_tres_vezes_o_plano_de_reserva_responde_pelo_indica
     from src.generate import responder
     from tests.fakes import LLMRoteirizado
 
-    llm = LLMRoteirizado("isto não é json", "nem isto", "{}", "Em 2026, 70,6% das contratações foram diretas [1].")
+    llm = LLMRoteirizado("isto não é json", "nem isto", "{}", "As contratações diretas de 2026 foram calculadas pelo indicador [1].")
     r = responder(PERGUNTA, _ctx_com_dados(tmp_path, llm, pastas))
     assert not r.is_refusal and r.rotas == [Rota.AGREGADA]
     assert len(llm.chamadas) == 4  # três tentativas do analisador + a geração
