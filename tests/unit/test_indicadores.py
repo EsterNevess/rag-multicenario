@@ -489,3 +489,11 @@ def test_se_o_analisador_erra_e_nao_ha_indicador_inequivoco_a_pergunta_continua_
     llm = LLMRoteirizado("isto não é json", "nem isto", "{}")
     r = responder("Qual a proporção de contratações diretas em 2026 só nos órgãos estaduais?", _ctx_com_dados(tmp_path, llm, pastas))
     assert r.is_refusal and r.refusal_reason == "pergunta_nao_entendida"
+
+
+def test_a_resposta_leva_o_plano_que_o_analisador_montou(tmp_path, pastas):
+    from src.generate import responder
+    from tests.fakes import LLMRoteirizado
+
+    r = responder(PERGUNTA, _ctx_com_dados(tmp_path, LLMRoteirizado(_plano_json(), "75% [1]."), pastas))
+    assert r.plano is not None and r.plano.entidade == "proporcao_contratacao_direta" and r.plano.filtros == {"ano_compra": 2026}

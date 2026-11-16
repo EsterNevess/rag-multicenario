@@ -473,8 +473,8 @@ def gerar(pergunta: str, evidencias: list[Evidencia], avisos: list[str], ctx: Co
 # --------------------------------------------------------------------------- pipeline
 
 
-def _recusa(motivo: str, mensagem: str, ctx: Contexto, rotas: list[Rota] | None = None) -> RAGResponse:
-    return RAGResponse(answer=mensagem, is_refusal=True, refusal_reason=motivo, rotas=rotas or [], trace_id=ctx.logger.query_id)
+def _recusa(motivo: str, mensagem: str, ctx: Contexto, rotas: list[Rota] | None = None, plano: PlanoConsulta | None = None) -> RAGResponse:
+    return RAGResponse(answer=mensagem, is_refusal=True, refusal_reason=motivo, rotas=rotas or [], trace_id=ctx.logger.query_id, plano=plano)
 
 
 def _resposta_catalogo(ctx: Contexto) -> str:
@@ -514,14 +514,14 @@ def responder(pergunta: str, ctx: Contexto) -> RAGResponse:
         return _recusa("pergunta_nao_entendida", "Não consegui transformar a pergunta em uma consulta que eu saiba fazer. Tente reformular, citando o órgão, o período ou o tipo de contratação.", ctx)
 
     if plano.rota is Rota.FORA_DO_ESCOPO:
-        return _recusa("fora_do_escopo", "Não consigo responder a isso com as bases que tenho.\n" + _resposta_catalogo(ctx), ctx, [Rota.FORA_DO_ESCOPO])
+        return _recusa("fora_do_escopo", "Não consigo responder a isso com as bases que tenho.\n" + _resposta_catalogo(ctx), ctx, [Rota.FORA_DO_ESCOPO], plano)
 
     if plano.rota is Rota.CATALOGO:
-        return RAGResponse(answer=_resposta_catalogo(ctx), rotas=[Rota.CATALOGO], cobertura=ctx.cobertura, trace_id=ctx.logger.query_id)
+        return RAGResponse(answer=_resposta_catalogo(ctx), rotas=[Rota.CATALOGO], cobertura=ctx.cobertura, trace_id=ctx.logger.query_id, plano=plano)
 
     evidencias, avisos = coletar(plano, pergunta, ctx)
     if not evidencias:
-        return _recusa("sem_evidencia", "Não encontrei nas bases disponíveis informação para responder a essa pergunta.", ctx, [plano.rota])
+        return _recusa("sem_evidencia", "Não encontrei nas bases disponíveis informação para responder a essa pergunta.", ctx, [plano.rota], plano)
 
     gerado = gerar(pergunta, evidencias, avisos, ctx)
     if gerado is None:
@@ -531,13 +531,14 @@ def responder(pergunta: str, ctx: Contexto) -> RAGResponse:
         saida = avaliar_resposta(texto, ctx.cap)
         v.output = "liberada" if saida.permitida else f"bloqueada: {saida.categoria}"
     if not saida.permitida:
-        return _recusa(saida.categoria or "saida_bloqueada", saida.mensagem or "A resposta foi bloqueada.", ctx, [plano.rota])
+        return _recusa(saida.categoria or "saida_bloqueada", saida.mensagem or "A resposta foi bloqueada.", ctx, [plano.rota], plano)
     return RAGResponse(
         answer=texto,
         sources_used=[Fonte(numero=e.numero, chunk_id=e.chunk_id, base_id=e.base_id, rotulo=e.rotulo) for e in usadas],
         rotas=[plano.rota],
         cobertura=ctx.cobertura,
         trace_id=ctx.logger.query_id,
+        plano=plano,
     )
 
 

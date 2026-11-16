@@ -150,6 +150,7 @@ class RAGResponse(BaseModel):
     cobertura: str | None = None
     rotas: list[Rota] = Field(default_factory=list)
     trace_id: str | None = None
+    plano: PlanoConsulta | None = None  # o plano que o analisador montou (só existe depois dessa etapa); a interface o mostra
 
     @model_validator(mode="after")
     def _recusa_nao_cita_fontes(self) -> "RAGResponse":
