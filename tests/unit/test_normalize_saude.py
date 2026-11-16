@@ -271,3 +271,48 @@ def test_normalizar_grava_pcdt_medicamento_a_partir_dos_trechos_ingeridos(tmp_pa
     conexao = sqlite3.connect(tmp_path / "data" / "normalized" / "saude" / "v1.sqlite")
     assert conexao.execute("SELECT medicamento, na_rename FROM pcdt_medicamento ORDER BY id").fetchall() == [("Amantadina", "sim"), ("Rasagilina", "não")]
     conexao.close()
+
+
+def test_lista_por_classe_da_artrite_2026_le_as_tres_classes_sem_apresentacao_e_sem_repetir():
+    texto = (
+        "6.2.1 Primeira etapa MEDICAMENTOS MODIFICADORES DO CURSO DA DOENÇA SINTÉTICOS (MMCDs): Metotrexato, leflunomida e hidroxicloroquina. 1ª LINHA O metotrexato.\n"
+        "6.2.2. Segunda etapa MEDICAMENTOS MODIFICADORES DO CURSO DA DOENÇA BIOLÓGICOS (MMCDbio)  - Abatacepte, adalimumabe e certolizumabe pegol; "
+        "MEDICAMENTOS MODIFICADORES DO CURSO DA DOENÇA SINTÉTICOS ALVO ESPECÍFICO (MMCDsae) – Baricitinibe e tofacitinibe. Após o uso."
+    )
+    repetido = "6.2.3 Terceira etapa MEDICAMENTOS MODIFICADORES DO CURSO DA DOENÇA BIOLÓGICOS (MMCDbio)  - Abatacepte, adalimumabe e certolizumabe pegol; outro."
+    linhas, sem_lista = medicamentos_do_pcdt([_trecho(texto, versao="PC 33/2026"), _trecho(repetido, versao="PC 33/2026")])
+    assert [(l["medicamento"], l["classe"]) for l in linhas] == [
+        ("Metotrexato", "MMCDs"), ("leflunomida", "MMCDs"), ("hidroxicloroquina", "MMCDs"),
+        ("Abatacepte", "MMCDbio"), ("adalimumabe", "MMCDbio"), ("certolizumabe pegol", "MMCDbio"),
+        ("Baricitinibe", "MMCDsae"), ("tofacitinibe", "MMCDsae"),
+    ]
+    assert all(l["apresentacao"] is None for l in linhas) and sem_lista == []
+
+
+def test_lista_sem_dois_pontos_do_diabetes_le_nome_dose_e_forma_e_para_no_rodape_da_pagina():
+    texto = (
+        "8 FÁRMACOS\n8 FÁRMACOS\nInsulina NPH 100U/mL suspensão injetável Insulina regular 100U/mL solução injetável "
+        "Insulina Análoga de ação prolongada 100U/ml MINISTÉRIO DA SAÚDE qualidade alta, um estudo de 0,18% a 0,55%."
+    )
+    linhas, _ = medicamentos_do_pcdt([_trecho(texto, versao="PC 17/2019", doenca="Diabetes", parte=1)])
+    assert [(l["medicamento"], l["apresentacao"]) for l in linhas] == [
+        ("Insulina NPH", "100U/mL suspensão injetável"),
+        ("Insulina regular", "100U/mL solução injetável"),
+        ("Insulina Análoga de ação prolongada", "100U/ml"),
+    ]
+
+
+def test_sumario_com_titulo_fármacos_nao_gera_medicamento():
+    linhas, sem_lista = medicamentos_do_pcdt([_trecho("8 FÁRMACOS----------------------- 22\n9 ESQUEMA DE ADMINISTRAÇÃO ------------ 23", versao="PC X", parte=1)])
+    assert linhas == [] and sem_lista == ["PC X"]
+
+
+def test_correspondencia_aproximada_so_vale_se_um_unico_nome_da_rename_contem_o_do_protocolo():
+    linhas = [{"medicamento": "Insulina NPH"}, {"medicamento": "Insulina"}, {"medicamento": "Cloroquina"}]
+    aprox = marcar_constar_na_rename(linhas, ["insulina humana NPH", "insulina humana regular", "difosfato de cloroquina"])
+    assert [(l["na_rename"], l["dcb_na_rename"]) for l in linhas] == [
+        ("sim", "insulina humana NPH"),
+        ("não", None),  # "insulina" cabe em dois nomes da RENAME: ambíguo, não casa
+        ("sim", "difosfato de cloroquina"),
+    ]
+    assert aprox == [("Insulina NPH", "insulina humana NPH")]

@@ -28,7 +28,7 @@ from src.fsutil import com_repeticao
 
 COLUNAS_MEDICAMENTO = ["id", "dcb", "concentracao", "forma", "componente", "atc", "aware", "grupo_atc", "grupo_atc_nome", "pagina", "ano_edicao"]
 COLUNAS_PCDT = ["id", "doenca", "versao", "rotulo", "data_publicacao", "data_vigencia_fim", "situacao"]
-COLUNAS_PCDT_MEDICAMENTO = ["id", "doenca", "versao", "data_publicacao", "situacao", "medicamento", "apresentacao", "na_rename", "dcb_na_rename"]
+COLUNAS_PCDT_MEDICAMENTO = ["id", "doenca", "versao", "data_publicacao", "situacao", "medicamento", "apresentacao", "classe", "na_rename", "dcb_na_rename"]
 TIPOS_SQL = {"id": "INTEGER", "pagina": "INTEGER", "ano_edicao": "INTEGER"}
 INDICES = [
     "CREATE INDEX ix_medicamento_dcb ON medicamento (dcb)",
@@ -171,44 +171,112 @@ def componentes_do_nome(nome: str) -> frozenset[str]:
     return frozenset(saida)
 
 
-def medicamentos_do_pcdt(chunks: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[str]]:
-    """Lê a seção "Fármacos" de cada versão de PCDT (só o primeiro trecho dela) e devolve (medicamentos, versões sem a seção).
+_CLASSE_DE_MEDICAMENTOS = re.compile(r"MEDICAMENTOS MODIFICADORES DO CURSO DA DOEN[ÇC]A [A-ZÇÃÕÁÉÍÓÚ ]+\((MMCD\w*)\)\s*[:–—-]\s*(.+?)(?=;|\.\s|\n|$)")
+_ITEM_SEM_DOIS_PONTOS = re.compile(r"([A-ZÁÉÍÓÚ][\wÀ-ÿ ]*?)\s+(\d+(?:[.,]\d+)?\s?[A-Za-zµ]+\s?/\s?[A-Za-z]+)\s*([a-zçãáéíóú ]*?)(?=\s+[A-ZÁÉÍÓÚ]|$)")
 
-    Cada linha: doença, versão, medicamento e a apresentação, como o protocolo escreve ('Pramipexol: comprimidos de 1 mg'). Entradas
-    sem forma farmacêutica ou dose na apresentação são descartadas, para não confundir texto corrido com a lista.
-    """
-    achados: list[dict[str, Any]] = []
-    versoes = set()
-    for c in chunks:
+
+def _linha_de_pcdt(metadata: dict[str, Any], nome: str, apresentacao: str | None, classe: str | None = None) -> dict[str, Any]:
+    return {
+        "doenca": metadata.get("doenca"), "versao": metadata.get("versao"), "data_publicacao": metadata.get("data_publicacao"),
+        "situacao": "substituída" if metadata.get("data_vigencia_fim") else "vigente",
+        "medicamento": re.sub(r"\s+", " ", nome).strip(), "apresentacao": re.sub(r"\s+", " ", apresentacao).strip() if apresentacao else None,
+        "classe": classe,
+    }
+
+
+def _corpo(chunk: dict[str, Any]) -> str:
+    texto = chunk.get("texto", "")
+    return texto.split("\n", 1)[1] if "\n" in texto else texto
+
+
+def _lista_com_dois_pontos(grupo: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """'Pramipexol: comprimidos de 1 mg.' na seção Fármacos (só no primeiro trecho dela): Parkinson 2017 e artrite 2017 a 2021."""
+    saida: list[dict[str, Any]] = []
+    for c in grupo:
         m = c.get("metadata", {})
-        versoes.add(m.get("versao"))
-        texto = c.get("texto", "")
-        corpo = texto.split("\n", 1)[1] if "\n" in texto else texto
+        corpo = _corpo(c)
         achado = SECAO_FARMACOS.search(corpo[:400])
         if not achado or m.get("parte") not in (None, 1):
             continue
         for nome, apresentacao in _ENTRADA_DE_FARMACO.findall(corpo[achado.end():]):
             apresentacao = _USO_PRIVADO.sub(" ", apresentacao).strip()  # marcador de lista do PDF
             apresentacao = re.split(r"\.\s+(?=[A-ZÁÉÍÓÚ])", apresentacao)[0].rstrip(". ")
-            if not _FORMA_FARMACEUTICA.search(apresentacao):
-                continue
-            achados.append({
-                "doenca": m.get("doenca"), "versao": m.get("versao"), "data_publicacao": m.get("data_publicacao"),
-                "situacao": "substituída" if m.get("data_vigencia_fim") else "vigente",
-                "medicamento": re.sub(r"\s+", " ", nome).strip(), "apresentacao": re.sub(r"\s+", " ", apresentacao),
-            })
-    com_secao = {a["versao"] for a in achados}
-    return achados, sorted(str(v) for v in versoes if v not in com_secao)
+            if _FORMA_FARMACEUTICA.search(apresentacao):
+                saida.append(_linha_de_pcdt(m, nome, apresentacao))
+    return saida
 
 
-def marcar_constar_na_rename(medicamentos_pcdt: list[dict[str, Any]], dcbs_da_rename: list[str]) -> None:
-    """Preenche na_rename ('sim' ou 'não') e dcb_na_rename comparando os princípios ativos; os nomes da RENAME vêm com sal (cloridrato de ...)."""
+def _lista_por_classe(grupo: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """'MEDICAMENTOS MODIFICADORES DO CURSO DA DOENÇA BIOLÓGICOS (MMCDbio) - Abatacepte, adalimumabe e ...': artrite 2026, sem apresentação."""
+    saida: list[dict[str, Any]] = []
+    vistos: set[str] = set()
+    for c in grupo:
+        for classe, lista in _CLASSE_DE_MEDICAMENTOS.findall(_corpo(c)):
+            for nome in re.split(r",\s*|\s+e\s+", lista.strip().rstrip(".")):
+                nome = nome.strip()
+                if nome and len(nome.split()) <= 3 and nome.lower() not in vistos:
+                    vistos.add(nome.lower())
+                    saida.append(_linha_de_pcdt(c["metadata"], nome, None, classe))
+    return saida
+
+
+def _lista_sem_dois_pontos(grupo: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """'Insulina NPH 100U/mL suspensão injetável Insulina regular 100U/mL solução injetável ...' logo após o título Fármacos: diabetes tipo 1."""
+    saida: list[dict[str, Any]] = []
+    for c in grupo:
+        corpo = _corpo(c)
+        titulos = list(SECAO_FARMACOS.finditer(corpo[:200]))
+        if not titulos or c.get("metadata", {}).get("parte") not in (None, 1):
+            continue
+        bloco = corpo[titulos[-1].end():][:400].lstrip(" \n")
+        bloco = re.split(r"MINIST[ÉE]RIO DA SA[ÚU]DE", bloco)[0].strip()  # rodapé da página
+        for nome, dose, forma in _ITEM_SEM_DOIS_PONTOS.findall(bloco):
+            saida.append(_linha_de_pcdt(c["metadata"], nome, f"{dose} {forma}".strip()))
+    return saida
+
+
+def medicamentos_do_pcdt(chunks: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[str]]:
+    """Lê a lista de medicamentos de cada versão de PCDT e devolve (medicamentos, versões em que nenhuma lista foi lida).
+
+    Há três formatos, cada um com seu leitor (a primeira que achar algo vale para a versão): 'nome: apresentação' na seção Fármacos,
+    listas por classe no texto do tratamento (sem apresentação) e 'nome dose forma' sem dois-pontos. Cada leitor serve ao formato de
+    documentos conhecidos: se um protocolo mudar de formato, a versão aparece como sem lista no relatório, em vez de sair uma lista errada.
+    """
+    por_versao: dict[Any, list[dict[str, Any]]] = {}
+    for c in chunks:
+        por_versao.setdefault(c.get("metadata", {}).get("versao"), []).append(c)
+    achados: list[dict[str, Any]] = []
+    sem_lista: list[str] = []
+    for versao, grupo in por_versao.items():
+        linhas = _lista_com_dois_pontos(grupo) or _lista_por_classe(grupo) or _lista_sem_dois_pontos(grupo)
+        if linhas:
+            achados += linhas
+        else:
+            sem_lista.append(str(versao))
+    return achados, sorted(sem_lista)
+
+
+def marcar_constar_na_rename(medicamentos_pcdt: list[dict[str, Any]], dcbs_da_rename: list[str]) -> list[tuple[str, str]]:
+    """Preenche na_rename ('sim' ou 'não') e dcb_na_rename comparando os princípios ativos; os nomes da RENAME vêm com sal (cloridrato de ...).
+
+    Se o nome não casa por inteiro, aceita-se um nome da RENAME que o contenha (palavra por palavra) quando só um nome o contém ('insulina NPH'
+    no protocolo, 'insulina humana NPH' na RENAME). Essas correspondências aproximadas são devolvidas, para constar no relatório.
+    """
     por_conjunto: dict[frozenset[str], str] = {}
     for dcb in dcbs_da_rename:
         por_conjunto.setdefault(componentes_do_nome(dcb), dcb)
+    aproximadas: list[tuple[str, str]] = []
     for i, linha in enumerate(medicamentos_pcdt, 1):
-        achado = por_conjunto.get(componentes_do_nome(linha["medicamento"]))
+        componentes = componentes_do_nome(linha["medicamento"])
+        achado = por_conjunto.get(componentes)
+        if achado is None and len(componentes) == 1:
+            palavras = set(next(iter(componentes)).split())
+            candidatos = [dcb for conj, dcb in por_conjunto.items() if len(conj) == 1 and palavras <= set(next(iter(conj)).split())]
+            if len(candidatos) == 1:
+                achado = candidatos[0]
+                aproximadas.append((linha["medicamento"], achado))
         linha.update({"id": i, "na_rename": "sim" if achado else "não", "dcb_na_rename": achado})
+    return aproximadas
 
 
 def linhas_de_pcdt(manifesto: dict[str, Any]) -> list[dict[str, Any]]:
@@ -254,7 +322,7 @@ def normalizar(manifesto_path: Path, versao: str, pastas: Pastas) -> dict[str, A
     versoes = linhas_de_pcdt(manifesto)
     chunks_pcdt = _chunks_de_pcdt(pastas, versao)
     farmacos, sem_secao = medicamentos_do_pcdt(chunks_pcdt)
-    marcar_constar_na_rename(farmacos, sorted({m["dcb"] for m in medicamentos if m.get("dcb")}))
+    aproximadas = marcar_constar_na_rename(farmacos, sorted({m["dcb"] for m in medicamentos if m.get("dcb")}))
 
     saida = pastas.dados / "normalized" / pastas.cenario_id
     saida.mkdir(parents=True, exist_ok=True)
@@ -291,6 +359,7 @@ def normalizar(manifesto_path: Path, versao: str, pastas: Pastas) -> dict[str, A
             "linhas_por_componente": por_componente,
             "linhas_por_grupo_atc": por_grupo,
             "linhas_sem_forma": sem_forma,
+            "pcdt_correspondencias_aproximadas": aproximadas,  # nome do protocolo contido num único nome da RENAME (ex.: insulina NPH e insulina humana NPH)
             "pcdt_versoes_sem_secao_farmacos": sem_secao,  # a lista de fármacos não foi lida nestas versões (o cruzamento com a RENAME não as cobre)
             "rejeitados": {},
             "periodo_de_publicacao": {"de": min(datas), "ate": max(datas)},  # das portarias dos protocolos e da RENAME

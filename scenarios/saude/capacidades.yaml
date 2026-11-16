@@ -12,7 +12,7 @@ dicas_do_analisador:
   - "A RENAME 2024 está na entidade medicamento (uma linha por medicamento + concentração + forma). O nome é a denominação comum brasileira (DCB) em minúsculas: use dcb__contem (por exemplo insulina). O componente de financiamento é Básico, Estratégico ou Especializado (há combinações). Atenção: a RENAME 2024 tem 541 medicamentos distintos em 996 linhas; para contar medicamentos distintos, conte pelo nome, não pelas linhas."
   - "A entidade pcdt_versao lista as versões de protocolo do corpus, com data de publicação, fim da vigência e situação (vigente ou substituída). Use para perguntas sobre desde quando uma versão vale e qual a vigente."
   - "Registros de ouvidoria (documentos sintéticos) estão disponíveis: perguntas sobre reclamações, falta de medicamento ou o que as pessoas relatam usam rota documentos com naturezas [conversacional]."
-  - "A entidade pcdt_medicamento traz os medicamentos da seção Fármacos de cada versão de protocolo (medicamento e apresentação como o protocolo escreve), com na_rename = sim ou não (se o princípio ativo consta na RENAME 2024; sais e formas não entram na comparação) e dcb_na_rename (o nome na RENAME). Para \"quais medicamentos do protocolo de X não estão na RENAME\", use estruturada em pcdt_medicamento com doenca__contem e SEM filtrar na_rename (listar, limite 100): a coluna na_rename mostra cada caso, e uma lista sem nenhum \"não\" significa que todos os medicamentos da seção constam na RENAME. Se a consulta voltar sem linhas, o corpus não tem a lista daquela versão: diga que a comparação não é possível, e nunca que nenhum medicamento falta. Cobertura: só Parkinson (2017) e artrite reumatoide (2017, 2019 e 2021); a versão de 2026 da artrite e o diabetes tipo 1 não têm a lista lida, e nesses casos o corpus não permite essa comparação."
+  - "A entidade pcdt_medicamento traz os medicamentos da seção Fármacos de cada versão de protocolo (medicamento e apresentação como o protocolo escreve), com na_rename = sim ou não (se o princípio ativo consta na RENAME 2024; sais e formas não entram na comparação) e dcb_na_rename (o nome na RENAME). Para \"quais medicamentos do protocolo de X não estão na RENAME\", use estruturada em pcdt_medicamento com doenca__contem e SEM filtrar na_rename (listar, limite 100): a coluna na_rename mostra cada caso, e uma lista sem nenhum \"não\" significa que todos os medicamentos da seção constam na RENAME. Se a consulta voltar sem linhas, o corpus não tem a lista daquela versão: diga que a comparação não é possível, e nunca que nenhum medicamento falta. Cobertura: as cinco versões do corpus (Parkinson 2017, artrite reumatoide 2017, 2019, 2021 e 2026, diabetes tipo 1 2019). Só entram os medicamentos que o protocolo lista na seção Fármacos ou, na artrite de 2026, nas listas por classe do tratamento (coluna classe: MMCDs sintéticos, MMCDbio biológicos, MMCDsae alvo específico); essa versão não traz apresentação, e o corpus não traz anti-inflamatórios nem glicocorticoides dela."
   - "Não há dados de dispensação, cobertura nem internações: o corpus não os coleta. Perguntas por quantidades dispensadas ou internadas usam fora_do_escopo."
 
 regras_de_resposta:
@@ -124,7 +124,7 @@ entidades:
       - { nome: ano_edicao, tipo: inteiro, agrupavel: true }
   pcdt_medicamento:
     tabela: pcdt_medicamento
-    exibir: [doenca, versao, medicamento, apresentacao, na_rename, dcb_na_rename]
+    exibir: [doenca, versao, medicamento, apresentacao, classe, na_rename, dcb_na_rename]
     ordem_padrao: medicamento
     campos:
       - { nome: id, tipo: id }
@@ -134,6 +134,7 @@ entidades:
       - { nome: situacao, tipo: categoria, agrupavel: true, listar_valores: true }
       - { nome: medicamento, tipo: categoria, agrupavel: true }
       - { nome: apresentacao, tipo: texto }
+      - { nome: classe, tipo: categoria, agrupavel: true }
       - { nome: na_rename, tipo: categoria, agrupavel: true, listar_valores: true }
       - { nome: dcb_na_rename, tipo: texto }
   pcdt_versao:
