@@ -344,3 +344,8 @@ def test_plano_de_cruzamento_pcdt_x_rename_valida_na_entidade_pcdt_medicamento()
     errado = plano.model_copy(update={"filtros": {"doenca__contem": "parkinson", "campo_que_nao_existe": "x"}})
     with pytest.raises(PlanoInvalido):
         validar_plano(errado, cap)
+
+
+def test_regra_de_comparacao_de_versoes_proibe_dizer_que_algo_e_novo_so_porque_o_trecho_nao_veio():
+    regra = next(r for r in SAUDE.regras_de_resposta if r.startswith("Ao comparar versões"))
+    assert "amostras" in regra and "acrescenta" in regra and "não consta" in regra and "texto completo" in regra
