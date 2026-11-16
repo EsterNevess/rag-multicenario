@@ -82,7 +82,7 @@ redacoes_na_ingestao:
     marca: "[TRECHO REMOVIDO: identifica o paciente]"
     aplica_a: [ouvidoria]
     padroes:
-      - '(?i)\b(meu nome e|me chamo|chamo-me)\b'
+      - '(?i)\b(meu\s+nome|me chamo|chamo-me)\b'
       - '\b(?i:sou|fui)\s+(?:(?i:o|a)\s+)?[A-Z][a-z]+\s+[A-Z][a-z]+'
       - '(?i)\bcartao\s+(do\s+)?sus\b'
       - '(?i)\b(cns|cpf)\b\s*:?\s*\d'
@@ -91,6 +91,12 @@ redacoes_na_ingestao:
       - '\b(?i:aqui e|aqui fala|quem fala e)\s+(?:(?i:o|a)\s+)?[A-Z][a-z]+\s+[A-Z][a-z]+'
       - '(?i)\b(moro|resido|moramos)\s+(na|no|em)\b'
       - '\b(?i:meu|minha)\s+(?i:pai|mae|filho|filha|avo|marido|esposa|irmao|irma|tio|tia|neto|neta),\s+[A-Z][a-z]+\s+[A-Z][a-z]+'
+      - '\b(?i:eu),?\s+[A-Z][a-z]+(?:\s+(?:d[aeo]s?\s+)?[A-Z][a-z]+)+'
+      - '\b(?i:seu|dona|dom|dr|dra|doutor|doutora|sr|sra|senhor|senhora)\.?\s+(?:(?i:d[aeo]s?)\s+)?[A-Z][a-z]+'
+      - '\b(?i:meu|minha)\s+(?i:pai|mae|filho|filha|avo|marido|esposa|irmao|irma|tio|tia|neto|neta|sogro|sogra|genro|nora|cunhado|cunhada|primo|prima|sobrinho|sobrinha|vizinho|vizinha|amigo|amiga|namorado|namorada|companheiro|companheira|enteado|enteada),?\s+(?:(?i:o|a|dona|seu)\s+)?[A-Z][a-z]+'
+      - '\b(?i:paciente|pacientes|usuario|usuaria|morador|moradora|vizinho|vizinha)\s+[A-Z][a-z]+(?:\s+(?:(?i:d[aeo]s?)\s+)?[A-Z][a-z]+)*'
+      - '(?i)\b(residimos|reside|residem|residia|mora|moram|morava|moravam)\s+(na|no|em)\b'
+      - '(?i)\b(meu|nosso|seu|dele|dela)\s+endereco\b'
   - categoria: diagnostico_ou_exame_individual
     marca: "[TRECHO REMOVIDO: dado clínico de uma pessoa]"
     aplica_a: [ouvidoria]
@@ -105,6 +111,18 @@ redacoes_na_ingestao:
       - '(?i)\b(exame|resultado|laudo)\b.{0,40}\b(deu|foi de|esta em|ficou em|mostrou)\b'
       - '(?i)\bdoenca de parkinson\b.{0,20}\b(relata|relatou)\b'
       - '(?i)\b(relata|relatou|disse|informou)\b.{0,40}\b(diabetes|parkinson|artrite)\b'
+      - '(?i)\b(?:meu|minha|meus|minhas|eu|sou|estou|tenho|tinha|tive|fiz|fui|dele|dela|nosso|nossa|pai|mae|filh[oa]|irma[o]?|avo|tio|tia|neto|neta|esposa|marido|sogr[oa]|vizinh[oa]|cunhad[oa]|prim[oa]|sobrinh[oa])\b.{0,100}\b(?:diabet\w*|hipertens\w*|pressao alta|asma\w*|cancer\w*|tumor\w*|leucemia|linfoma|lupus|hiv|aids|hepatite|tuberculose|hanseniase|epilep\w*|esquizofreni\w*|bipolar\w*|depress\w*|ansiedade|avc|derrame|infarto|cardiopat\w*|insuficiencia (?:renal|cardiaca|hepatica)|parkinson|alzheimer|demencia|artrite|artrose|fibromialgia|catarata|glaucoma|anemia falciforme|gravida|gestante|gravidez|cirurgia|biopsia|quimioterapia|radioterapia|hemodialise|dialise|transplant\w*|amputa\w*)\b'
+      - '(?i)\b(?:diabet\w*|hipertens\w*|pressao alta|asma\w*|cancer\w*|tumor\w*|leucemia|linfoma|lupus|hiv|aids|hepatite|tuberculose|hanseniase|epilep\w*|esquizofreni\w*|bipolar\w*|depress\w*|ansiedade|avc|derrame|infarto|cardiopat\w*|insuficiencia (?:renal|cardiaca|hepatica)|parkinson|alzheimer|demencia|artrite|artrose|fibromialgia|catarata|glaucoma|anemia falciforme|gravida|gestante|gravidez|cirurgia|biopsia|quimioterapia|radioterapia|hemodialise|dialise|transplant\w*|amputa\w*)\b.{0,100}\b(?:meu|minha|meus|minhas|eu|sou|estou|tenho|tinha|tive|fiz|fui|dele|dela|nosso|nossa|pai|mae|filh[oa]|irma[o]?|avo|tio|tia|neto|neta|esposa|marido|sogr[oa]|vizinh[oa]|cunhad[oa]|prim[oa]|sobrinh[oa])\b'
+      - '(?i)\b(?:toma|tomo|tomava|tomei|tomou|usa|usam|uso|usava|usei|usou|aplico|aplica|aplicava|aplicou|injeta|injeto|ingere)\b.{0,70}\b\d+[,.]?\d*\s*(?:ui|u|unidades?|mg|mcg|ml|g|comprimidos?|gotas?|capsulas?|ampolas?)\b'
+      - '(?i)\b(?:pressao|saturacao|imc|triglicerideos|triglicerides|ldl|hdl|hemoglobina|plaquetas|leucocitos|psa|ferritina|tgo|tgp|carga viral|cd4|acido urico|glicose)\b.{0,50}\b\d+(?:[,.]\d+)?'
+      - '(?i)\bem tratamento (contra|por)\b'
+  - categoria: documento_ou_contato_pessoal
+    marca: "[TRECHO REMOVIDO: documento ou contato pessoal]"
+    aplica_a: [ouvidoria]
+    padroes:
+      - '(?i)\b(?:rg|identidade|carteira de identidade)\b\D{0,30}\d'
+      - '(?i)\b(?:nasci|nasceu|nascid[oa]|nascimento|data de nascimento)\b.{0,25}\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}'
+      - '(?i)^(?!.*\b(?:central|ouvidoria|disque|0800)\b).*\b(?:tel(?:efone)?|fone|cel(?:ular)?|whats(?:app)?|ramal)\b.{0,40}\d{4,5}[- ]?\d{4}'
 
 entidades:
   medicamento:

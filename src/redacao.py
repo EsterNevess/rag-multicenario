@@ -15,7 +15,10 @@ import unicodedata
 from dataclasses import dataclass
 from typing import Any
 
-_FIM_DE_FRASE = re.compile(r"(?<=[.!?])\s+")
+# Não corta depois de abreviação de tratamento ("Dr. Anderson Costa"): o nome ficaria numa frase sem o título que o denuncia.
+_ABREVIACOES = ("dr", "dra", "sr", "sra", "srta", "prof", "profa", "sto", "sta")
+_NAO_CORTA = "".join(rf"(?<!\b{a}\.)(?<!\b{a.capitalize()}\.)" for a in _ABREVIACOES)
+_FIM_DE_FRASE = re.compile(rf"(?<=[.!?]){_NAO_CORTA}\s+")
 
 
 @dataclass(frozen=True)
