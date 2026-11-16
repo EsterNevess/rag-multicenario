@@ -10,7 +10,7 @@ O Ministério da Saúde publica os PCDT (Protocolos Clínicos e Diretrizes Terap
 
 | Base | Conteúdo | Fonte | Acesso |
 |---|---|---|---|
-| Normativa | 6 PCDT de 3 doenças (diabetes tipo 1, Parkinson e artrite reumatoide, esta com 4 versões de 2017 a 2026), 635 trechos | Conitec / Ministério da Saúde | PDF por URL |
+| Normativa | 8 PCDT de 4 doenças (diabetes tipo 1 e tipo 2, Parkinson e artrite reumatoide, esta com 5 versões seguidas de 2017 a 2026), 900 trechos | Conitec / Ministério da Saúde | PDF por URL |
 | Estruturada | RENAME 2024: 996 linhas (medicamento + concentração + forma), 541 medicamentos distintos; e o catálogo das versões de PCDT | Ministério da Saúde | PDF de tabelas lido por célula |
 | Agregada | 3 indicadores em SQL (apresentações por componente, por grupo ATC, versões de PCDT por doença) | Calculada sobre as bases acima | SQL |
 | Conversacional | 30 registros de ouvidoria, 6 armadilhas | Sintética | Texto |
@@ -36,8 +36,9 @@ O sistema explica o conteúdo do protocolo, mas **não** indica dose, troca ou s
 
 ## Limitações já conhecidas
 
-- O corpus é um recorte datado: três doenças, e o PCDT de cada uma pode ter sido atualizado depois do documento coletado. A Portaria Conjunta 14/2020 da artrite reumatoide só existe como página HTML e não está no corpus, então entre 2020-09-08 e 2021-09-09 não há versão (o sistema não inventa uma).
-- O PCDT vigente de diabetes tipo 2 não foi localizado em PDF oficial confirmado e ficou de fora.
+- O corpus é um recorte datado: quatro doenças, e o PCDT de cada uma pode ter sido atualizado depois do documento coletado.
+- A Portaria Conjunta 14/2020 da artrite reumatoide entra pelo Relatório de Recomendação da Conitec nº 551, que traz o protocolo e a decisão da portaria (o PDF da portaria em si não foi localizado em fonte oficial). Com ela, a artrite não tem mais intervalo entre as versões.
+- O PDF de diabetes tipo 2 é a Portaria SCTIE/MS 13/2026, que "torna pública a decisão de atualizar" o protocolo, com o texto em anexo. Não se confirmou se é o texto em vigor, nem se há portaria conjunta posterior; as versões de 2020 e 2024, citadas no próprio texto, não estão no corpus.
 - A RENAME é lida das tabelas do PDF. Um cruzamento com a contagem de códigos ATC do texto mostrou que as diferenças vêm de células com dois códigos; mesmo assim, não há garantia de cobrir toda forma de tabela. Medicamentos com dois códigos ficam com os dois na mesma célula.
 - A redação de dado clínico na ouvidoria só pega o que as regras conhecem: 3 de 8 frases novas na primeira medição, 8 de 8 depois de generalizar (número otimista, as frases já eram conhecidas). A cobertura real é desconhecida.
 - A comparação entre versões de um protocolo tem uma tabela calculada em código (`pcdt_secao`: por seção, quantas frases são novas ou sumiram). Só a artrite reumatoide tem mais de uma versão no corpus. Ela mostra onde o texto mudou, não o que mudou clinicamente.

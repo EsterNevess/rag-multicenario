@@ -11,7 +11,7 @@ O ponto central do projeto: o sistema decide **que tipo de evidência** responde
 | Cenário | Normativa | Estruturada | Agregada | Conversacional (sintética) | Estado |
 |---|---|---|---|---|---|
 | [Contratações públicas do RJ](scenarios/rj/README.md) | **indexada** (1.456 trechos) | **normalizada** (37 mil contratações, 46 mil contratos) | 7 indicadores | 20 atas e e-mails, 5 armadilhas | **rodada real feita** (RJ-04 instável) |
-| [Saúde pública](scenarios/saude/README.md) | **indexada** (635 trechos de 6 PCDT de 3 doenças, com vigência por versão) | **RENAME 2024 normalizada** (996 linhas, 541 medicamentos) | 3 indicadores; dispensação recusada por decisão | 30 registros de ouvidoria, 6 armadilhas | **rodada real feita** (SA-10 falha) |
+| [Saúde pública](scenarios/saude/README.md) | **indexada** (900 trechos de 8 PCDT de 4 doenças, com vigência por versão) | **RENAME 2024 normalizada** (996 linhas, 541 medicamentos) | 3 indicadores; dispensação recusada por decisão | 30 registros de ouvidoria, 6 armadilhas | **rodada real feita** (SA-10 falha) |
 | [Pesquisa acadêmica](scenarios/pesquisa/README.md) | **indexada** (453 trechos) | **normalizada** (5.000 artigos) | 6 indicadores | 21 pareceres e e-mails, 7 armadilhas | **rodada real feita** |
 
 Todos os dados trazem SHA-256 e inventário por versão. Os documentos conversacionais são **sintéticos** (gerados por script com semente fixa, marcados como fictícios) e ficam fora do Git, assim como os dados coletados.
@@ -70,7 +70,7 @@ Ditas aqui porque o projeto é um portfólio e o que não funciona importa tanto
 - **Falhas previstas que continuam.** A comparação entre o que um protocolo clínico cita e o que a RENAME lista (SA-10) passou a ter uma tabela própria (`pcdt_medicamento`), testada na consulta mas ainda não repetida com o modelo; ela cobre as cinco versões de protocolo do corpus, mas só os medicamentos que cada protocolo enumera, e o RJ-04 (contratações diretas e proporção) oscilava porque o modelo às vezes errava o plano três vezes seguidas. Agora, nesse caso, um plano de reserva sem o modelo usa o indicador pronto (testado por teste unitário, ainda não repetido com o modelo). Sem memória de conversa, "desses" na segunda pergunta (PE-02) não funciona.
 - **Redação de dado sensível.** A remoção de trechos que identificam pessoas em registros sintéticos só pega o que as regras conhecem; a cobertura em texto novo é desconhecida.
 - **Os cenários conversacionais são sintéticos.** Pessoas, órgãos e números são fictícios, gerados com semente fixa.
-- **Os dados são um recorte datado.** Três doenças na saúde, uma amostra de artigos na pesquisa, e a RENAME de dezembro de 2024. Nada aqui substitui orientação clínica, jurídica ou profissional.
+- **Os dados são um recorte datado.** Quatro doenças na saúde, uma amostra de artigos na pesquisa, e a RENAME de dezembro de 2024. Nada aqui substitui orientação clínica, jurídica ou profissional.
 - **API e console (`app/`) não existem**: o uso é pela linha de comando.
 
 ## Estrutura do repositório

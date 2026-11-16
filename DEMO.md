@@ -67,4 +67,4 @@ Respostas: todas a capturar.
 
 ## Para fechar a captura
 
-Quando o limite diário da Groq voltar, rode as perguntas marcadas "a capturar" e cole as respostas aqui. Para a demonstração em vídeo, o mais seguro é gravar uma execução limpa de cada pergunta, na ordem da tabela, e mostrar também a linha de fontes que o sistema devolve.
+Quando o limite diário da Groq voltar, rode as perguntas marcadas "a capturar" e cole as respostas aqui. Não há vídeo: este roteiro é a demonstração. Cole as respostas como saíram, com a linha de fontes que o sistema devolve.

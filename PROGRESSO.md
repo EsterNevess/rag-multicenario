@@ -307,7 +307,7 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [x] `capacidades.yaml` com recusa de prescrição individual, de interpretação de exame e de dado de paciente
 - [x] Agregada: 3 indicadores (dispensação recusada por decisão)
 - [x] Conversacional sintética: 30 registros de ouvidoria, 6 armadilhas
-- [x] Índices: 635 vetores (PCDT) e 30 (ouvidoria)
+- [x] Índices: 635 vetores (PCDT, v1) e 30 (ouvidoria); com o corpus v2, 900 vetores (PCDT)
 - [x] Rodada real: 13 perguntas × 3 repetições (rota e recusa estáveis em 12 de 13; SA-10 falha nas 3, como previsto; a pergunta da lacuna de 2021 é instável)
 - [x] SA-02: busca por versão (os melhores trechos de cada versão) e regra de que a "anterior" é a publicada logo antes da vigente. Reverificado: compara 33/2026 com 16/2021, com as datas, e diz que os trechos recuperados não mostram diferença explícita, sem inventar
 - [x] SA-10: tabela `pcdt_medicamento` (69 linhas) com a marca de constar na RENAME, entidade e dica declaradas, testes (655 passando). Consulta conferida sem o modelo
@@ -317,15 +317,15 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [ ] SA-10: repetir a pergunta com o modelo (3 repetições) quando o limite da Groq voltar
 - [x] Lista de fármacos da artrite de 2026 (por classe, sem apresentação) e do diabetes tipo 1 (sem dois-pontos): 89 linhas nas cinco versões, todas na RENAME; duas insulinas por correspondência aproximada, registradas no relatório
 - [x] OCR para PDFs escaneados: não foi preciso, os 7 PDFs têm camada de texto
-- [ ] Incluir a Portaria Conjunta 14/2020 da artrite reumatoide (só existe em HTML) e o PCDT de diabetes tipo 2, para fechar as lacunas do corpus
+- [x] Corpus v2 (19,6 MB, 9 arquivos): Relatório Conitec 551 (Portaria Conjunta 14/2020 da artrite, sem mais intervalo entre versões) e PCDT de diabetes tipo 2 (Portaria SCTIE/MS 13/2026, decisão de atualizar; não confirmado como texto em vigor). 900 trechos, 119 medicamentos de protocolo (todos na RENAME), 105 linhas de comparação por seção
+- [ ] Repetir com o modelo as perguntas da saúde no corpus v2 (a rodada medida foi no v1; o SA-X1 agora tem resposta: a PC 14/2020)
 
 **Publicação e portfólio**
 - [x] Varredura de segredos e de dados pessoais no histórico inteiro (33 commits): limpo; só dados falsos de teste
 - [x] Licença MIT e README com o estado real, as limitações conhecidas e o que ainda não existe (rerank, `app/`)
 - [x] Itens de logística interna retirados do checklist
 - [ ] Tornar o `rag-multicenario` público (ação da Ester nas configurações do GitHub; conferir antes como o README aparece)
-- [ ] Demonstração (vídeo curto ou captura) do sistema respondendo nos três cenários
-- [ ] Vídeo do `rag-contratacoes` e link no README
+- [x] Decisão (Ester): não haverá vídeo de demonstração. A demonstração é o roteiro escrito em [DEMO.md](DEMO.md), com respostas reais; faltam as respostas das perguntas marcadas "a capturar" (limite da Groq)
 - [ ] Deck opcional de posicionamento
 
 ## Fase 0: desenho (concluída)
