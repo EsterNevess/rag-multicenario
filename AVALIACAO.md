@@ -94,9 +94,30 @@ O que isso sustenta:
 
 - **É a primeira diferença de ordenação com intervalo sem zero.** O rerank melhora o MRR em +0,10 (vantagem concentrada no primeiro lugar: hit@1 de 0,661 para 0,814) e aparece também no conjunto novo, escrito depois das decisões, onde o ganho é maior (+0,162). Em cada cenário isolado o intervalo ainda inclui zero (ou encosta nele), porque há poucas perguntas.
 - **Não é uma melhoria em tudo.** Em 4 das 59 perguntas o rerank piorou o MRR (RJ-N04, SA-R04, SA-R05 e PE-R05; a maior queda é −0,67), em 14 melhorou e em 41 deu o mesmo. O hit@5 sobe pouco (0,915 -> 0,966): ele reorganiza a ordem mais do que acha trechos que a fusão perdeu, porque só vê os 20 primeiros.
-- **O custo é alto em CPU.** Mediana de ~19 s por busca (o RRF leva ~0,3 s), com 20 candidatos de até 512 tokens por pergunta. Por isso fica **desligado por padrão** (`RERANK=true` no `.env` liga). Reduzir o número de candidatos ou o tamanho do trecho deve baratear, mas não foi medido.
+- **O custo é alto em CPU na configuração completa.** ~17 s por busca com 20 candidatos de até 512 tokens (o RRF leva ~0,3 s). Por isso fica **desligado por padrão** (`RERANK=true` no `.env` liga). A subseção seguinte mede versões mais baratas: o padrão do motor agora é 10 candidatos e 256 tokens por trecho, ~4 s.
 - **Medi a ordenação dos trechos, não a resposta final.** Não sei se melhor ordenação melhora a resposta escrita pelo modelo, e isso depende da Groq. O modelo foi quantizado em 8 bits; não comparei com a versão sem quantização.
 - **As perguntas e os critérios são meus**, como nos conjuntos anteriores (ver "Limites desta avaliação").
+
+### Rerank mais barato
+
+O custo do cross-encoder é proporcional ao número de trechos lidos e ao tamanho de cada um. `python -m src.avaliar_rerank --scenario <id> [--conjunto retrieval_gold_novas]` calcula a nota do rerank uma vez para os 20 primeiros da fusão em dois tamanhos de leitura (256 e 512 tokens), e cada variante só reordena os N primeiros (5, 10, 15 ou 20) com as notas já prontas, o que dá comparações pareadas nas mesmas 59 perguntas. O tempo é medido à parte, chamando o modelo de verdade em 8 perguntas, com a CPU livre (mediana de um rerank de 20 candidatos por pergunta, sem a busca).
+
+| Variante | MRR@10 | hit@1 | Tempo | Ganho sobre o RRF (MRR, IC 95%) | Contra a completa (n20, 512) |
+|---|---|---|---|---|---|
+| RRF, sem rerank | 0,770 | 0,661 | 0,3 s | | |
+| 5 candidatos, 256 tokens | 0,835 | 0,780 | 2,2 s | +0,064 [+0,004; +0,131] | -0,037 [-0,100; +0,018] |
+| **10 candidatos, 256 tokens (novo padrão)** | **0,855** | 0,797 | **4,2 s** | **+0,084 [+0,020; +0,157]** | -0,017 [-0,065; +0,025] |
+| 20 candidatos, 256 tokens | 0,863 | 0,797 | 8,4 s | +0,093 [+0,027; +0,163] | -0,008 [-0,047; +0,028] |
+| 10 candidatos, 512 tokens | 0,852 | 0,797 | 8,4 s | +0,081 [+0,016; +0,153] | -0,020 [-0,059; +0,006] |
+| 20 candidatos, 512 tokens (completa) | 0,871 | 0,814 | 17,1 s | +0,101 [+0,025; +0,181] | |
+
+O que isso sustenta:
+
+- **Ler 256 tokens em vez de 512 corta o tempo pela metade e quase não custa MRR** (20 candidatos: 0,863 contra 0,871, e a diferença tem intervalo que inclui zero). A maior parte do sinal de relevância está no começo do trecho.
+- **10 candidatos mantêm cerca de 83% do ganho da versão completa (+0,084 de +0,101) por um quarto do tempo (4,2 s de 17,1 s).** Todas as variantes têm ganho sobre o RRF com intervalo sem zero, mas as de 5 candidatos só por pouco (o limite inferior é +0,004 a +0,008), enquanto as de 10 ou mais ficam de +0,014 para cima.
+- **Nenhuma variante barata perde de forma detectável para a completa**, mas isso é falta de poder estatístico, não prova de igualdade: com 59 perguntas, uma diferença de 0,02 de MRR não se distingue de zero. Quem precisar da melhor ordenação possível pode pedir 20 candidatos e 512 tokens (`RERANK_CANDIDATOS=20`, `RERANK_MAX_TOKENS=512`).
+- **Padrão do motor:** 10 candidatos e 256 tokens. O sistema `rrf_rerank` de `python -m src.avaliar` continua sendo a referência completa (20 e 512).
+- **Limites:** o tempo é de um notebook em CPU com 8 núcleos; as 59 perguntas são minhas; mediu-se a ordenação dos trechos, não a resposta final; o modelo é o mesmo quantizado em 8 bits.
 
 ## Resposta final com repetições (fase 5, parte 2)
 
@@ -176,5 +197,5 @@ O código já conferia as citações (`[1]` precisa apontar para uma fonte que e
 2. **Manter k_rrf = 60.** O sinal a favor do 10 vinha do primeiro conjunto, em que o valor foi escolhido; no conjunto novo (25 perguntas) a diferença some (+0,005).
 3. **Manter o filtro de vigência e de doença**, que já é necessário por correção (não misturar versões) e é um efeito firme: +0,064 de MRR nas 59 perguntas, com intervalo sem zero (7 vitórias, 2 derrotas).
 4. **Próximos passos para fechar a fase 5:** continuar a rodada de respostas do RJ e da pesquisa com `--retomar` quando o limite da Groq voltar; medir o efeito do rerank na resposta final (a ordenação dos trechos já foi medida). O conjunto de perguntas foi ampliado (segundo conjunto, acima).
-6. **Rerank: opcional e desligado.** Melhora o MRR em +0,10 nas 59 perguntas, ao custo de ~19 s por busca em CPU. Sem evidência de ganho na resposta final e com esse custo, não vira o padrão.
+6. **Rerank: opcional e desligado, e mais barato quando ligado.** Melhora o MRR em +0,10 nas 59 perguntas na configuração completa (20 candidatos, 512 tokens, ~17 s) e em +0,084 na barata que virou o padrão (10 candidatos, 256 tokens, ~4 s). Sem evidência de ganho na resposta final, não vira o padrão do motor, mas o custo de ligá-lo caiu a um quarto.
 5. **Falha conhecida:** o SA-10. A causa (comparar sem ter extraído os medicamentos do protocolo) foi tratada com a tabela `pcdt_medicamento`, mas a pergunta só será dada como corrigida depois de repetida com o modelo, e a lista cobre só o que o protocolo enumera.

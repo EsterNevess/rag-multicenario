@@ -267,7 +267,8 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 **Motor único (vale para os três)**
 - [x] Coleta versionada com inventário e SHA-256, ingestão, índice (BM25 + vetores + RRF), normalização em SQL, roteador com guardrails, geração com citações conferidas, CLI
 - [x] Capacidades por cenário em `capacidades.yaml` (campos, valores codificados, regras de recusa, textos dos prompts)
-- [x] Rerank por cross-encoder (opcional, desligado por padrão): bge-reranker-v2-m3 em ONNX int8; MRR +0,10 nas 59 perguntas, ~19 s por busca em CPU
+- [x] Rerank por cross-encoder (opcional, desligado por padrão): bge-reranker-v2-m3 em ONNX int8; MRR +0,10 nas 59 perguntas na configuração completa (~17 s)
+- [x] Rerank mais barato: o padrão passou a 10 candidatos e 256 tokens por trecho (MRR +0,084, ~4 s), medido numa grade de 8 variantes nas 59 perguntas (`src/avaliar_rerank.py`)
 - [x] Cobertura de 92% para 96%: 25 testes das linhas de comando de `ingest`, `index`, `normalize`, `fetch_corpus`, `indicadores`, `synth` e do laço de `avaliar_respostas` (com mutação conferida; um teste de retomada fraco foi reforçado)
 - [x] Qualidade: `ruff` configurado e sem pendências (43 correções automáticas de importação e anotação, 8 `zip` com `strict` explícito); cobertura de 89% para 92% com 22 testes novos (linha de comando do motor, laço de `avaliar`, `carregar_contexto`); CI com lint e piso de 85%
 - [x] Memória de conversa de um turno (pergunta e plano anteriores no analisador; app e modo interativo), com testes e mutação conferida
