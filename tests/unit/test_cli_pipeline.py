@@ -34,14 +34,16 @@ def ingest_falso(monkeypatch, pastas):
     monkeypatch.setattr(ingest, "versoes_existentes", lambda p: ["v1", "v2"])
     relatorio = {"versao": "v2", "base_id": "editais_normativo", "total_chunks": 5, "chunks_com_dado_pessoal": 1, "avisos": ["data difere"],
                  "documentos": [{"chunks": 3, "doc_type": "lei", "arquivo": "lei.html"}, {"chunks": 2, "doc_type": "decreto", "arquivo": "d.pdf"}]}
+    monkeypatch.setattr(ingest, "get_settings", lambda: SimpleNamespace(redacao_ner=False))
     monkeypatch.setattr(ingest, "ingerir", lambda *a: chamadas.append(a) or relatorio)
     return chamadas
 
 
 def test_ingest_usa_a_versao_mais_recente_e_o_manifesto_do_cenario_e_imprime_o_resumo(ingest_falso, pastas, capsys):
     assert ingest.main(["--scenario", "rj"]) == 0
-    manifesto, versao, base, p = ingest_falso[0]
+    manifesto, versao, base, p, ner = ingest_falso[0]
     assert manifesto == pastas.cenario / "corpus_manifest.yaml" and versao == "v2" and base == "editais_normativo" and p is pastas
+    assert ner is None  # o NER é opcional e vem desligado
     saida = capsys.readouterr().out
     assert "v2 / editais_normativo: 5 trechos, 1 com dado pessoal mascarado." in saida and "lei.html" in saida and "AVISO: data difere" in saida
 
