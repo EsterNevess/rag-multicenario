@@ -32,6 +32,7 @@ from typing import Any
 
 import pymupdf
 
+from config import get_settings
 from src.capacidades import carregar_capacidades
 from src.fetch_corpus import (
     Pastas,
@@ -612,7 +613,8 @@ def montar_chunks(
 # --------------------------------------------------------------------------- orquestração
 
 
-def ingerir(manifesto_path: Path, versao: str, base_id: str, pastas: Pastas) -> dict[str, Any]:
+def ingerir(manifesto_path: Path, versao: str, base_id: str, pastas: Pastas, ner: Any = None) -> dict[str, Any]:
+    """`ner` (src.ner): troca nomes de pessoa por [NOME] nos documentos conversacionais, depois das regras de redação."""
     manifesto = carregar_manifesto(manifesto_path)
     base = next((b for b in manifesto["bases"] if b["base_id"] == base_id), None)
     if base is None:
@@ -628,6 +630,7 @@ def ingerir(manifesto_path: Path, versao: str, base_id: str, pastas: Pastas) -> 
     except FileNotFoundError:
         redacoes = ()
     redigidos: Counter[str] = Counter()
+    nomes_trocados = 0
     ignorar = [re.compile(p) for p in base.get("ignorar_secoes") or []]
 
     todos: list[Chunk] = []
@@ -637,6 +640,11 @@ def ingerir(manifesto_path: Path, versao: str, base_id: str, pastas: Pastas) -> 
         texto, info = texto_do_documento(doc)
         texto, feitas = redigir(texto, doc.doc_type, redacoes)
         redigidos.update(feitas)
+        if ner is not None and natureza == Natureza.CONVERSACIONAL:  # normas citam autoridades pelo nome: só texto de pessoas comuns
+            texto, nomes = ner.mascarar_nomes(texto)
+            nomes_trocados += nomes
+            if nomes:
+                info = {**info, "nomes_redigidos": nomes}
         if feitas:
             info = {**info, "frases_redigidas": sum(feitas.values())}
         if doc.doc_type == "decreto":
@@ -685,6 +693,7 @@ def ingerir(manifesto_path: Path, versao: str, base_id: str, pastas: Pastas) -> 
         "total_chunks": len(todos),
         "chunks_com_dado_pessoal": sum(d["chunks_com_dado_pessoal"] for d in por_documento),
         "frases_redigidas_por_categoria": dict(redigidos),
+        "nomes_redigidos_por_ner": nomes_trocados if ner is not None else None,
         "sha256_do_jsonl": hashlib.sha256(conteudo.encode("utf-8")).hexdigest(),
         "documentos": por_documento,
         "avisos": avisos,
@@ -707,8 +716,17 @@ def main(argv: list[str] | None = None) -> int:
     if not versao:
         print("Erro: nenhuma versão coletada. Rode primeiro o fetch_corpus.", file=sys.stderr)
         return 2
+    ner = None
+    if get_settings().redacao_ner:
+        from src.ner import NerIndisponivel, carregar_ner
+
+        try:
+            ner = carregar_ner()
+        except NerIndisponivel as erro:
+            print(f"Erro: REDACAO_NER=true, mas o reconhecimento de nomes não está disponível ({erro}).", file=sys.stderr)
+            return 2
     try:
-        r = ingerir(args.manifest or pastas.cenario / "corpus_manifest.yaml", versao, args.base, pastas)
+        r = ingerir(args.manifest or pastas.cenario / "corpus_manifest.yaml", versao, args.base, pastas, ner)
     except (ValueError, FileNotFoundError) as erro:
         print(f"Erro: {erro}", file=sys.stderr)
         return 2

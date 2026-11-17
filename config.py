@@ -48,6 +48,10 @@ class Settings(BaseSettings):
     rerank_candidatos: int = 10
     rerank_max_tokens: int = 256
 
+    # Reconhecimento de nomes na redação da ingestão (opcional, desligado): exige os arquivos em data/models (veja src/ner.py).
+    # Só age em bases conversacionais; as normas citam autoridades pelo nome e não são tocadas.
+    redacao_ner: bool = False
+
     log_dir: Path = Path("logs")
 
     @field_validator("scenario")

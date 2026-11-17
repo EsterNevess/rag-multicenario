@@ -555,3 +555,66 @@ def test_pagina_curta_nao_entra_no_caminho_de_colunas(tmp_path):
         pagina.insert_text((330, 80), "Direita tres quatro", fontsize=9)
 
     assert "Esquerda" in texto_de_pdf(_pdf_de(tmp_path, desenhar))
+
+
+# --------------------------------------------------------------------------- reconhecimento de nomes (NER) na ingestão
+
+
+class NerFalso:
+    """Troca a palavra 'Art.' por [NOME], só para ver se a ingestão o chamou e o que fez com o resultado."""
+
+    def __init__(self) -> None:
+        self.chamadas = 0
+
+    def mascarar_nomes(self, texto: str) -> tuple[str, int]:
+        self.chamadas += 1
+        return texto.replace("Art.", "[NOME]"), texto.count("Art.")
+
+
+def _como_conversacional(manifesto: Path) -> Path:
+    dados = yaml.safe_load(manifesto.read_text(encoding="utf-8"))
+    dados["bases"][0]["natureza"] = "conversacional"
+    novo = manifesto.with_name("conversacional.yaml")
+    novo.write_text(yaml.safe_dump(dados), encoding="utf-8")
+    return novo
+
+
+def test_ner_nao_toca_em_base_normativa(corpus):
+    manifesto, pastas = corpus
+    ner = NerFalso()
+    relatorio = ingerir(manifesto, "v1", "editais_normativo", pastas, ner)
+    assert ner.chamadas == 0
+    assert relatorio["nomes_redigidos_por_ner"] == 0
+
+
+def test_ner_age_em_base_conversacional_e_entra_no_relatorio(corpus):
+    manifesto, pastas = corpus
+    ner = NerFalso()
+    relatorio = ingerir(_como_conversacional(manifesto), "v1", "editais_normativo", pastas, ner)
+    assert ner.chamadas == 2  # um por documento
+    assert relatorio["nomes_redigidos_por_ner"] > 0
+    assert any(d.get("nomes_redigidos") for d in relatorio["documentos"])
+    saida = (pastas.dados / "processed" / "teste" / "v1_editais_normativo.jsonl").read_text(encoding="utf-8")
+    assert "[NOME]" in saida
+
+
+def test_sem_ner_o_relatorio_diz_que_nao_houve(corpus):
+    manifesto, pastas = corpus
+    assert ingerir(manifesto, "v1", "editais_normativo", pastas)["nomes_redigidos_por_ner"] is None
+
+
+def test_linha_de_comando_recusa_ner_ligado_sem_os_arquivos(corpus, monkeypatch, capsys):
+    import src.ingest as mod
+    from src.ner import NerIndisponivel
+
+    manifesto, pastas = corpus
+    monkeypatch.setattr(mod, "pastas_do_cenario", lambda _: pastas)
+    monkeypatch.setattr(mod, "versoes_existentes", lambda _: ["v1"])
+    monkeypatch.setattr(mod, "get_settings", lambda: type("S", (), {"redacao_ner": True})())
+
+    def sem_modelo():
+        raise NerIndisponivel("faltam arquivos")
+
+    monkeypatch.setattr("src.ner.carregar_ner", sem_modelo)
+    assert mod.main(["--scenario", "rj", "--manifest", str(manifesto)]) == 2
+    assert "REDACAO_NER=true" in capsys.readouterr().err
