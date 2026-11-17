@@ -1,0 +1,25 @@
+name: auditoria
+
+# Procura vulnerabilidades conhecidas nas dependências fixadas. Roda toda segunda-feira e sob demanda, e não bloqueia os pushes:
+# uma vulnerabilidade nova numa dependência não deveria quebrar um commit que não a tocou.
+on:
+  schedule:
+    - cron: "0 12 * * 1"
+  workflow_dispatch:
+
+jobs:
+  pip-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Instalar o pip-audit
+        run: pip install pip-audit
+      - name: Auditar as dependências fixadas
+        run: |
+          pip-audit -r requirements.txt
+          pip-audit -r requirements-dev.txt
+          pip-audit -r requirements-app.txt
+          pip-audit -r requirements-rerank.txt

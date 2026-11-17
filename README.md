@@ -130,6 +130,7 @@ AVALIACAO.md           recuperação, rerank, resposta final, redação e confer
 LICENSE                MIT
 PROGRESSO.md           o que está pronto, o que falta e decisões tomadas (diário em ordem cronológica)
 DADOS_E_LICENCAS.md    fontes, modelos e dependências, com licenças e o que não foi conferido
+SEGURANCA.md           varreduras de segredos e de vulnerabilidades, e o que não cobrem
 DEMO.md                roteiro de perguntas para mostrar o sistema, com respostas reais
 .env.example           variáveis necessárias, sem valores reais
 requirements*.txt      dependências (núcleo, desenvolvimento, rerank e interface)
@@ -167,4 +168,4 @@ Os integrantes do Time 03 estão listados no [rag-contratacoes](https://github.c
 
 ## Licença
 
-Código e textos sob a licença [MIT](LICENSE). Os dados coletados não fazem parte do repositório: cada fonte (PNCP, Planalto, OpenAlex, Ministério da Saúde, FAPERJ, CNPq e outras) mantém os seus próprios termos de uso, e o manifesto de cada cenário registra a origem e a licença declarada. [DADOS_E_LICENCAS.md](DADOS_E_LICENCAS.md) reúne as fontes, os modelos e as dependências com as licenças, e o que não foi conferido. Dois pontos pedem atenção: a dependência **PyMuPDF é AGPL-3.0** (ou licença comercial), o que importa a quem hospedar o app como serviço; e, com a Groq ou a OpenAI como provedor, **as perguntas e os trechos de evidência saem do seu computador** para o provedor.
+Código e textos sob a licença [MIT](LICENSE). Os dados coletados não fazem parte do repositório: cada fonte (PNCP, Planalto, OpenAlex, Ministério da Saúde, FAPERJ, CNPq e outras) mantém os seus próprios termos de uso, e o manifesto de cada cenário registra a origem e a licença declarada. [DADOS_E_LICENCAS.md](DADOS_E_LICENCAS.md) reúne as fontes, os modelos e as dependências com as licenças, e o que não foi conferido; [SEGURANCA.md](SEGURANCA.md) registra as varreduras de segredos e de vulnerabilidades e o que não cobrem. Dois pontos pedem atenção: a dependência **PyMuPDF é AGPL-3.0** (ou licença comercial), o que importa a quem hospedar o app como serviço; e, com a Groq ou a OpenAI como provedor, **as perguntas e os trechos de evidência saem do seu computador** para o provedor.
