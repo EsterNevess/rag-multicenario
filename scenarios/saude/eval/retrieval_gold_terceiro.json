@@ -1,0 +1,13 @@
+{
+  "descricao": "Terceiro conjunto de perguntas de recuperação, escrito DEPOIS de medir o tamanho do pool e as variantes de consulta do BM25 (17/11/2026), SEM olhar o ranking de nenhum sistema nelas, para decidir se o prefixo de 5 letras na consulta do BM25 se sustenta fora das perguntas em que foi escolhido. Os critérios só podem ser ajustados se uma pergunta ficar sem trecho relevante no índice. Mesmo formato de retrieval_gold.json.",
+  "itens": [
+    {"id": "SA-T01", "pergunta": "Qual a dose de metotrexato recomendada para artrite reumatoide?", "base": "pcdt_normativo", "filtros": {"doenca__contem": "artrite", "vigente_em": "$hoje"}, "relevante": {"texto": ["metotrexato", "(mg|dose)"]}},
+    {"id": "SA-T02", "pergunta": "Como se faz o diagnóstico da doença de Parkinson?", "base": "pcdt_normativo", "filtros": {"doenca__contem": "parkinson", "vigente_em": "$hoje"}, "relevante": {"texto": ["diagnostic"]}},
+    {"id": "SA-T03", "pergunta": "Mulheres grávidas com artrite reumatoide podem usar os mesmos remédios?", "base": "pcdt_normativo", "filtros": {"doenca__contem": "artrite", "vigente_em": "$hoje"}, "relevante": {"texto": ["(gestac|gravidez|gestante|gravida)"]}},
+    {"id": "SA-T04", "pergunta": "Que efeitos colaterais a levodopa pode causar?", "base": "pcdt_normativo", "filtros": {"doenca__contem": "parkinson", "vigente_em": "$hoje"}, "relevante": {"texto": ["levodopa", "(efeito|adverso|discinesia)"]}},
+    {"id": "SA-T05", "pergunta": "Quando se troca o medicamento biológico na artrite reumatoide?", "base": "pcdt_normativo", "filtros": {"doenca__contem": "artrite", "vigente_em": "$hoje"}, "relevante": {"texto": ["(troca|substitui|falha|inadequada)", "biologic"]}},
+    {"id": "SA-T06", "pergunta": "Qual a conduta quando a glicemia fica fora do alvo no diabetes tipo 1?", "base": "pcdt_normativo", "filtros": {"doenca__contem": "tipo 1", "vigente_em": "$hoje"}, "relevante": {"texto": ["(glicemia|glicemico)", "(alvo|meta|controle)"]}},
+    {"id": "SA-T07", "pergunta": "Alguém reclamou que faltou remédio na farmácia da unidade?", "base": "ouvidoria_conversacional", "relevante": {"texto": ["(medicament|remedio)"]}},
+    {"id": "SA-T08", "pergunta": "Houve reclamação sobre demora para fazer exames?", "base": "ouvidoria_conversacional", "relevante": {"texto": ["exame"]}}
+  ]
+}

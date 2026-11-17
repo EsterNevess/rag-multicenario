@@ -1,0 +1,13 @@
+{
+  "descricao": "Terceiro conjunto de perguntas de recuperação, escrito DEPOIS de medir o tamanho do pool e as variantes de consulta do BM25 (17/11/2026), SEM olhar o ranking de nenhum sistema nelas, para decidir se o prefixo de 5 letras na consulta do BM25 se sustenta fora das perguntas em que foi escolhido. Os critérios só podem ser ajustados se uma pergunta ficar sem trecho relevante no índice. Mesmo formato de retrieval_gold.json.",
+  "itens": [
+    {"id": "RJ-T01", "pergunta": "Em que situações o contrato pode ser prorrogado?", "base": "editais_normativo", "relevante": {"texto": ["prorroga"]}},
+    {"id": "RJ-T02", "pergunta": "Posso repassar parte do serviço contratado para outra empresa?", "base": "editais_normativo", "relevante": {"texto": ["subcontrata"]}},
+    {"id": "RJ-T03", "pergunta": "O que é o diálogo competitivo?", "base": "editais_normativo", "relevante": {"texto": ["dialogo competitivo"]}},
+    {"id": "RJ-T04", "pergunta": "Como funciona o credenciamento de fornecedores?", "base": "editais_normativo", "relevante": {"texto": ["credenciamento"]}},
+    {"id": "RJ-T05", "pergunta": "O que o termo de referência precisa conter?", "base": "editais_normativo", "relevante": {"texto": ["termo de referencia", "(conter|conterao|deve conter|elementos)"]}},
+    {"id": "RJ-T06", "pergunta": "E se a proposta vencedora tiver um preço que não se sustenta?", "base": "editais_normativo", "relevante": {"texto": ["inexequ"]}},
+    {"id": "RJ-T07", "pergunta": "Que provas de regularidade com impostos e encargos sociais a empresa precisa mostrar?", "base": "editais_normativo", "relevante": {"texto": ["(regularidade fiscal|fiscal, social e trabalhista)"]}},
+    {"id": "RJ-T08", "pergunta": "Alguma sessão de licitação foi suspensa ou adiada?", "base": "atas_conversacional", "relevante": {"texto": ["(suspens|adiad)"]}}
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "descricao": "Terceiro conjunto de perguntas de recuperação, escrito DEPOIS de medir o tamanho do pool e as variantes de consulta do BM25 (17/11/2026), SEM olhar o ranking de nenhum sistema nelas, para decidir se o prefixo de 5 letras na consulta do BM25 se sustenta fora das perguntas em que foi escolhido. Os critérios só podem ser ajustados se uma pergunta ficar sem trecho relevante no índice. Mesmo formato de retrieval_gold.json.",
+  "itens": [
+    {"id": "PE-T01", "pergunta": "Como se protege o sigilo das informações dos participantes de uma pesquisa?", "base": "editais_normas_normativo", "relevante": {"texto": ["(sigilo|confidencialidade|privacidade)"]}},
+    {"id": "PE-T02", "pergunta": "Menores de idade precisam concordar em participar da pesquisa?", "base": "editais_normas_normativo", "relevante": {"texto": ["assentimento"]}},
+    {"id": "PE-T03", "pergunta": "Dá para comprar equipamentos com o dinheiro do auxílio?", "base": "editais_normas_normativo", "relevante": {"texto": ["(equipamento|material permanente)"]}},
+    {"id": "PE-T04", "pergunta": "O que ocorre se a prestação de contas não for aprovada?", "base": "editais_normas_normativo", "relevante": {"texto": ["(devolu|restitui|reprova|nao aprovada)"]}},
+    {"id": "PE-T05", "pergunta": "Quais são as obrigações do pesquisador responsável?", "base": "editais_normas_normativo", "relevante": {"texto": ["pesquisador responsavel"]}},
+    {"id": "PE-T06", "pergunta": "Pesquisas com povos indígenas têm regras próprias?", "base": "editais_normas_normativo", "relevante": {"texto": ["indigena"]}},
+    {"id": "PE-T07", "pergunta": "Algum parecer questiona a análise estatística do trabalho?", "base": "pareceres_conversacional", "relevante": {"texto": ["estatistic"]}},
+    {"id": "PE-T08", "pergunta": "Há algum e-mail combinando prorrogação do prazo da revisão?", "base": "pareceres_conversacional", "relevante": {"texto": ["prazo para a versao revisada"]}}
+  ]
+}
