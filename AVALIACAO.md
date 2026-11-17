@@ -119,6 +119,34 @@ O que isso sustenta:
 - **Padrão do motor:** 10 candidatos e 256 tokens. O sistema `rrf_rerank` de `python -m src.avaliar` continua sendo a referência completa (20 e 512).
 - **Limites:** o tempo é de um notebook em CPU com 8 núcleos; as 59 perguntas são minhas; mediu-se a ordenação dos trechos, não a resposta final; o modelo é o mesmo quantizado em 8 bits.
 
+## Duas ablações baratas: tamanho do pool e consulta do BM25 (17/11)
+
+Duas escolhas do motor nunca tinham sido medidas: quantos candidatos cada busca entrega à fusão (`k_busca = 50`) e como a pergunta vira consulta do BM25 (palavras entre aspas unidas por OR, sem as stopwords). Medi nas mesmas 59 perguntas, sem modelo de linguagem, com intervalos por bootstrap pareado. A análise foi exploratória e o script não está no repositório (só o resultado).
+
+**Tamanho do pool (RRF, MRR@10).**
+
+| k_busca | 10 | 20 | 30 a 200 |
+|---|---|---|---|
+| MRR@10 | 0,768 | 0,771 | 0,770 (idêntico ao padrão de 50) |
+| hit@5 | 0,898 | 0,915 | 0,915 |
+
+A partir de 20 candidatos por busca, o resultado é o mesmo (de 30 a 200, ordem idêntica em todas as perguntas). Com 10, o hit@5 cai um pouco (-0,017) e o MRR fica igual dentro do ruído (-0,002 [-0,027; +0,024]). **Conclusão: 50 é folgado; poderia ser 20 sem perda medida, mas não há ganho em mudar** (a economia é de milissegundos). Fica 50.
+
+**Consulta do BM25 (50 candidatos).** Cada variante contra a consulta atual, nas 59 perguntas:
+
+| Variante | BM25 sozinho (MRR) | RRF (MRR) | Diferença do RRF (IC 95%; vitórias / derrotas / empates) |
+|---|---|---|---|
+| atual (sem stopwords, OR) | 0,715 | 0,770 | |
+| sem remover as stopwords | 0,693 | 0,772 | +0,002 [-0,012; +0,023]; 1 / 4 / 54 |
+| só palavras com 3 letras ou mais | 0,715 | 0,770 | 0 (ordem idêntica) |
+| prefixo de 5 letras ("licit*") | 0,723 | **0,804** | +0,033 [-0,034; +0,101]; 10 / 7 / 42 |
+| prefixo de 6 letras | 0,723 | 0,795 | +0,024 [-0,023; +0,076]; 7 / 6 / 46 |
+| prefixo de 7 letras | 0,702 | 0,782 | +0,012 [-0,031; +0,061]; 5 / 7 / 47 |
+
+- **Tirar ou manter stopwords quase não importa** no RRF; tirá-las ajuda o BM25 sozinho (0,693 para 0,715).
+- **Cortar as palavras em prefixo (um radical grosseiro para o português) é a única variante com sinal**: o RRF com prefixo de 5 letras vai de 0,770 a 0,804, e o hit@5 de 0,915 a 0,966. Mas o intervalo inclui zero, o BM25 sozinho quase não muda (+0,008, com 11 vitórias e 11 derrotas), e escolhi o melhor de três tamanhos olhando as mesmas perguntas em que ele é medido, o mesmo erro que o k_rrf = 10 mostrou (a vantagem sumiu no conjunto novo). **Não alterei o padrão.**
+- **Para decidir é preciso um terceiro conjunto de perguntas**, escrito sem ver essas contas: se o prefixo de 5 letras se mantiver ali, vale adotá-lo.
+
 ## Resposta final com repetições (fase 5, parte 2)
 
 `python -m src.avaliar_respostas --scenario <id> --repeticoes 3 [--retomar]` roda cada pergunta N vezes com o modelo (Groq, `openai/gpt-oss-120b`) e mede o que muda entre as repetições. A rodada anda uma repetição de cada vez sobre todas as perguntas e grava em `logs/` (fora do Git) o texto de cada resposta. O modelo varia de uma repetição para outra, e é isso que se quer ver.
@@ -202,4 +230,5 @@ Em 17/11 conferi os números do README e desta página contra os logs de `logs/`
 3. **Manter o filtro de vigência e de doença**, que já é necessário por correção (não misturar versões) e é um efeito firme: +0,064 de MRR nas 59 perguntas, com intervalo sem zero (7 vitórias, 2 derrotas).
 4. **Próximos passos para fechar a fase 5:** continuar a rodada de respostas do RJ e da pesquisa com `--retomar` quando o limite da Groq voltar; medir o efeito do rerank na resposta final (a ordenação dos trechos já foi medida). O conjunto de perguntas foi ampliado (segundo conjunto, acima).
 5. **Rerank: opcional e desligado, e mais barato quando ligado.** Melhora o MRR em +0,10 nas 59 perguntas na configuração completa (20 candidatos, 512 tokens, ~17 s) e em +0,084 na barata que virou o padrão (10 candidatos, 256 tokens, ~4 s). Sem evidência de ganho na resposta final, não vira o padrão do motor, mas o custo de ligá-lo caiu a um quarto.
-6. **Falha conhecida:** o SA-10. A causa (comparar sem ter extraído os medicamentos do protocolo) foi tratada com a tabela `pcdt_medicamento`, mas a pergunta só será dada como corrigida depois de repetida com o modelo, e a lista cobre só o que o protocolo enumera.
+6. **Pool e consulta do BM25: manter.** `k_busca = 50` é folgado (de 20 a 200 dá o mesmo resultado) e a única consulta alternativa com sinal (prefixo de 5 letras, +0,033 de MRR no RRF) tem intervalo que inclui zero e foi escolhida nas mesmas perguntas; só se adota com um conjunto novo.
+7. **Falha conhecida:** o SA-10. A causa (comparar sem ter extraído os medicamentos do protocolo) foi tratada com a tabela `pcdt_medicamento`, mas a pergunta só será dada como corrigida depois de repetida com o modelo, e a lista cobre só o que o protocolo enumera.
