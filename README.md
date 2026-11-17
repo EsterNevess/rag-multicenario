@@ -130,4 +130,4 @@ Os integrantes do Time 03 estão listados no [rag-contratacoes](https://github.c
 
 ## Licença
 
-Código e textos sob a licença [MIT](LICENSE). Os dados coletados não fazem parte do repositório: cada fonte (PNCP, Planalto, OpenAlex, Ministério da Saúde, FAPERJ, CNPq e outras) mantém os seus próprios termos de uso, e o manifesto de cada cenário registra a origem e a licença declarada.
+Código e textos sob a licença [MIT](LICENSE). Os dados coletados não fazem parte do repositório: cada fonte (PNCP, Planalto, OpenAlex, Ministério da Saúde, FAPERJ, CNPq e outras) mantém os seus próprios termos de uso, e o manifesto de cada cenário registra a origem e a licença declarada. [DADOS_E_LICENCAS.md](DADOS_E_LICENCAS.md) reúne as fontes, os modelos e as dependências com as licenças, e o que não foi conferido. Dois pontos pedem atenção: a dependência **PyMuPDF é AGPL-3.0** (ou licença comercial), o que importa a quem hospedar o app como serviço; e, com a Groq ou a OpenAI como provedor, **as perguntas e os trechos de evidência saem do seu computador** para o provedor.

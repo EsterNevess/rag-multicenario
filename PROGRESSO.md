@@ -327,6 +327,7 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 
 **Publicação e portfólio**
 - [x] Varredura de segredos e de dados pessoais no histórico inteiro (33 commits): limpo; só dados falsos de teste
+- [x] `DADOS_E_LICENCAS.md`: fontes, modelos e dependências com licença (lida nos metadados e nos registros dos modelos), a nota de uso não comercial que a Conitec traz no Relatório 551, o aviso do PyMuPDF (AGPL-3.0) e o que não foi conferido
 - [x] Licença MIT e README com o estado real, as limitações conhecidas e o que ainda não existe (então: rerank e `app/`, depois implementados)
 - [x] Itens de logística interna retirados do checklist
 - [ ] Tornar o `rag-multicenario` público (ação da Ester nas configurações do GitHub; conferir antes como o README aparece)
