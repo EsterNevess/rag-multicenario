@@ -16,6 +16,23 @@ O ponto central do projeto: o sistema decide **que tipo de evidência** responde
 
 Todos os dados trazem SHA-256 e inventário por versão. Os documentos conversacionais são **sintéticos** (gerados por script com semente fixa, marcados como fictícios) e ficam fora do Git, assim como os dados coletados.
 
+## Resultados em uma página
+
+Tudo medido por mim, em perguntas escritas por mim; o detalhe, o método e os limites estão em [AVALIACAO.md](AVALIACAO.md).
+
+| O que | Resultado | Quanto confiar |
+|---|---|---|
+| **Recuperação**, 59 perguntas nos 3 cenários (MRR@10) | BM25 0,715; denso 0,713; fusão RRF (padrão) 0,770 | A vantagem do RRF aparece nos dois conjuntos, mas o intervalo de confiança de 95% inclui zero (+0,056 [-0,011; +0,125] sobre o BM25). Direção consistente, prova não. |
+| **Filtro de doença e de vigência** | +0,064 de MRR [+0,014; +0,124] (7 vitórias, 2 derrotas) | A diferença mais firme; só ajuda na saúde. |
+| **Rerank** (opcional, desligado) | RRF 0,770 → 0,871 na versão completa (~17 s por busca) e 0,855 no padrão barato (10 candidatos, 256 tokens, ~4 s; +0,084 [+0,020; +0,157]) | Intervalo sem zero. Mediu a ordem dos trechos, **não** a resposta final. Em 4 das 59 perguntas piorou. |
+| **Resposta final**, só saúde, 13 perguntas × 3 repetições | Rota esperada em 38 de 39 execuções; as 4 recusas (dose individual, plano de saúde, dispensação, telefone) recusadas nas 3 repetições; o número calculado em SQL (314) igual nas 3 | Amostra pequena, conferência grossa, sem juiz automático. RJ e pesquisa só têm rodadas parciais. |
+| **Falhas que a avaliação achou** | SA-10 (medicamentos fora da RENAME) falhou nas 3 repetições; SA-02 (o que mudou na artrite) acertou as versões, mas 5 de 6 "novidades" já estavam na versão antiga | As duas foram tratadas em código (tabelas `pcdt_medicamento` e `pcdt_secao`), **sem nova rodada com o modelo** |
+| **Conferência de números da resposta** | 12 de 12 números adulterados apontados; 0 alarmes falsos em 3 respostas certas | Só 3 respostas reais; a taxa de falso alarme em volume não foi medida. |
+| **Redação de dados pessoais** | **43%** das frases sensíveis protegidas em texto novo (13 de 30), 0 de 12 comuns alteradas | Regras escritas à mão não generalizam. **Não serve para dados reais.** |
+| **Código** | mais de 800 testes, 96% de cobertura, lint e CI; 0 vulnerabilidades conhecidas e nenhum segredo no histórico ([SEGURANCA.md](SEGURANCA.md)) | Testes usam modelo simulado; não substituem a avaliação com o modelo real. |
+
+**O que ainda não está provado:** que um rerank melhor melhore a resposta escrita; a memória de uma pergunta para a seguinte com o modelo real; a taxa de erro da conferência de números em volume; e a qualidade das respostas do RJ e da pesquisa em repetições. Tudo isso espera o limite diário da Groq.
+
 ## Como rodar (cenário RJ)
 
 ```bash
