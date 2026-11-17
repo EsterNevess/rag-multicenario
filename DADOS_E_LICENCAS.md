@@ -35,6 +35,7 @@ Três bases são **sintéticas**, geradas por `python -m src.synth build` com se
 | `openai/gpt-oss-120b` | Gerar as respostas e montar o plano da consulta | Pesos sob Apache-2.0 (conforme o repositório do modelo); o uso pela API da Groq segue os termos da Groq | **Via API da Groq (nuvem).** Cada pergunta e os trechos de evidência enviados ao modelo saem do seu computador para o provedor. Os dados do projeto são públicos ou sintéticos; não use dados reais sensíveis. |
 | `qwen3-embedding:0.6b` | Vetores de busca | Apache-2.0 (conforme o repositório do modelo) | Local, no Ollama. |
 | `BAAI/bge-reranker-v2-m3` (conversão ONNX quantizada de `onnx-community`) | Rerank opcional | Apache-2.0 o modelo original; a conversão não declara licença própria e deriva do original | Local, em `data/models/` (não vai para o Git). |
+| `rchuluc/bertimbau-large-ner-total-onnx` (`model_quantized.onnx`, 109 MB; deriva de `marquesafonso/bertimbau-large-ner-total` e do BERTimbau da NeuralMind) | Reconhecimento de nomes de pessoa na redação (opcional, só na avaliação por ora) | MIT (conforme o cartão da conversão); treinado no corpus HAREM, cuja licença não verifiquei | Local, em `data/models/bertimbau-ner-onnx/` (não vai para o Git). Conversão feita por terceiro, não conferida contra o original. |
 | `qwen3:4b-instruct-2507-q4_K_M` | Teste de encadeamento sem a Groq (opcional) | Apache-2.0 (texto da licença na camada do registro do Ollama) | Local, no Ollama. |
 
 Provedores opcionais: com `LLM_PROVIDER=openai`, as perguntas e a evidência vão para a OpenAI, sob os termos dela.

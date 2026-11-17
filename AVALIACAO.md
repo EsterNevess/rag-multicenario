@@ -194,6 +194,21 @@ O que escapou no conjunto C: doenças fora do léxico (psoríase, enxaqueca, ost
 
 Limites: as 126 frases são minhas, num único cenário, e escritas por quem conhecia as regras.
 
+### Reconhecimento de nomes (NER) como segunda camada (17/11)
+
+`src/ner.py` lê a frase com um BERTimbau treinado no HAREM (`rchuluc/bertimbau-large-ner-total-onnx`, ONNX int8, 109 MB, MIT, CPU, sem PyTorch) e troca cada trecho marcado como PESSOA por `[NOME]`, depois das regras e antes do mascaramento de contatos. Nenhum limiar nem regra foi ajustado olhando os resultados: a regra era trocar todo nome que o modelo achar. Roda com `python -m src.avaliar_redacao --scenario saude --conjunto <...> --ner`. Escrevi um quarto conjunto (D, 30 sensíveis e 12 comuns, `redacao_holdout_d.json`) depois de baixar o modelo e antes de rodá-lo.
+
+| Conjunto | Só as regras | Regras + NER | Frases comuns alteradas |
+|---|---|---|---|
+| C (não visto pelas regras) | 13 de 30 (43%); 18 de 37 valores | **15 de 30 (50%); 22 de 37 valores** | 0 de 12 |
+| D (novo) | 24 de 30 (80%); 32 de 40 valores | **27 de 30 (90%); 37 de 40 valores** | 0 de 12 |
+| A e B (usados para ajustar as regras) | 30 de 30 e 30 de 30 | 30 de 30 e 30 de 30 | 0 de 12 |
+
+- **O NER pega nomes que as regras perdem** (apelidos e nomes soltos: "a Cida", "o menino Davi", "a Rosinha", "o Zé Maria", "a Luzia"), sem falso alarme em 24 frases comuns, inclusive com "Hospital Pedro Ernesto", "Santos Dumont" e "Zilda Arns".
+- **Não pega o que não é nome.** Todos os vazamentos que sobram em D e quase todos os de C são doenças fora do léxico (psoríase, autismo, tireoide), identificadores (prontuário, matrícula, CEP, telefone com espaços), doses por extenso e valores de exame. A rua "Teodoro da Silva" também escapou: o modelo a marca como lugar, não como pessoa, e marcar lugares geraria falso alarme com hospitais e bairros (não testei).
+- **A diferença entre C e D (43% e 80% só com as regras) mostra que a medida depende muito do estilo das frases** que escrevo: em D os nomes vêm em construções que as regras já conheciam ("Dr.", "meu irmão X"). Por isso o ganho do NER (+2 e +3 frases) vale mais que o nível absoluto de cada conjunto.
+- **Conclusão:** o NER é uma melhoria real e barata (109 MB, sem falso alarme medido) para **nomes**, mas a redação continua sem cobrir dados clínicos fora do léxico e identificadores novos. **Continua sem servir para dados reais.** Por ora o NER só roda na avaliação; a ingestão ainda usa só as regras.
+
 ## Conferência dos números da resposta
 
 O código já conferia as citações (`[1]` precisa apontar para uma fonte que existe), mas um modelo pode citar a fonte certa e escrever um número que a fonte não traz. `src/numeros.py` extrai cada número do texto da resposta e o procura na evidência recebida e na pergunta, aceitando as formas de escrever o mesmo valor: milhar (25.005, 25 005, 25005), vírgula ou ponto decimal, percentual de uma fração (70,6% para 0,7059), arredondamento ao número de casas escrito, "milhão" e "mil", e as partes de uma data. Se algum não for encontrado, o modelo recebe uma segunda chance, com o número apontado; se o erro persistir, a resposta sai **com aviso** (`numeros_nao_conferidos` na resposta, "Atenção" na linha de comando e um aviso na tela) em vez de ser recusada, e quem lê decide. Os números se conferem no texto já mascarado, para o aviso nunca repetir um CPF ou telefone.
