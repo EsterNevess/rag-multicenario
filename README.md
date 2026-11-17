@@ -48,7 +48,7 @@ ruff check .                         # lint (regras E, F, W, I, B, UP; configura
 coverage run -m pytest && coverage report
 ```
 
-Cobertura medida em 16/11: **92%** das linhas de `src/`, `app/` e `config.py` (4.598 linhas). O que ficou sem teste são, sobretudo, as linhas de comando de `ingest`, `index`, `normalize` e `fetch_corpus` (cobertas de 80% a 91%, pelo caminho das funções, e não pelas chamadas na linha de comando), o laço de `avaliar_respostas` e o caminho que carrega o modelo de rerank. O CI roda o lint e exige ao menos 85% de cobertura. Os testes não chamam modelo de linguagem de verdade (o `-m llm` os liga).
+Cobertura medida em 16/11: **96%** das linhas de `src/`, `app/` e `config.py` (4.675 linhas; era 89% antes de se testarem as linhas de comando e o laço da avaliação). O que ficou sem teste são, sobretudo, ramos de erro de leitura de arquivo e de rede em `ingest`, `fetch_corpus`, `indicadores` e `synth`, o caminho que carrega o modelo de rerank de verdade (`src/rerank.py`, 88%) e a rotina de `llm.py` que espera a resposta do provedor (91%). O CI roda o lint e exige ao menos 85% de cobertura. Os testes não chamam modelo de linguagem de verdade (o `-m llm` os liga).
 
 ## Como o sistema pensa
 
