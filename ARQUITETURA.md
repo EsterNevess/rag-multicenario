@@ -8,6 +8,51 @@ O motor não conhece nenhum cenário. Tudo o que varia (fontes, personas, regras
 
 ## Pipeline e estágios
 
+```mermaid
+flowchart TD
+    P([Pergunta]) --> GE{{"Guarda de entrada<br/>regras do cenário"}}
+    GE -- barrada --> R1[/"Recusa com motivo, sem chamar o modelo"/]
+    GE -- liberada --> AN["Analisador<br/>o LLM devolve um plano em JSON"]
+    AN --> VP{{"O código valida o plano<br/>campos, filtros e indicador"}}
+    VP -- "inválido, até 3 tentativas" --> AN
+    VP -- "3 falhas" --> PR["Plano de reserva sem o modelo<br/>só se um indicador for inequívoco"]
+    PR -- "sem indicador" --> R3[/"Recusa: pergunta não entendida"/]
+    PR -- "com indicador" --> RT
+    VP -- válido --> RT{Rota}
+    RT -- estruturada --> SQL["Consulta SQL montada pelo código<br/>o modelo nunca escreve SQL"]
+    RT -- agregada --> AG["Indicador já calculado<br/>com definição e ressalvas"]
+    RT -- documentos --> BU["Busca nos documentos<br/>BM25 + vetores + RRF, rerank opcional<br/>filtros de vigência e sensibilidade"]
+    RT -- híbrida --> SQL
+    RT -- híbrida --> BU
+    RT -- "catálogo ou fora do escopo" --> CAT[/"Diz o que o sistema responde"/]
+    SQL --> EV["Evidências numeradas"]
+    AG --> EV
+    BU --> EV
+    EV -- "nenhuma evidência" --> R4[/"Recusa: sem evidência"/]
+    EV --> GER["Geração<br/>o LLM escreve só com as evidências"]
+    GER --> CV{{"O código confere<br/>citações e números"}}
+    CV -- "erro: uma segunda chance" --> GER
+    CV -- "sem citação válida" --> R5[/"Recusa: sem fonte verificável"/]
+    CV --> GS{{"Guarda de saída e mascaramento<br/>de dados pessoais"}}
+    GS -- bloqueada --> R2[/"Recusa"/]
+    GS -- liberada --> RES(["Resposta com fontes, cobertura e plano<br/>e aviso, se um número não foi conferido"])
+```
+
+Os estágios abaixo são os mesmos do diagrama, com o nome que cada um emite no log. Como os dados chegam ao motor:
+
+```mermaid
+flowchart LR
+    M["Manifesto do cenário<br/>fontes, licenças e SHA-256"] --> F["Coleta versionada<br/>versões imutáveis"]
+    F --> I["Ingestão<br/>trechos por artigo ou seção<br/>vigência, sensibilidade e redação"]
+    S["Dados sintéticos<br/>semente fixa"] --> I
+    I --> X["Índices<br/>BM25 (FTS5) + vetores (FAISS)"]
+    F --> N["Normalização em SQL<br/>contratações, RENAME, artigos"]
+    N --> IA["Indicadores em SQL<br/>base agregada"]
+    X --> MOTOR(["Motor de perguntas"])
+    N --> MOTOR
+    IA --> MOTOR
+```
+
 Cada estágio emite uma linha de log JSONL com o mesmo nome (campo `stage`).
 
 | # | Estágio (`stage`) | O que faz |
