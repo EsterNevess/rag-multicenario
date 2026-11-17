@@ -122,7 +122,7 @@ def avaliar(cenario: str, hoje: str | None = None, conjunto: str = "retrieval_go
     niveis = list(ctx.cap.niveis_consultaveis)
     itens = carregar_gold(cenario, conjunto=conjunto)
     try:
-        reranker = carregar_reranker()
+        reranker = carregar_reranker(max_tokens=512)  # a referência completa; o padrão do motor é mais barato (ver src/avaliar_rerank.py)
     except RerankerIndisponivel:
         reranker = None
     sistemas = list(SISTEMAS) + ([SISTEMA_RERANK] if reranker else [])

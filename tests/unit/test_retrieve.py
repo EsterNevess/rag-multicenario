@@ -316,3 +316,23 @@ def test_busca_por_bases_ordena_pela_nota_do_reranker_quando_ela_existe(tmp_path
     resultados = buscar_por_bases({"a": indice}, embedder, "dispensa de licitação", k=3, k_por_base=5, garantir_por_base=1,
                                   reranker=_RerankerFalso("prazo de vigência"))
     assert resultados[0].chunk_id == "c4"
+
+
+def _corpus_grande(n=14):
+    return [_chunk(f"g{i}", f"Licitação número {i}: o procedimento de licitação pública e a dispensa de licitação.", artigo=str(i)) for i in range(n)]
+
+
+def test_sem_pedir_outro_numero_o_reranker_le_os_dez_primeiros_da_fusao(tmp_path):
+    from src.retrieve import N_RERANK_PADRAO
+
+    indice, embedder = _indice(tmp_path, _corpus_grande())
+    reranker = _RerankerFalso("zzz")
+    buscar_hibrido(indice, embedder, "dispensa de licitação", k=3, reranker=reranker)
+    assert N_RERANK_PADRAO == 10 and len(reranker.chamadas[0][1]) == 10
+
+
+def test_buscar_por_bases_repassa_o_numero_de_candidatos_ao_rerank(tmp_path):
+    indice, embedder = _indice(tmp_path, _corpus_grande())
+    reranker = _RerankerFalso("zzz")
+    buscar_por_bases({"a": indice}, embedder, "dispensa de licitação", k=3, k_por_base=3, reranker=reranker, n_rerank=6)
+    assert len(reranker.chamadas[0][1]) == 6

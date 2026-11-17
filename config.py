@@ -42,8 +42,11 @@ class Settings(BaseSettings):
     embedding_batch_size: int = 4
     embedding_pause_seconds: float = 0.0
 
-    # Rerank por cross-encoder (opcional, desligado): exige os arquivos do modelo em data/models (veja src/rerank.py). Em CPU, +15 a 20 s por busca.
+    # Rerank por cross-encoder (opcional, desligado): exige os arquivos do modelo em data/models (veja src/rerank.py).
+    # Em CPU, com os padrões (10 candidatos, 256 tokens por trecho) custa ~4 s por busca; com 20 e 512, ~17 s (medido em AVALIACAO.md).
     rerank: bool = False
+    rerank_candidatos: int = 10
+    rerank_max_tokens: int = 256
 
     log_dir: Path = Path("logs")
 

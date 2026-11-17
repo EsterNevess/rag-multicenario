@@ -32,6 +32,7 @@ from src.index import Embedder, IndiceCarregado
 from src.obs import PipelineLogger, Stage
 
 K_RRF = 60
+N_RERANK_PADRAO = 10  # quantos trechos da fusão o cross-encoder reordena: 10 custa ~4 s e mantém a maior parte do ganho de 20 (AVALIACAO.md)
 
 # Palavras de ligação que não ajudam a distinguir um trecho de outro. O BM25 já dá pouco peso a elas,
 # mas retirá-las da consulta deixa a busca mais rápida e as listas mais limpas.
@@ -221,7 +222,7 @@ def buscar_hibrido(
     k_busca: int = 50,
     logger: PipelineLogger | None = None,
     reranker: Any = None,
-    n_rerank: int = 20,
+    n_rerank: int = N_RERANK_PADRAO,
 ) -> list[Resultado]:
     """BM25 + FAISS + RRF em uma base. Devolve os k melhores, com o texto e a posição em cada busca.
 
@@ -286,11 +287,12 @@ def buscar_por_bases(
     filtros: dict[str, Any] | None = None,
     logger: PipelineLogger | None = None,
     reranker: Any = None,
+    n_rerank: int = N_RERANK_PADRAO,
 ) -> list[Resultado]:
     """Pesquisa cada base separadamente e junta. Garante até `garantir_por_base` trechos de cada base
     que tenha resultado, para uma base grande não afogar uma pequena; o resto é preenchido pela nota RRF."""
     por_base = {
-        base_id: buscar_hibrido(indice, embedder, consulta, k=k_por_base, filtros=filtros, logger=logger, reranker=reranker)
+        base_id: buscar_hibrido(indice, embedder, consulta, k=k_por_base, filtros=filtros, logger=logger, reranker=reranker, n_rerank=n_rerank)
         for base_id, indice in indices.items()
     }
     garantidos: list[Resultado] = []
@@ -311,6 +313,7 @@ def buscar_por_versao(
     por_versao: int = 2,
     logger: PipelineLogger | None = None,
     reranker: Any = None,
+    n_rerank: int = N_RERANK_PADRAO,
 ) -> list[Resultado]:
     """Para comparar versões de um documento: os melhores trechos de CADA versão que casa com os filtros.
 
@@ -324,6 +327,6 @@ def buscar_por_versao(
             if meta.get("versao") and casa_filtro(meta, filtros):
                 versoes[meta["versao"]] = meta.get("data_publicacao") or ""
         for versao in versoes:
-            achados += buscar_hibrido(indice, embedder, consulta, k=por_versao, filtros={**(filtros or {}), "versao": versao}, logger=logger, reranker=reranker)
+            achados += buscar_hibrido(indice, embedder, consulta, k=por_versao, filtros={**(filtros or {}), "versao": versao}, logger=logger, reranker=reranker, n_rerank=n_rerank)
     achados.sort(key=lambda r: (r.metadata.get("data_publicacao") or "", nota_de_ordenacao(r)), reverse=True)
     return achados

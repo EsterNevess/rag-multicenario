@@ -45,7 +45,7 @@ def _reranker(entradas=("input_ids", "attention_mask")):
 
 def test_configura_truncamento_e_preenchimento_no_tokenizador():
     r, tok = _reranker()
-    assert tok.truncado == 512 and tok.preenchido is True and r.max_tokens == 512
+    assert tok.truncado == 256 and tok.preenchido is True and r.max_tokens == 256  # o padrão lê 256 tokens por trecho
 
 
 def test_pontuar_devolve_uma_nota_por_texto_na_mesma_ordem_e_em_lotes():

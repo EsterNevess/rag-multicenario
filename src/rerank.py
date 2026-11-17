@@ -16,7 +16,7 @@ from typing import Any
 
 PASTA_PADRAO = Path(__file__).resolve().parent.parent / "data" / "models" / "bge-reranker-v2-m3-onnx"
 ARQUIVOS = ("model_int8.onnx", "tokenizer.json")
-MAX_TOKENS = 512
+MAX_TOKENS = 256  # padrão: 256 mantém quase todo o ganho de 512 por metade do custo (AVALIACAO.md); 512 é o máximo útil do modelo
 TAMANHO_DO_LOTE = 8
 
 

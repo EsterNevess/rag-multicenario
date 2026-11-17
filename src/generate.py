@@ -59,6 +59,7 @@ class Contexto:
     indices: dict[str, IndiceCarregado] = field(default_factory=dict)
     embedder: Any = None
     reranker: Any = None  # cross-encoder opcional (Settings.rerank); sem ele, a busca é só BM25 + vetores + RRF
+    rerank_candidatos: int = 10  # quantos trechos da fusão o cross-encoder reordena
     hoje: str = field(default_factory=lambda: date.today().isoformat())
     cobertura: str | None = None
     bases: list[str] = field(default_factory=list)
@@ -409,9 +410,9 @@ def coletar(plano: PlanoConsulta, pergunta: str, ctx: Contexto) -> tuple[list[Ev
         indices = {b: i for b, i in ctx.indices.items() if ctx.natureza_da_base(b) in alvo}
         achados = []
         if indices and "vigente_em" not in filtros_docs and plano.filtros_documentos.get("vigente_em") == "todas":
-            achados = buscar_por_versao(indices, ctx.embedder, consulta, filtros=filtros_docs, logger=ctx.logger, reranker=ctx.reranker)  # comparar versões
+            achados = buscar_por_versao(indices, ctx.embedder, consulta, filtros=filtros_docs, logger=ctx.logger, reranker=ctx.reranker, n_rerank=ctx.rerank_candidatos)  # comparar versões
         if indices and not achados:
-            achados = buscar_por_bases(indices, ctx.embedder, consulta, k=5, filtros=filtros_docs, logger=ctx.logger, reranker=ctx.reranker)
+            achados = buscar_por_bases(indices, ctx.embedder, consulta, k=5, filtros=filtros_docs, logger=ctx.logger, reranker=ctx.reranker, n_rerank=ctx.rerank_candidatos)
         evidencias += evidencias_documentos(achados, len(evidencias) + 1)
         if not achados:
             avisos.append("Nenhum trecho de documento foi encontrado para a pergunta.")
@@ -656,10 +657,10 @@ def carregar_contexto(config: Settings, pastas: Pastas) -> Contexto:
     reranker = None
     if config.rerank:
         try:
-            reranker = carregar_reranker()
+            reranker = carregar_reranker(max_tokens=config.rerank_max_tokens)
         except RerankerIndisponivel as erro:
             print(f"Aviso: rerank ligado, mas indisponível ({erro}); seguindo sem ele.", file=sys.stderr)
-    return Contexto(llm=criar_llm(config), logger=logger, cap=cap, banco=banco, banco_agregado=banco_agregado, indices=indices, embedder=embedder, reranker=reranker,
+    return Contexto(llm=criar_llm(config), logger=logger, cap=cap, banco=banco, banco_agregado=banco_agregado, indices=indices, embedder=embedder, reranker=reranker, rerank_candidatos=config.rerank_candidatos,
                     cobertura=cobertura, bases=sorted(indices), natureza_das_bases=naturezas, valores_conhecidos=valores)
 
 

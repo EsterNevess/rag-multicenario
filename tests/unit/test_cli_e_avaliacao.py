@@ -115,7 +115,7 @@ def ambiente(tmp_path, monkeypatch):
     ctx = SimpleNamespace(indices={"b": indice}, embedder=embedder, cap=SimpleNamespace(niveis_consultaveis=("publico",)), hoje="2026-11-16")
     monkeypatch.setattr(generate, "carregar_contexto", lambda config, pastas: ctx)
 
-    def sem_modelo():
+    def sem_modelo(max_tokens=None):
         raise RerankerIndisponivel("sem arquivos")
 
     monkeypatch.setattr(av, "carregar_reranker", sem_modelo)
@@ -139,7 +139,7 @@ def test_com_reranker_disponivel_o_sistema_rrf_rerank_entra_na_medicao(ambiente,
         def reordenar(self, consulta, candidatos):
             return [c for c, _ in reversed(candidatos)]
 
-    monkeypatch.setattr(av, "carregar_reranker", lambda: Falso())
+    monkeypatch.setattr(av, "carregar_reranker", lambda max_tokens=None: Falso())
     monkeypatch.setattr(av, "carregar_gold", lambda cenario, raiz=None, conjunto="retrieval_gold": [_item("Q1")])
     r = av.avaliar("rj", hoje="2026-01-01")
     assert av.SISTEMA_RERANK in r["resumo"] and r["hoje"] == "2026-01-01"
@@ -195,7 +195,7 @@ def test_contexto_de_um_ambiente_sem_dados_nao_tem_banco_nem_indice_nem_reranker
 
 
 def test_rerank_ligado_sem_os_arquivos_avisa_e_segue_sem_ele(tmp_path, capsys, monkeypatch):
-    def sem_modelo():
+    def sem_modelo(max_tokens):
         raise RerankerIndisponivel("sem arquivos")
 
     monkeypatch.setattr(generate, "carregar_reranker", sem_modelo)  # não depende de o modelo estar baixado nesta máquina
@@ -205,6 +205,8 @@ def test_rerank_ligado_sem_os_arquivos_avisa_e_segue_sem_ele(tmp_path, capsys, m
 
 def test_rerank_ligado_com_o_modelo_disponivel_entra_no_contexto(tmp_path, monkeypatch):
     modelo = object()
-    monkeypatch.setattr(generate, "carregar_reranker", lambda: modelo)
-    ctx = generate.carregar_contexto(_config(log_dir=tmp_path / "logs", rerank=True), _pastas_vazias(tmp_path))
-    assert ctx.reranker is modelo
+    pedidos = []
+    monkeypatch.setattr(generate, "carregar_reranker", lambda max_tokens: pedidos.append(max_tokens) or modelo)
+    ctx = generate.carregar_contexto(_config(log_dir=tmp_path / "logs", rerank=True, rerank_max_tokens=128, rerank_candidatos=7), _pastas_vazias(tmp_path))
+    assert ctx.reranker is modelo and pedidos == [128] and ctx.rerank_candidatos == 7
+    assert generate.carregar_contexto(_config(log_dir=tmp_path / "logs"), _pastas_vazias(tmp_path)).rerank_candidatos == 10  # padrões: 10 candidatos
