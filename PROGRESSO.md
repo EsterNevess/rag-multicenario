@@ -291,7 +291,7 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [x] Rodada real nas 10 perguntas (RJ-04 instável)
 - [x] Agregada (opção A): 7 indicadores calculados em SQL sobre o que já temos. O RJ-10 (preço por quilo) segue recusado, agora com a razão: a base não tem itens. O PCA e os valores homologados por item ficam fora
 - [x] Conversacional sintética: 20 atas e e-mails, com 5 armadilhas (dado pessoal, pedido de "confirmar a fraude", senha, dado bancário)
-- [ ] Reindexar a normativa a partir da v3 (o índice atual veio da v2, e antes das mudanças de leitura de PDF em duas colunas)
+- [x] Reindexar a normativa a partir da v3: desnecessário. Os 13 documentos de editais têm o mesmo SHA-256 na v2 e na v3 (conferido pelos inventários), então o índice atual, refeito com a ingestão corrente, é o mesmo que a v3 daria
 - [x] RJ-04 (contratações diretas e proporção): plano de reserva sem o modelo para quando o analisador esgota as tentativas (`palavras_de_recorte` evita responder outro recorte). Testado; falta repetir com o modelo
 - [x] RJ-04 com o modelo, 1 execução (16/11): **respondeu certo** (25.005 de 35.423 = 70,6%, conferido no banco). O analisador errou a 1ª tentativa (rota híbrida), a guarda o devolveu, e acertou na 3ª; o plano de reserva não precisou entrar, então segue sem teste com o modelo. Uma execução não mede estabilidade
 - [ ] SA-10: na única tentativa, o analisador já montou o plano certo (entidade `pcdt_medicamento` filtrada por Parkinson), mas a geração caiu no limite diário da Groq (HTTP 429); falta a resposta
@@ -300,7 +300,7 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [x] Normativa: 8 documentos, 453 trechos indexados
 - [x] Estruturada: 5.000 artigos do OpenAlex (3 tabelas)
 - [x] Rodada real nas 10 perguntas
-- [x] Reindexar RJ e pesquisa com as mudanças de leitura de PDF (pesquisa: trechos idênticos; RJ editais v2: 1.458 → 1.456 trechos, métricas iguais). Falta reindexar a v3 dos editais do RJ
+- [x] Reindexar RJ e pesquisa com as mudanças de leitura de PDF (pesquisa: trechos idênticos; RJ editais v2: 1.458 → 1.456 trechos, métricas iguais); a v3 dos editais tem os mesmos 13 arquivos (mesmo SHA-256), então não há o que reindexar
 - [~] Agregada: 6 indicadores bibliométricos sobre a amostra do OpenAlex. Faltam os resumos do arXiv e do SciELO
 - [x] Conversacional sintética: 17 pareceres e 4 e-mails editoriais, com 7 armadilhas (pistas de identidade do revisor, pedido para revelá-lo, e-mail de autor)
 

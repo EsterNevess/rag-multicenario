@@ -168,7 +168,7 @@ O código já conferia as citações (`[1]` precisa apontar para uma fonte que e
 - **São 59 perguntas (34 + 25).** Uma pergunta muda uma média em 0,02 a 0,03. Diferenças pequenas não devem ser lidas como ranking.
 - **Eu escrevi as perguntas e os critérios.** Um critério por expressão regular pode marcar como relevante um trecho que não responde bem, ou deixar de fora um que responde com outras palavras. A precisão@5 é a métrica mais sensível a isso.
 - **O embedding é pequeno** (0,6 bilhão de parâmetros, em CPU). Com outro modelo de embedding o denso pode subir.
-- **Os índices do RJ e da pesquisa foram reconstruídos** com a ingestão atual (leitura de PDF em duas colunas e cabeçalhos de página). Na pesquisa os trechos saíram idênticos (mesmo SHA-256); no RJ a base de editais foi de 1.458 para 1.456 trechos (versão v2), e as métricas de recuperação não mudaram (MRR@10: BM25 0,687, denso 0,745, RRF 0,722). A v3 dos editais do RJ não foi reindexada.
+- **Os índices do RJ e da pesquisa foram reconstruídos** com a ingestão atual (leitura de PDF em duas colunas e cabeçalhos de página). Na pesquisa os trechos saíram idênticos (mesmo SHA-256); no RJ a base de editais foi de 1.458 para 1.456 trechos (versão v2), e as métricas de recuperação não mudaram (MRR@10: BM25 0,687, denso 0,745, RRF 0,722). A v3 dos editais do RJ tem os mesmos 13 arquivos da v2 (mesmo SHA-256 em todos), então não há o que reindexar.
 
 ## Decisões
 
