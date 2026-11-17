@@ -1,5 +1,7 @@
 # Progresso
 
+> Este arquivo é um **diário em ordem cronológica**: as seções mais antigas descrevem o que era verdade no momento (por exemplo, "635 trechos" ou "89 linhas" na saúde, antes do corpus v2). Os números atuais estão no [README](README.md) e no [AVALIACAO.md](AVALIACAO.md).
+
 ## Fase 1: motor + cenário do RJ (em andamento)
 
 Plano de passos, cada um com testes e um commit:
@@ -288,7 +290,7 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
   - [ ] Rerank na resposta final (depende da Groq)
 
 **Cenário RJ (contratações públicas)**
-- [x] Normativa: 1.458 trechos indexados (Lei 14.133, 7 decretos, 5 editais)
+- [x] Normativa: 1.456 trechos indexados (Lei 14.133, 7 decretos, 5 editais; eram 1.458 antes das correções de leitura de PDF)
 - [x] Estruturada: 37.637 contratações e 46.450 contratos (v3 normalizada)
 - [x] Rodada real nas 10 perguntas (RJ-04 instável)
 - [x] Agregada (opção A): 7 indicadores calculados em SQL sobre o que já temos. O RJ-10 (preço por quilo) segue recusado, agora com a razão: a base não tem itens. O PCA e os valores homologados por item ficam fora

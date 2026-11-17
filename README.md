@@ -4,7 +4,7 @@ Plataforma de **Adaptive RAG** com um motor único e três cenários configuráv
 
 O ponto central do projeto: o sistema decide **que tipo de evidência** responde à pergunta antes de buscar. Não roteia por palavra-chave. Três perguntas com quase o mesmo vocabulário podem ir para três bases diferentes.
 
-> **Estado atual: motor e três cenários construídos; a avaliação formal (fase 5) está em parte feita.** A recuperação foi medida em 59 perguntas (inclusive com rerank opcional) e a resposta final, com 3 repetições, só na saúde; o RJ e a pesquisa esperam o limite diário da Groq. O motor tem configuração, esquemas, mascaramento de dados pessoais, logs estruturados, coleta versionada, ingestão em trechos, indexação (BM25, vetores e fusão RRF), normalização em SQL, bases agregadas de indicadores, bases conversacionais sintéticas, roteador com guardrails em camadas e geração de respostas com fontes numeradas e citações conferidas por código, tudo com testes (mais de 700). Um mesmo motor atende os três cenários: o que muda de um para outro está em `scenarios/<id>/` (manifesto do corpus, `capacidades.yaml` e `indicadores.yaml`). Foram feitas rodadas reais com um modelo de linguagem (Groq) nos cenários do RJ e da pesquisa, e uma rodada na saúde (13 perguntas × 3 repetições; a comparação PCDT x RENAME falhou, como previsto, e foi tratada depois com uma tabela própria, ainda sem nova rodada com o modelo). O que foi e o que não foi verificado está em [PROGRESSO.md](PROGRESSO.md).
+> **Estado atual: motor e três cenários construídos; a avaliação formal (fase 5) está em parte feita.** A recuperação foi medida em 59 perguntas (inclusive com rerank opcional) e a resposta final, com 3 repetições, só na saúde; o RJ e a pesquisa esperam o limite diário da Groq. O motor tem configuração, esquemas, mascaramento de dados pessoais, logs estruturados, coleta versionada, ingestão em trechos, indexação (BM25, vetores e fusão RRF), normalização em SQL, bases agregadas de indicadores, bases conversacionais sintéticas, roteador com guardrails em camadas e geração de respostas com fontes numeradas e citações conferidas por código, tudo com testes (mais de 800). Um mesmo motor atende os três cenários: o que muda de um para outro está em `scenarios/<id>/` (manifesto do corpus, `capacidades.yaml` e `indicadores.yaml`). Foram feitas rodadas reais com um modelo de linguagem (Groq) nos cenários do RJ e da pesquisa, e uma rodada na saúde (13 perguntas × 3 repetições; a comparação PCDT x RENAME falhou, como previsto, e foi tratada depois com uma tabela própria, ainda sem nova rodada com o modelo). O que foi e o que não foi verificado está em [PROGRESSO.md](PROGRESSO.md).
 
 ## Estado dos cenários
 
@@ -43,12 +43,12 @@ A geração usa a Groq por padrão (chave gratuita em console.groq.com, `GROQ_AP
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest                     # mais de 750 testes, sem rede e sem modelo de linguagem
+python -m pytest                     # mais de 800 testes, sem rede e sem modelo de linguagem
 ruff check .                         # lint (regras E, F, W, I, B, UP; configuração em pyproject.toml)
 coverage run -m pytest && coverage report
 ```
 
-Cobertura medida em 16/11: **96%** das linhas de `src/`, `app/` e `config.py` (4.675 linhas; era 89% antes de se testarem as linhas de comando e o laço da avaliação). O que ficou sem teste são, sobretudo, ramos de erro de leitura de arquivo e de rede em `ingest`, `fetch_corpus`, `indicadores` e `synth`, o caminho que carrega o modelo de rerank de verdade (`src/rerank.py`, 88%) e a rotina de `llm.py` que espera a resposta do provedor (91%). O CI roda o lint e exige ao menos 85% de cobertura. Os testes não chamam modelo de linguagem de verdade (o `-m llm` os liga).
+Cobertura medida em 17/11: **96%** das linhas de `src/`, `app/` e `config.py` (4.772 linhas; era 89% antes de se testarem as linhas de comando e o laço da avaliação). O que ficou sem teste são, sobretudo, ramos de erro de leitura de arquivo e de rede em `ingest`, `fetch_corpus`, `indicadores` e `synth`, o caminho que carrega o modelo de rerank de verdade (`src/rerank.py`, 88%) e a rotina de `llm.py` que espera a resposta do provedor (91%). O CI roda o lint e exige ao menos 85% de cobertura. Os testes não chamam modelo de linguagem de verdade (o `-m llm` os liga).
 
 ## Como o sistema pensa
 
@@ -115,7 +115,7 @@ Ditas aqui porque o projeto é um portfólio e o que não funciona importa tanto
 
 - **Rerank só medido na ordenação dos trechos.** Não foi medido na resposta final e custa ~4 s por busca em CPU (17 s na configuração completa), por isso fica desligado por padrão.
 - **Avaliação pequena.** A recuperação foi medida em 59 perguntas escritas por mim (34 + 25 de um segundo conjunto), e as diferenças entre BM25, vetores e RRF não são estatisticamente conclusivas; só o efeito do filtro de vigência e de doença e o do rerank têm intervalo sem zero. A resposta final foi medida com 3 repetições só no cenário de saúde; o RJ e a pesquisa esperam o limite diário da Groq.
-- **Falhas previstas que continuam.** A comparação entre o que um protocolo clínico cita e o que a RENAME lista (SA-10) passou a ter uma tabela própria (`pcdt_medicamento`), testada na consulta mas ainda não repetida com o modelo; ela cobre as cinco versões de protocolo do corpus, mas só os medicamentos que cada protocolo enumera, e o RJ-04 (contratações diretas e proporção) oscilava porque o modelo às vezes errava o plano três vezes seguidas. Agora, nesse caso, um plano de reserva sem o modelo usa o indicador pronto (testado por teste unitário, ainda não repetido com o modelo). A memória de conversa ("desses", "e em 2025?") foi implementada com **um turno** de memória e testada com um modelo simulado, mas **não foi conferida com o modelo real**: se o PE-02 passa a funcionar depende de a LLM reaproveitar bem os filtros do plano anterior.
+- **Falhas previstas que continuam.** A comparação entre o que um protocolo clínico cita e o que a RENAME lista (SA-10) passou a ter uma tabela própria (`pcdt_medicamento`), testada na consulta mas ainda não repetida com o modelo; ela cobre as oito versões de protocolo do corpus, mas só os medicamentos que cada protocolo enumera, e o RJ-04 (contratações diretas e proporção) oscilava porque o modelo às vezes errava o plano três vezes seguidas. Agora, nesse caso, um plano de reserva sem o modelo usa o indicador pronto (testado por teste unitário, ainda não repetido com o modelo). A memória de conversa ("desses", "e em 2025?") foi implementada com **um turno** de memória e testada com um modelo simulado, mas **não foi conferida com o modelo real**: se o PE-02 passa a funcionar depende de a LLM reaproveitar bem os filtros do plano anterior.
 - **Redação de dado sensível.** A remoção de trechos que identificam pessoas só pega o que as regras conhecem: em frases novas, que as regras nunca viram, protegeu **13 de 30 (43%)** das sensíveis e não alterou nenhuma de 12 comuns; ajustar as regras às falhas medidas não melhorou isso (as regras não generalizam). É uma primeira camada, não serve para dados reais (veja AVALIACAO.md).
 - **Os cenários conversacionais são sintéticos.** Pessoas, órgãos e números são fictícios, gerados com semente fixa.
 - **Os dados são um recorte datado.** Quatro doenças na saúde, uma amostra de artigos na pesquisa, e a RENAME de dezembro de 2024. Nada aqui substitui orientação clínica, jurídica ou profissional.
@@ -126,17 +126,23 @@ Ditas aqui porque o projeto é um portfólio e o que não funciona importa tanto
 ```text
 README.md              vitrine e estado real dos cenários
 ARQUITETURA.md         pipeline, estágios e decisões (desenho; ver o aviso no topo)
-AVALIACAO.md           ablação da recuperação e resposta final com repetições
+AVALIACAO.md           recuperação, rerank, resposta final, redação e conferência de números, com os limites
 LICENSE                MIT
-PROGRESSO.md           o que está pronto, o que falta e decisões tomadas
+PROGRESSO.md           o que está pronto, o que falta e decisões tomadas (diário em ordem cronológica)
+DADOS_E_LICENCAS.md    fontes, modelos e dependências, com licenças e o que não foi conferido
+DEMO.md                roteiro de perguntas para mostrar o sistema, com respostas reais
 .env.example           variáveis necessárias, sem valores reais
+requirements*.txt      dependências (núcleo, desenvolvimento, rerank e interface)
+pyproject.toml         configuração do pytest, do ruff e da cobertura
+.github/workflows/     testes e lint a cada push
 scenarios/<nome>/      tudo o que varia por cenário
     README.md  corpus_manifest.yaml  PERSONAS.md
     sensibilidade.yaml  capacidades.yaml  indicadores.yaml
-    eval/questions.json  eval/retrieval_gold.json  eval/respostas.json
+    eval/questions.json  eval/respostas.json  eval/retrieval_gold.json  eval/retrieval_gold_novas.json
+    eval/redacao_holdout*.json (só a saúde)
 src/                   motor único, sem nada específico de cenário
 app/                   interface de perguntas em Streamlit (uma tela; sem API HTTP)
-tests/                 testes unitários e de contrato (mais de 700)
+tests/                 testes unitários e de contrato (mais de 800)
 data/inventory/        inventário de cada coleta (os dados em si não vão para o Git)
 ```
 

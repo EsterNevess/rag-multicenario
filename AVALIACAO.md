@@ -17,13 +17,13 @@ Mede só a **recuperação** de trechos (BM25, busca densa e fusão RRF), sem mo
 
 | Sistema | hit@1 | hit@5 | MRR@10 | P@5 | Tempo mediano |
 |---|---|---|---|---|---|
-| BM25 | 0,676 | 0,853 | 0,751 | 0,435 | 5 a 18 ms |
-| Denso | 0,588 | **0,971** | 0,736 | 0,406 | ~400 ms (inclui o embedding da pergunta) |
-| RRF (k=60, padrão) | 0,676 | 0,941 | 0,799 | 0,471 | ~420 ms |
-| RRF (k=10) | 0,735 | 0,941 | **0,833** | 0,476 | ~420 ms |
-| RRF sem filtro de vigência | 0,618 | 0,941 | 0,760 | 0,435 | ~420 ms |
+| BM25 | 0,676 | 0,853 | 0,750 | 0,435 | ~5 ms |
+| Denso | 0,588 | **0,971** | 0,736 | 0,406 | ~300 ms (inclui o embedding da pergunta) |
+| RRF (k=60, padrão) | 0,676 | 0,941 | 0,799 | 0,476 | ~320 ms |
+| RRF (k=10) | 0,735 | 0,941 | **0,833** | 0,476 | ~320 ms |
+| RRF sem filtro de vigência | 0,618 | 0,941 | 0,760 | 0,435 | ~320 ms |
 
-Por cenário (MRR@10, BM25 / denso / RRF): RJ 0,687 / 0,745 / 0,722; saúde 0,711 / 0,783 / 0,792; pesquisa 0,875 / 0,667 / 0,900.
+Por cenário (MRR@10, BM25 / denso / RRF): RJ 0,687 / 0,745 / 0,722; saúde 0,710 / 0,783 / 0,792; pesquisa 0,875 / 0,667 / 0,900.
 
 ## O que os números sustentam
 
@@ -31,8 +31,8 @@ Diferenças pareadas no MRR@10, com intervalo de confiança de 95% por bootstrap
 
 | Comparação | Diferença | IC 95% | Vitórias / derrotas / empates |
 |---|---|---|---|
-| RRF - BM25 | +0,048 | [-0,040; +0,137] | 9 / 3 / 22 |
-| RRF - denso | +0,063 | [-0,051; +0,180] | 9 / 5 / 20 |
+| RRF - BM25 | +0,049 | [-0,038; +0,136] | 9 / 3 / 22 |
+| RRF - denso | +0,063 | [-0,050; +0,178] | 9 / 5 / 20 |
 | RRF k=10 - RRF k=60 | +0,034 | [0,000; +0,088] | 2 / 0 / 32 |
 | RRF - RRF sem filtro | +0,039 | [-0,007; +0,103] | 3 / 1 / 30 |
 
@@ -56,7 +56,7 @@ Para testar o que foi decidido com as 34 primeiras, escrevi 25 perguntas novas (
 
 | Comparação (MRR@10) | Novas (25) | Todas (59) |
 |---|---|---|
-| RRF - BM25 | +0,065 [-0,038; +0,178] | +0,055 [-0,011; +0,125] |
+| RRF - BM25 | +0,065 [-0,038; +0,178] | +0,056 [-0,011; +0,125] |
 | RRF - denso | +0,049 [-0,078; +0,179] | +0,057 [-0,026; +0,145] |
 | RRF k=10 - RRF k=60 | +0,005 [-0,004; +0,020] | +0,022 [-0,001; +0,053] |
 | RRF - RRF sem filtro | +0,098 [+0,002; +0,203] | +0,064 [+0,014; +0,124] |
@@ -132,7 +132,7 @@ O que isso sustenta:
 | Rota igual nas 3 repetições | 12 de 13 perguntas |
 | Perguntas de recusa (dose individual, plano de saúde, dispensação, telefone) | recusadas nas 3 repetições; a de dose pela regra de entrada, sem chamar o modelo |
 | Número calculado em SQL (apresentações do componente Especializado) | 314 nas 3 repetições, confere |
-| Texto da resposta | difere em toda pergunta respondida (3 textos distintos nas 3 repetições), o que é esperado de um modelo de linguagem; só as recusas por regra repetem o texto idêntico |
+| Texto da resposta | difere entre as repetições, como é esperado de um modelo de linguagem: das 9 perguntas respondidas, 7 deram 3 textos distintos nas 3 repetições, a da lacuna (SA-X1) deu 2 e a do número em SQL (SA-X2, 314 apresentações) deu o mesmo texto nas 3; as 4 recusas repetem o texto idêntico |
 
 O que as repetições mostraram:
 
@@ -142,7 +142,7 @@ O que as repetições mostraram:
   - **Conferência à mão do casamento de seções (16/11).** Li os 4 pares da artrite, linha por linha. **Nos pares em que a estrutura se manteve (2020 para 2021 e 2021 para 2026), o casamento estava certo.** Nos pares em que o protocolo foi reorganizado (2017 para 2019 e 2019 para 2020) havia erros de três tipos: (1) **8 linhas falsas**, fragmentos de tabela ("46 - A média do DM 0,19 menor") lidos como título de seção; (2) **1 par errado**, porque um título solto de 16 caracteres ("5. RECOMENDAÇÕES") pegava o par de "RECOMENDAÇÕES PARA PESQUISA" na frente do casamento exato; (3) cerca de **10 seções que só mudaram de nome** (monitorização e monitoramento, abordagem terapêutica e tratamento, critérios de elegibilidade e de inclusão, gestão e controle e regulação, fármacos e "fármacos e esquema de administração") apareciam como "só numa das versões". Corrigi com um filtro de fragmentos de tabela (só 4 dos 135 títulos distintos do corpus caíram nele, todos lixo), casamento em três passadas (exato, um contido no outro a partir de 8 caracteres, semelhança) e uma tabela de 4 sinônimos conferidos nas versões do corpus; a tabela foi de 105 para 88 linhas. **O que continua errado:** reorganizações de uma parte em várias (o "Tratamento" de 2017 virou "Abordagem terapêutica", "Fármacos e esquema" e "Fluxograma" em 2019) não casam 1 para 1, e a seção nova ou sumida é reportada como "só numa das versões" mesmo quando o conteúdo existia dentro de outra. Não medi uma taxa de erro depois da correção: reli os pares e os erros listados sumiram.
   - **Limites da comparação por seção.** Diz onde o texto mudou e quanto, não o que mudou clinicamente: uma frase "nova" pode ser a mesma ideia reescrita, e o PDF tem ruído (colunas, quebras). "Só na versão anterior" pode ser conteúdo de outro documento do mesmo PDF: o de 2021 inclui também a artrite idiopática juvenil, cujas seções (diagnóstico, casos especiais, monitorização) aparecem como "só na anterior". Títulos repetidos de anexos foram ignorados (61 na versão de 2021, contados no relatório). O casamento de seções por título pode errar quando o título muda muito.
 - **SA-10 (medicamentos do PCDT de Parkinson fora da RENAME) falhou nas 3 repetições, como previsto.** A consulta à RENAME não leva filtro e devolve itens quaisquer. Em duas repetições o modelo disse que não dava para responder (honesto); na outra afirmou que os itens listados "não constam no PCDT", o que é enganoso. É a falha mais perigosa do cenário porque nem sempre o modelo desconfia.
-  - **Correção feita depois da rodada, ainda não medida com o modelo.** A seção "Fármacos" dos protocolos agora vira a tabela `pcdt_medicamento` (69 linhas: Parkinson 2017, com 11 medicamentos, e artrite reumatoide de 2017, 2019 e 2021), com a marca de constar ou não na RENAME, calculada em código pelo princípio ativo (sal e forma não entram na comparação). Nas 69 linhas, todos os princípios ativos constam na RENAME 2024; para o Parkinson a resposta correta passa a ser "nenhum dos 11 deixa de constar", com a ressalva de que só a seção Fármacos foi lida. A consulta foi testada com um plano montado à mão, sem o modelo; falta repetir a pergunta com o modelo quando o limite da Groq voltar. **Cobertura (ampliada depois):** a primeira versão só lia o formato "nome: apresentação" (69 linhas). Agora há mais dois leitores, um para as listas por classe da artrite de 2026 (a vigente: 16 medicamentos, sem apresentação) e outro para o diabetes tipo 1 (4 insulinas, sem dois-pontos), e a tabela tem 89 linhas nas cinco versões. Todos os 89 constam na RENAME. Duas insulinas casaram só por correspondência aproximada ("insulina NPH" e "insulina humana NPH"; "insulina regular" e "insulina humana regular"), que o relatório da normalização registra. Cada leitor serve ao formato de um documento conhecido: se um protocolo mudar de formato, a versão aparece sem lista no relatório. Só entram os medicamentos que o protocolo lista; a lista da artrite de 2026 não traz anti-inflamatórios nem glicocorticoides, que as versões antigas traziam.
+  - **Correção feita depois da rodada, ainda não medida com o modelo.** A seção "Fármacos" dos protocolos agora vira a tabela `pcdt_medicamento` (69 linhas: Parkinson 2017, com 11 medicamentos, e artrite reumatoide de 2017, 2019 e 2021), com a marca de constar ou não na RENAME, calculada em código pelo princípio ativo (sal e forma não entram na comparação). Nas 69 linhas, todos os princípios ativos constam na RENAME 2024; para o Parkinson a resposta correta passa a ser "nenhum dos 11 deixa de constar", com a ressalva de que só a seção Fármacos foi lida. A consulta foi testada com um plano montado à mão, sem o modelo; falta repetir a pergunta com o modelo quando o limite da Groq voltar. **Cobertura (ampliada depois):** a primeira versão só lia o formato "nome: apresentação" (69 linhas). Agora há mais dois leitores, um para as listas por classe da artrite de 2026 (a vigente: 16 medicamentos, sem apresentação) e outro para o diabetes tipo 1 (4 insulinas, sem dois-pontos), e a tabela tem 89 linhas nas cinco versões. Depois do corpus v2 (artrite de 2020 e diabetes tipo 2 entraram, com um quarto leitor para o item "Medicamentos" do diabetes tipo 2), **são 119 linhas nas oito versões, e todas constam na RENAME**. Três nomes casaram só por correspondência aproximada ("insulina NPH" e "insulina humana NPH"; "insulina regular" e "insulina humana regular"; "dapagliflozina" e "dapagliflozina propanodiol"), que o relatório da normalização registra. Cada leitor serve ao formato de um documento conhecido: se um protocolo mudar de formato, a versão aparece sem lista no relatório. Só entram os medicamentos que o protocolo lista; a lista da artrite de 2026 não traz anti-inflamatórios nem glicocorticoides, que as versões antigas traziam.
 - **A pergunta da lacuna (versão em janeiro de 2021) é instável** (medida no corpus v1, que tinha um intervalo entre setembro de 2020 e setembro de 2021; no v2 a Portaria Conjunta 14/2020 cobre o período, e a pergunta passou a ter resposta). Em 2 das 3 repetições o sistema recusou por falta de evidência; na outra, respondeu que a consulta não achou registro e que isso não prova que não haja versão. Nenhuma inventou uma versão, mas o comportamento não é consistente, e nenhuma explicou que o corpus não tem versão naquele período.
 
 **Limites.** A conferência de rota é grossa (tipo de evidência, não o plano exato) e não há juiz automático de qualidade: o texto das respostas precisa de leitura. Só uma pergunta da saúde tem número conferível por SQL. As 13 perguntas são poucas para estimar taxas.
@@ -184,6 +184,10 @@ O código já conferia as citações (`[1]` precisa apontar para uma fonte que e
 - **Resposta final no RJ e na pesquisa.** Só a saúde tem as 3 repetições (seção acima); o RJ tem 3 perguntas com 1 repetição e a pesquisa nenhuma, por causa do limite diário da Groq.
 - **Perguntas de dados** (estruturada e agregada) não passam pela recuperação de trechos e ficam fora.
 
+## Conferência dos números desta página
+
+Em 17/11 conferi os números do README e desta página contra os logs de `logs/`, os bancos e o código, um a um. As diferenças achadas e corrigidas: na tabela das 34 perguntas, o MRR do BM25 (0,751 para 0,750), a precisão@5 do RRF (0,471 para 0,476) e os tempos (as buscas rodam em ~300 ms, não ~400 ms); o MRR do BM25 na saúde (0,711 para 0,710); os intervalos das duas primeiras comparações pareadas (recalculados) e a diferença de RRF contra BM25 nas 59 perguntas (0,055 para 0,056); a afirmação de que todo texto respondido mudava entre as repetições (a pergunta do número em SQL deu o mesmo texto nas 3); a tabela `pcdt_medicamento`, que já tinha 119 linhas e não 89; e a numeração das decisões. Os números de cenários (contratações, contratos, artigos, trechos, indicadores, armadilhas, medicamentos), as tabelas do rerank, da redação e da comparação por seção bateram. As diferenças de milésimos vêm de que o MRR dos logs é recalculado a cada rodada com o índice atual.
+
 ## Limites desta avaliação
 
 - **São 59 perguntas (34 + 25).** Uma pergunta muda uma média em 0,02 a 0,03. Diferenças pequenas não devem ser lidas como ranking.
@@ -197,5 +201,5 @@ O código já conferia as citações (`[1]` precisa apontar para uma fonte que e
 2. **Manter k_rrf = 60.** O sinal a favor do 10 vinha do primeiro conjunto, em que o valor foi escolhido; no conjunto novo (25 perguntas) a diferença some (+0,005).
 3. **Manter o filtro de vigência e de doença**, que já é necessário por correção (não misturar versões) e é um efeito firme: +0,064 de MRR nas 59 perguntas, com intervalo sem zero (7 vitórias, 2 derrotas).
 4. **Próximos passos para fechar a fase 5:** continuar a rodada de respostas do RJ e da pesquisa com `--retomar` quando o limite da Groq voltar; medir o efeito do rerank na resposta final (a ordenação dos trechos já foi medida). O conjunto de perguntas foi ampliado (segundo conjunto, acima).
-6. **Rerank: opcional e desligado, e mais barato quando ligado.** Melhora o MRR em +0,10 nas 59 perguntas na configuração completa (20 candidatos, 512 tokens, ~17 s) e em +0,084 na barata que virou o padrão (10 candidatos, 256 tokens, ~4 s). Sem evidência de ganho na resposta final, não vira o padrão do motor, mas o custo de ligá-lo caiu a um quarto.
-5. **Falha conhecida:** o SA-10. A causa (comparar sem ter extraído os medicamentos do protocolo) foi tratada com a tabela `pcdt_medicamento`, mas a pergunta só será dada como corrigida depois de repetida com o modelo, e a lista cobre só o que o protocolo enumera.
+5. **Rerank: opcional e desligado, e mais barato quando ligado.** Melhora o MRR em +0,10 nas 59 perguntas na configuração completa (20 candidatos, 512 tokens, ~17 s) e em +0,084 na barata que virou o padrão (10 candidatos, 256 tokens, ~4 s). Sem evidência de ganho na resposta final, não vira o padrão do motor, mas o custo de ligá-lo caiu a um quarto.
+6. **Falha conhecida:** o SA-10. A causa (comparar sem ter extraído os medicamentos do protocolo) foi tratada com a tabela `pcdt_medicamento`, mas a pergunta só será dada como corrigida depois de repetida com o modelo, e a lista cobre só o que o protocolo enumera.
