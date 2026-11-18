@@ -9,6 +9,13 @@ from typing import Any, Protocol
 
 import requests
 
+try:  # usa o repositório de certificados do sistema (necessário onde a rede troca o certificado, como em alguns Windows)
+    import truststore
+
+    truststore.inject_into_ssl()
+except Exception:  # pragma: no cover - sem truststore, o requests usa o certifi
+    pass
+
 from config import Settings
 from src.obs import Tokens, tokens_de_uso
 
