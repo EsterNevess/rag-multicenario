@@ -121,7 +121,7 @@ flowchart LR
 Decisões que o projeto mantém:
 
 - **A LLM não escreve SQL.** Ela só preenche um plano validado por schema; o banco recebe campos permitidos e parâmetros protegidos.
-- **Duas buscas combinadas:** BM25 (SQLite FTS5) e FAISS (embeddings), fundidas por RRF em código. A ablação (BM25, vetores e RRF) está medida em [AVALIACAO.md](AVALIACAO.md); o rerank por cross-encoder está implementado como **opção desligada** (melhora o MRR em +0,08, a ~4 s por busca em CPU no padrão de 10 candidatos e 256 tokens; veja "Rerank (opcional)" abaixo).
+- **Duas buscas combinadas:** BM25 (SQLite FTS5) e FAISS (embeddings), fundidas por RRF em código. A ablação (BM25, vetores e RRF) está medida em [AVALIACAO.md](AVALIACAO.md); o rerank por cross-encoder está implementado como **opção desligada** (melhora o MRR em +0,08, a ~4 s por busca em CPU no padrão de 10 candidatos e 256 tokens; veja "Rerank (opcional)" abaixo). Um embedding maior (`qwen3-embedding:4b`) também foi medido: +0,048 de MRR no RRF nas 83 perguntas, com intervalo que mal exclui zero e horas de indexação em CPU, então o padrão continua o `0.6b` (detalhes em AVALIACAO.md).
 - **Sensibilidade classificada na ingestão**, nunca na hora de responder. CPF, telefone e e-mail pessoal são mascarados antes de indexar.
 - **Cálculos numéricos em código (SQL)**, não pelo modelo.
 - **Sem evidência, o sistema diz que não sabe.** Não acusa e não emite juízo jurídico ou clínico.
