@@ -147,6 +147,24 @@ A partir de 20 candidatos por busca, o resultado é o mesmo (de 30 a 200, ordem 
 - **Cortar as palavras em prefixo (um radical grosseiro para o português) é a única variante com sinal**: o RRF com prefixo de 5 letras vai de 0,770 a 0,804, e o hit@5 de 0,915 a 0,966. Mas o intervalo inclui zero, o BM25 sozinho quase não muda (+0,008, com 11 vitórias e 11 derrotas), e escolhi o melhor de três tamanhos olhando as mesmas perguntas em que ele é medido, o mesmo erro que o k_rrf = 10 mostrou (a vantagem sumiu no conjunto novo). **Não alterei o padrão.**
 - **Terceiro conjunto (24 perguntas, `retrieval_gold_terceiro.json`, 8 por cenário).** Escrito depois dessas contas e sem olhar o ranking de nenhum sistema; só se verificou que cada pergunta tinha trecho relevante, e uma (PE-T08, o e-mail sobre prazo da revisão) precisou de ajuste de critério, porque nenhum trecho cumpria o primeiro. Prefixo de 5 letras contra a consulta atual: **RRF 0,804 para 0,826 (+0,023 [-0,059; +0,101]; 4 vitórias, 2 derrotas, 18 empates), hit@5 de 0,833 para 0,958**; as variantes de 6 e 7 letras e a que mantém as stopwords repetem o padrão anterior (+0,019, -0,061 e -0,006). Nas 83 perguntas juntas: **RRF 0,780 para 0,810 (+0,030 [-0,021; +0,084]; 14 / 9 / 60) e hit@5 de 0,892 para 0,964**; no BM25 sozinho o hit@5 cai (0,843 para 0,807). A direção se manteve em dados não vistos, mas o intervalo ainda inclui zero. As perguntas do conjunto são minhas e o ganho concentra-se em poucas perguntas.
 
+## Embedding maior: qwen3-embedding:4b contra 0,6b (18/11)
+
+Os três cenários foram reindexados com o `qwen3-embedding:4b` (2560 dimensões, contra 1024 do 0,6b), em pasta separada, e as mesmas perguntas foram medidas com a mesma consulta, o mesmo BM25 e o mesmo filtro. Só o vetor muda. MRR@10, diferença pareada com intervalo de 95% (5000 reamostragens, semente 7) e vitórias / derrotas / empates do 4b:
+
+| Perguntas | Sistema | 0,6b | 4b | Diferença |
+|---|---|---|---|---|
+| 59 (originais + novas) | denso | 0,713 | 0,743 | +0,030 [-0,046; +0,103]; 14 / 9 / 36 |
+| 59 | RRF | 0,770 | 0,802 | +0,032 [-0,016; +0,084]; 8 / 5 / 46 |
+| 24 (terceiro conjunto) | denso | 0,839 | 0,896 | +0,057 [-0,009; +0,162]; 3 / 2 / 19 |
+| 24 | RRF | 0,804 | 0,894 | +0,090 [+0,008; +0,194]; 4 / 1 / 19 |
+| 83 (todas) | denso | 0,749 | 0,787 | +0,038 [-0,019; +0,096]; 17 / 11 / 55 |
+| 83 | RRF | 0,780 | 0,828 | **+0,048 [+0,006; +0,096]**; 12 / 6 / 65 |
+
+- **O 4b ajuda um pouco.** Nas 83 perguntas o RRF sobe de 0,780 para 0,828 e o intervalo fica acima de zero, mas por pouco. O hit@5 quase não muda (0,892 para 0,904).
+- **O sinal não é firme.** Nas 59 perguntas o intervalo inclui zero; o que o leva para cima é o terceiro conjunto, que tem 24 perguntas e foi escrito por mim. No denso sozinho o intervalo inclui zero nos três recortes.
+- **Custo:** a indexação levou cerca de 7 horas em CPU (contra poucos minutos no 0,6b), o índice tem mais que o dobro de dimensões e cada consulta vetoriza mais devagar.
+- **Não alterei o padrão.** Adotá-lo exigiria `embedding_model` e `embedding_dimensions=2560` na configuração e reconstruir `data/index`. Fica como opção medida, para quem aceitar o custo por um ganho provável de uns 5 pontos de MRR.
+
 ## Resposta final com repetições (fase 5, parte 2)
 
 `python -m src.avaliar_respostas --scenario <id> --repeticoes 3 [--retomar]` roda cada pergunta N vezes com o modelo (Groq, `openai/gpt-oss-120b`) e mede o que muda entre as repetições. A rodada anda uma repetição de cada vez sobre todas as perguntas e grava em `logs/` (fora do Git) o texto de cada resposta. O modelo varia de uma repetição para outra, e é isso que se quer ver.
@@ -235,7 +253,7 @@ Em 17/11 conferi os números do README e desta página contra os logs de `logs/`
 
 - **São 59 perguntas (34 + 25), mais 24 de um terceiro conjunto usado só na ablação da consulta do BM25.** Uma pergunta muda uma média em 0,02 a 0,03. Diferenças pequenas não devem ser lidas como ranking.
 - **Eu escrevi as perguntas e os critérios.** Um critério por expressão regular pode marcar como relevante um trecho que não responde bem, ou deixar de fora um que responde com outras palavras. A precisão@5 é a métrica mais sensível a isso.
-- **O embedding é pequeno** (0,6 bilhão de parâmetros, em CPU). Com outro modelo de embedding o denso pode subir.
+- **O embedding padrão é pequeno** (0,6 bilhão de parâmetros, em CPU). O de 4 bilhões foi medido (seção acima): ganho pequeno, de uns 5 pontos de MRR no RRF, com intervalo que mal exclui zero.
 - **Os índices do RJ e da pesquisa foram reconstruídos** com a ingestão atual (leitura de PDF em duas colunas e cabeçalhos de página). Na pesquisa os trechos saíram idênticos (mesmo SHA-256); no RJ a base de editais foi de 1.458 para 1.456 trechos (versão v2), e as métricas de recuperação não mudaram (MRR@10: BM25 0,687, denso 0,745, RRF 0,722). A v3 dos editais do RJ tem os mesmos 13 arquivos da v2 (mesmo SHA-256 em todos), então não há o que reindexar.
 
 ## Decisões
@@ -247,3 +265,4 @@ Em 17/11 conferi os números do README e desta página contra os logs de `logs/`
 5. **Rerank: opcional e desligado, e mais barato quando ligado.** Melhora o MRR em +0,10 nas 59 perguntas na configuração completa (20 candidatos, 512 tokens, ~17 s) e em +0,084 na barata que virou o padrão (10 candidatos, 256 tokens, ~4 s). Sem evidência de ganho na resposta final, não vira o padrão do motor, mas o custo de ligá-lo caiu a um quarto.
 6. **Pool e consulta do BM25: manter.** `k_busca = 50` é folgado (de 20 a 200 dá o mesmo resultado) e a única consulta alternativa com sinal (prefixo de 5 letras, +0,033 de MRR no RRF) tem intervalo que inclui zero e foi escolhida nas mesmas perguntas; e, no terceiro conjunto, manteve a direção (+0,023) sem intervalo que exclua zero (nas 83 juntas, +0,030 [-0,021; +0,084]). Não alterei o padrão: é uma decisão a tomar sabendo que o ganho provável é pequeno e que o radical por corte de letras é grosseiro.
 7. **Falha conhecida:** o SA-10. A causa (comparar sem ter extraído os medicamentos do protocolo) foi tratada com a tabela `pcdt_medicamento`, mas a pergunta só será dada como corrigida depois de repetida com o modelo, e a lista cobre só o que o protocolo enumera.
+8. **Embedding: manter o qwen3-embedding:0.6b como padrão.** O 4b dá +0,048 de MRR no RRF nas 83 perguntas ([+0,006; +0,096]), mas o intervalo mal exclui zero, o ganho vem em boa parte do terceiro conjunto (24 perguntas) e o custo é de horas de indexação e consultas mais lentas. Fica como opção.

@@ -26,6 +26,7 @@ htmlcov/
 *.db-shm
 *.db-journal
 index/
+index_*/
 indices/
 *.faiss
 
