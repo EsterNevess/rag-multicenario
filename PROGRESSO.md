@@ -260,7 +260,7 @@ Depois dos defeitos abaixo, **as correções estão testadas por teste unitário
 | Apresentações Especializado na RENAME | **314**, confere com o SQL |
 | Telefone de quem reclamou | **recusada**, mas pela rota fora do escopo e não pela regra de dado de paciente |
 
-O que isso quer dizer: o filtro de vigência e as recusas funcionam; a comparação entre versões depende de recuperar as versões certas (SA-02), e a comparação PCDT x RENAME (SA-10) não funciona, porque exigiria extrair os medicamentos do protocolo e cruzar um a um.
+O que isso quer dizer: o filtro de vigência e as recusas funcionam; a comparação entre versões depende de recuperar as versões certas (SA-02), e a comparação PCDT x RENAME (SA-10) não funciona, porque exigiria extrair os medicamentos do protocolo e cruzar um a um. (Esta tabela é da primeira rodada; as correções e as repetições de 19/11 estão nos itens abaixo e em AVALIACAO.md.)
 
 ## Checklist dos três cenários (atualizado em 2026-11-16)
 
@@ -298,7 +298,7 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [x] Reindexar a normativa a partir da v3: desnecessário. Os 13 documentos de editais têm o mesmo SHA-256 na v2 e na v3 (conferido pelos inventários), então o índice atual, refeito com a ingestão corrente, é o mesmo que a v3 daria
 - [x] RJ-04 (contratações diretas e proporção): plano de reserva sem o modelo para quando o analisador esgota as tentativas (`palavras_de_recorte` evita responder outro recorte). Testado; falta repetir com o modelo
 - [x] RJ-04 com o modelo, 1 execução (16/11): **respondeu certo** (25.005 de 35.423 = 70,6%, conferido no banco). O analisador errou a 1ª tentativa (rota híbrida), a guarda o devolveu, e acertou na 3ª; o plano de reserva não precisou entrar, então segue sem teste com o modelo. Uma execução não mede estabilidade
-- [ ] SA-10: na única tentativa, o analisador já montou o plano certo (entidade `pcdt_medicamento` filtrada por Parkinson), mas a geração caiu no limite diário da Groq (HTTP 429); falta a resposta
+- [x] SA-10: repetido com o modelo em 19/11 (3 repetições): rota estruturada, respostas coerentes com o banco (11 medicamentos de Parkinson, todos na RENAME). Limite: a tabela inteira (119 linhas) não tem nenhum "não", então o teste não mostra que um medicamento ausente seria achado
 
 **Cenário pesquisa acadêmica**
 - [x] Normativa: 8 documentos, 453 trechos indexados
@@ -321,6 +321,9 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [x] SA-10: tabela `pcdt_medicamento` (69 linhas) com a marca de constar na RENAME, entidade e dica declaradas, testes (655 passando). Consulta conferida sem o modelo
 - [x] SA-02: afirmações "acrescenta" conferidas contra o texto das duas versões: 5 de 6 estavam também na versão anterior (ver AVALIACAO.md); regra de resposta endurecida
 - [x] Comparação de versões seção por seção em código (`src/pcdt_versoes.py`, tabela `pcdt_secao`, 88 linhas, testes com mutação conferida)
+- [x] Certificado: o cliente do modelo (`src/llm.py`) passou a usar o repositório de certificados do sistema (`truststore`), porque o Python falhava com `CERTIFICATE_VERIFY_FAILED` ao falar com a Groq neste computador; a verificação não foi desligada
+- [x] SA-02 corrigido em código e repetido com o modelo em 19/11: o analisador nunca pedia todas as versões para os documentos e, em 3 de 5 planos, filtrava `versao_nova = "2026"` (0 linhas no banco). Agora a comparação de versões traz documentos de todas as versões e da mesma doença, e igualdade em campo de texto que volta vazia é refeita como busca por trecho (8 testes novos, 851 passando). Houve HTTP 413 (pedido de 8.256 tokens contra o limite de 8.000 do plano gratuito da Groq), resolvido com um trecho por versão. 3 de 3 repetições respondem, com as versões, as datas e as contagens da tabela; falta a redação do modelo, que mistura a numeração das seções
+- [ ] SA-02: tratar o limite de 8.000 tokens por pedido de forma geral (hoje o pedido fica perto dele; um protocolo com mais versões pode voltar a dar 413) e a confusão de numeração de seções na resposta
 - [x] Casamento de seções conferido à mão nos 4 pares da artrite: 8 títulos falsos, 1 par errado e ~10 seções renomeadas corrigidos; partes que viraram várias seções continuam sem casar 1 para 1
 - [ ] SA-02: repetir com o modelo depois da regra nova e da tabela `pcdt_secao` (a pergunta deve usar a rota híbrida com a entidade `pcdt_secao`)
 - [ ] SA-10: repetir a pergunta com o modelo (3 repetições) quando o limite da Groq voltar
