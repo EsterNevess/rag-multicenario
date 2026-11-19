@@ -376,8 +376,56 @@ def evidencias_documentos(resultados: list, primeiro: int) -> list[Evidencia]:
     return saida
 
 
+def _tabela_de_comparacao_de_versoes(plano: PlanoConsulta, ctx: Contexto) -> bool:
+    """A entidade do plano compara duas versões de um documento (tem os campos versao_anterior e versao_nova)."""
+    entidade = ctx.cap.entidades.get(plano.entidade or "")
+    return entidade is not None and {"versao_anterior", "versao_nova"} <= set(entidade.campos)
+
+
+def completar_plano(plano: PlanoConsulta, ctx: Contexto) -> PlanoConsulta:
+    """Numa pergunta de comparação de versões, os documentos têm de vir de todas as versões e da mesma doença.
+
+    O analisador às vezes esquece o `vigente_em: "todas"`, e então a busca de texto traz só a versão em vigor e a resposta
+    diz que não há versão anterior. Só se aplica quando o plano já consulta a tabela de comparação e usa documentos, e nunca
+    troca um `vigente_em` que o analisador tenha escolhido (uma data, por exemplo).
+    """
+    if plano.rota not in (Rota.HIBRIDA, Rota.DOCUMENTOS) or not _tabela_de_comparacao_de_versoes(plano, ctx):
+        return plano
+    docs = dict(plano.filtros_documentos)
+    if "vigente_em" not in docs:
+        docs["vigente_em"] = "todas"
+    for chave, valor in plano.filtros.items():  # o recorte do plano estruturado (a doença) vale também para os documentos
+        base = chave.split("__")[0]
+        if base in ctx.cap.filtros_de_documentos and base not in docs and isinstance(valor, str):
+            docs[base] = valor
+    return plano if docs == plano.filtros_documentos else plano.model_copy(update={"filtros_documentos": docs})
+
+
+def relaxar_igualdades(plano: PlanoConsulta, ctx: Contexto) -> PlanoConsulta | None:
+    """Plano com a igualdade em campo de texto trocada por busca de trecho, ou None se não há o que trocar.
+
+    Serve para quando a consulta com igualdade volta vazia: o analisador escreve, por exemplo, versao_nova = "2026", mas o
+    campo guarda o nome inteiro da portaria ("Portaria Conjunta SAES/SCTIE 33/2026"). Campos com lista de valores
+    conhecidos ou com código não entram, porque o valor deles é conferido antes.
+    """
+    entidade = ctx.cap.entidades.get(plano.entidade or "")
+    if entidade is None:
+        return None
+    novos: dict[str, Any] = {}
+    mudou = False
+    for chave, valor in plano.filtros.items():
+        campo = entidade.campos.get(chave)
+        if campo is not None and campo.tipo in ("texto", "categoria") and not campo.valores and isinstance(valor, str) and f"{chave}__contem" not in plano.filtros:
+            novos[f"{chave}__contem"] = valor
+            mudou = True
+        else:
+            novos[chave] = valor
+    return plano.model_copy(update={"filtros": novos}) if mudou else None
+
+
 def coletar(plano: PlanoConsulta, pergunta: str, ctx: Contexto) -> tuple[list[Evidencia], list[str]]:
     """Executa as partes do plano. Devolve as evidências e avisos sobre o que não deu para consultar."""
+    plano = completar_plano(plano, ctx)
     evidencias: list[Evidencia] = []
     avisos: list[str] = []
     usa_agregada = bool(plano.entidade) and ctx.banco_agregado is not None and usa_base_agregada(plano, ctx.cap)
@@ -400,8 +448,17 @@ def coletar(plano: PlanoConsulta, pergunta: str, ctx: Contexto) -> tuple[list[Ev
                 r = consultar(plano, ctx.banco, ctx.cap)
             except sqlite3.Error as erro:
                 raise RuntimeError(f"A base estruturada não pôde ser consultada: {erro}") from erro
+            relaxado = relaxar_igualdades(plano, ctx) if not r.linhas else None
+            if relaxado is not None:  # a consulta exata voltou vazia: tenta de novo com busca por trecho nos campos de texto
+                try:
+                    r2 = consultar(relaxado, ctx.banco, ctx.cap)
+                except sqlite3.Error as erro:
+                    raise RuntimeError(f"A base estruturada não pôde ser consultada: {erro}") from erro
+                if r2.linhas:
+                    r = r2
+                    e.extra = {"filtro_ampliado": True}
             e.output = f"{len(r.linhas)} linhas"
-            e.extra = {"sql": r.sql, "parametros": [str(p) for p in r.parametros], "truncado": r.truncado}
+            e.extra = {**(e.extra or {}), "sql": r.sql, "parametros": [str(p) for p in r.parametros], "truncado": r.truncado}
         evidencias.append(evidencia_sql(r, len(evidencias) + 1))
     if usa_docs:
         consulta = plano.consulta_semantica or pergunta
@@ -410,7 +467,9 @@ def coletar(plano: PlanoConsulta, pergunta: str, ctx: Contexto) -> tuple[list[Ev
         indices = {b: i for b, i in ctx.indices.items() if ctx.natureza_da_base(b) in alvo}
         achados = []
         if indices and "vigente_em" not in filtros_docs and plano.filtros_documentos.get("vigente_em") == "todas":
-            achados = buscar_por_versao(indices, ctx.embedder, consulta, filtros=filtros_docs, logger=ctx.logger, reranker=ctx.reranker, n_rerank=ctx.rerank_candidatos)  # comparar versões
+            # comparar versões: um trecho de cada versão basta (a tabela de comparação já traz o detalhe), e mais que isso passa do
+            # limite de 8.000 tokens por pedido do plano gratuito da Groq quando o protocolo tem cinco versões
+            achados = buscar_por_versao(indices, ctx.embedder, consulta, filtros=filtros_docs, por_versao=1, logger=ctx.logger, reranker=ctx.reranker, n_rerank=ctx.rerank_candidatos)
         if indices and not achados:
             achados = buscar_por_bases(indices, ctx.embedder, consulta, k=5, filtros=filtros_docs, logger=ctx.logger, reranker=ctx.reranker, n_rerank=ctx.rerank_candidatos)
         evidencias += evidencias_documentos(achados, len(evidencias) + 1)
