@@ -28,6 +28,13 @@ class LLMIndisponivel(RuntimeError):
     """O modelo de geração não pôde ser usado (sem chave, sem servidor, chave recusada, limite)."""
 
 
+class PedidoGrandeDemais(LLMIndisponivel):
+    """O provedor recusou o pedido pelo tamanho (HTTP 413, por exemplo o limite de tokens por pedido do plano gratuito da Groq).
+
+    Repetir o mesmo pedido não adianta: quem chamou tem de mandar menos texto.
+    """
+
+
 @dataclass
 class Completacao:
     texto: str
@@ -97,6 +104,8 @@ class ClienteLLM:
                     return Completacao(texto, tokens_de_uso(dados.get("usage")), dados.get("model") or self.modelo)
                 if r.status_code in (401, 403):
                     raise LLMIndisponivel(f"O servidor recusou a chave de API (HTTP {r.status_code}). Confira a chave do provedor {self.provider} no .env.")
+                if r.status_code == 413:
+                    raise PedidoGrandeDemais("O pedido passou do limite de tamanho do provedor (HTTP 413).")
                 if r.status_code == 404 and self.provider == "ollama":
                     raise LLMIndisponivel(f"O Ollama não tem o modelo {self.modelo}. Baixe com: ollama pull {self.modelo}")
                 if r.status_code not in (429, 500, 502, 503, 504):

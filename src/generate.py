@@ -24,7 +24,7 @@ from src.capacidades import Capacidades, capacidades_do_cenario
 from src.fetch_corpus import Pastas, pastas_do_cenario
 from src.index import EmbeddingIndisponivel, IndiceCarregado, carregar_indice, criar_embedder
 from src.indicadores import conferir_atualizacao, ler_ficha, localizar_agregado
-from src.llm import LLM, LLMIndisponivel, criar_llm
+from src.llm import LLM, LLMIndisponivel, PedidoGrandeDemais, criar_llm
 from src.numeros import numeros_nao_conferidos
 from src.obs import PipelineLogger, Stage, Tokens
 from src.pii import mascarar_dados_pessoais
@@ -36,6 +36,7 @@ from src.schema import Fonte, Natureza, PlanoConsulta, RAGResponse, Rota
 MAX_LINHAS_NA_EVIDENCIA = 25
 MAX_CARACTERES_DO_TRECHO = 1500
 MAX_CARACTERES_DO_VALOR = 200
+AVISO_EVIDENCIA_CORTADA = "Parte da evidência foi omitida porque o pedido passava do limite de tamanho do modelo: diga que a resposta pode estar incompleta."
 TENTATIVAS_DO_ANALISADOR = 3  # o plano pode errar duas vezes em sequência (por exemplo, a rota e depois um filtro) e ainda ser corrigido
 # Palavras que mostram que a pessoa quer um número calculado (e não uma lista de registros).
 INTENCAO_AGREGADA = ("proporcao", "percentual", "porcentagem", "quantas", "quantos", "media", "medio", "total", "soma", "evolu", "por mes", "cada mes",
@@ -538,12 +539,25 @@ def gerar(pergunta: str, evidencias: list[Evidencia], avisos: list[str], ctx: Co
     texto = ""
     suspeitos: list[str] = []
     for tentativa in range(1, 3):
-        with ctx.logger.etapa(Stage.GERACAO, pergunta) as e:
-            c = ctx.llm.completar(sistema_geracao(ctx.cap), _prompt_geracao(pergunta, evidencias, avisos, correcao))
-            e.modelo, e.output = c.modelo, c.texto
-            e.tokens.somar(c.tokens)
-            ctx.tokens.somar(c.tokens)
-            e.extra = {"tentativa": tentativa, "evidencias": len(evidencias)}
+        while True:
+            try:
+                with ctx.logger.etapa(Stage.GERACAO, pergunta) as e:
+                    c = ctx.llm.completar(sistema_geracao(ctx.cap), _prompt_geracao(pergunta, evidencias, avisos, correcao))
+                    e.modelo, e.output = c.modelo, c.texto
+                    e.tokens.somar(c.tokens)
+                    ctx.tokens.somar(c.tokens)
+                    e.extra = {"tentativa": tentativa, "evidencias": len(evidencias)}
+                break
+            except PedidoGrandeDemais:
+                if len(evidencias) <= 1:
+                    raise  # não há mais o que cortar
+                # O provedor recusou o tamanho: tira a última evidência (a de menor posição na busca, ou a versão mais antiga) e avisa o modelo.
+                # A numeração das que ficam não muda, então as citações continuam valendo.
+                evidencias = evidencias[:-1]
+                validos = {e.numero for e in evidencias}
+                textos_da_evidencia = textos_da_evidencia[: len(evidencias)]
+                if AVISO_EVIDENCIA_CORTADA not in avisos:
+                    avisos = [*avisos, AVISO_EVIDENCIA_CORTADA]
         texto = c.texto.strip()
         citados = _citados(texto)
         ruins = sorted(set(citados) - validos)
