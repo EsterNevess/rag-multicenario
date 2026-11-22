@@ -286,7 +286,8 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
   - [x] Recuperação: BM25 x vetores x RRF em 34 perguntas, sem modelo, com intervalo de confiança (o RRF tem a maior média de MRR, mas não é conclusivo)
   - [x] Segundo conjunto de 25 perguntas de recuperação, escrito depois das decisões: a vantagem do k_rrf = 10 não se repetiu (+0,005) e o filtro de vigência e de doença é um efeito firme (+0,064 nas 59, sem zero no intervalo)
   - [x] Resposta final com 3 repetições na saúde (13 perguntas)
-  - [ ] Resposta final com 3 repetições no RJ (parou no RJ-04) e na pesquisa (não começou): limite diário da Groq, retomar com `python -m src.avaliar_respostas --scenario <id> --retomar`
+  - [x] Resposta final com 3 repetições no RJ: 30 de 30 execuções (22/11; a primeira passada parou no RJ-08 pelo limite diário da Groq e foi completada depois com `--retomar`). Rota e recusa estáveis nas 10 perguntas, e o RJ-04 com os três números certos nas 3 repetições; o gabarito do RJ-10 foi ajustado para "deve recusar" depois do resultado (declarado em AVALIACAO.md)
+  - [ ] Resposta final com 3 repetições na pesquisa (não começou): retomar com `python -m src.avaliar_respostas --scenario pesquisa --retomar` quando houver cota (200.000 tokens por dia no plano gratuito)
   - [x] RRF + rerank na ordenação dos trechos (59 perguntas, IC sem zero)
   - [ ] Rerank na resposta final (depende da Groq)
 

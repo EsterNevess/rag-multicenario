@@ -199,20 +199,20 @@ O que as repetições mostraram:
 
 ### Resposta final do RJ com repetições (22/11)
 
-`python -m src.avaliar_respostas --scenario rj --repeticoes 3 --retomar`, Groq (`openai/gpt-oss-120b`), 10 perguntas. **A rodada parou no limite diário do provedor (HTTP 429) na repetição 3, na pergunta RJ-08:** são **27 de 30 execuções** (as repetições 1 e 2 completas, a 3 até o RJ-07); faltam RJ-08, RJ-09 e RJ-10 da repetição 3, que se completam com `--retomar` quando a cota voltar. Tokens acumulados da rodada: 132.387 de entrada e 33.286 de saída. Não houve HTTP 413 nem 400, então o tratamento de pedido grande e a nova tentativa do analisador não foram acionados.
+`python -m src.avaliar_respostas --scenario rj --repeticoes 3 --retomar`, Groq (`openai/gpt-oss-120b`), 10 perguntas. **A primeira passada parou no limite diário do provedor (HTTP 429) na repetição 3, no RJ-08**, com 27 de 30 execuções; a própria Groq informou o motivo: 198.203 dos 200.000 tokens por dia já usados, em janela móvel de 24 h. As 3 execuções que faltavam (RJ-08, RJ-09 e RJ-10 da repetição 3) foram completadas depois com `--retomar`, quando a janela liberou tokens. **Total: 30 de 30 execuções.** Tokens acumulados da rodada: 142.342 de entrada e 34.665 de saída. Não houve HTTP 413 nem 400, então o tratamento de pedido grande e a nova tentativa do analisador não foram acionados.
 
 | Medida (RJ) | Resultado |
 |---|---|
-| Rota escolhida bate com o tipo de evidência esperado (conferência grossa) | 27 de 27 depois do ajuste do gabarito do RJ-10, abaixo (25 de 27 antes dele) |
+| Rota escolhida bate com o tipo de evidência esperado (conferência grossa) | 30 de 30 com o gabarito do RJ-10 ajustado (abaixo); no arquivo da rodada aparecem 28 de 30, porque duas repetições do RJ-10 foram avaliadas com o gabarito antigo |
 | Rota igual em todas as repetições | 10 de 10 perguntas |
 | Recusa igual em todas as repetições | 10 de 10 perguntas |
 | Número calculado em SQL (RJ-04: 25.005 contratações diretas, 35.423 no total, 70,6%) | 3 de 3 repetições com os três números |
 | Recusas (RJ-06 fraude, RJ-09 previsão do tempo, RJ-10 preço por quilo de arroz) | estáveis em todas as repetições; a de fraude pela regra de entrada, sem chamar o modelo |
 | Texto da resposta | difere entre as repetições, como é esperado: RJ-01, 02, 05 e 07 deram 3 textos distintos; RJ-03, 04 e 08 deram 2; as 3 recusas repetem o texto idêntico |
 
-- **RJ-10: a marca "rota errada" era um gabarito defasado, não uma falha do sistema.** O `respostas.json` esperava "agregada ou estruturada", mas a decisão registrada no PROGRESSO.md (a base não tem os itens de cada contratação, então o preço por quilo não se calcula) é recusar, e foi o que o sistema fez nas 2 repetições, com a razão do catálogo. Ajustei o gabarito para "deve recusar" (`esperado: []`) **depois de ver o resultado**, o que declaro aqui: a decisão de recusar é anterior (PROGRESSO.md, coleta do RJ), mas o ajuste foi feito com o resultado na mão. A hipótese original de falha (uma média por quilo fluente e errada) não ocorreu.
+- **RJ-10: a marca "rota errada" era um gabarito defasado, não uma falha do sistema.** O `respostas.json` esperava "agregada ou estruturada", mas a decisão registrada no PROGRESSO.md (a base não tem os itens de cada contratação, então o preço por quilo não se calcula) é recusar, e foi o que o sistema fez nas 3 repetições, com a razão do catálogo. Ajustei o gabarito para "deve recusar" (`esperado: []`) **depois de ver o resultado**, o que declaro aqui: a decisão de recusar é anterior (PROGRESSO.md, coleta do RJ), mas o ajuste foi feito com o resultado na mão. A hipótese original de falha (uma média por quilo fluente e errada) não ocorreu.
 - **O que li nas respostas (só li, não conferi cada afirmação contra os dados):** o RJ-01 (modalidades da Lei 14.133) deu as cinco do art. 28 (pregão, concorrência, concurso, leilão e diálogo competitivo) nas 3 repetições. O RJ-02 (valor-limite da dispensa e decreto estadual) disse nas 3 que o valor numérico não consta na evidência, sem inventar, e citou o Decreto Estadual 48.820/2023. O RJ-03 e o RJ-05 listam só as 20 primeiras linhas e avisam que há mais. **O RJ-07 (microempresa e limpeza) muda de substância entre as repetições**: uma diz que não há cota exclusiva, outra que o benefício "só é obrigatório quando o edital reserva participação exclusiva"; não verifiquei qual está certa, e as contratações de limpeza citadas são coerentes entre si.
-- **Limites:** 3 repetições por pergunta, a última incompleta; conferência de rota grossa; sem juiz automático de qualidade; um número conferível por SQL (RJ-04). O arquivo completo fica em `logs/avaliacao-respostas-rj.json`, fora do Git.
+- **Limites:** 3 repetições por pergunta; conferência de rota grossa; sem juiz automático de qualidade; um número conferível por SQL (RJ-04). O arquivo completo fica em `logs/avaliacao-respostas-rj.json`, fora do Git.
 
 ## Redação de dados pessoais em texto novo
 
