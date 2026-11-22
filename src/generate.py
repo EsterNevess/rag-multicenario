@@ -24,7 +24,7 @@ from src.capacidades import Capacidades, capacidades_do_cenario
 from src.fetch_corpus import Pastas, pastas_do_cenario
 from src.index import EmbeddingIndisponivel, IndiceCarregado, carregar_indice, criar_embedder
 from src.indicadores import conferir_atualizacao, ler_ficha, localizar_agregado
-from src.llm import LLM, LLMIndisponivel, PedidoGrandeDemais, criar_llm
+from src.llm import LLM, LLMIndisponivel, PedidoGrandeDemais, PedidoRecusado, criar_llm
 from src.numeros import numeros_nao_conferidos
 from src.obs import PipelineLogger, Stage, Tokens
 from src.pii import mascarar_dados_pessoais
@@ -214,12 +214,17 @@ def analisar(pergunta: str, ctx: Contexto, anterior: TurnoAnterior | None = None
     usuario = base
     ultimo = ""
     for tentativa in range(1, TENTATIVAS_DO_ANALISADOR + 1):
-        with ctx.logger.etapa(Stage.QUERY_ANALYSIS, pergunta) as e:
-            c = ctx.llm.completar(sistema, usuario, json=True)
-            e.modelo, e.output = c.modelo, c.texto
-            e.tokens.somar(c.tokens)
-            ctx.tokens.somar(c.tokens)
-            e.extra = {"tentativa": tentativa}
+        try:
+            with ctx.logger.etapa(Stage.QUERY_ANALYSIS, pergunta) as e:
+                c = ctx.llm.completar(sistema, usuario, json=True)
+                e.modelo, e.output = c.modelo, c.texto
+                e.tokens.somar(c.tokens)
+                ctx.tokens.somar(c.tokens)
+                e.extra = {"tentativa": tentativa}
+        except PedidoRecusado as erro:  # o servidor não aceitou (na Groq, JSON inválido no modo JSON): pede de novo, sem derrubar a pergunta
+            ultimo = str(erro)
+            usuario = f"{base}\n\nO servidor recusou a sua resposta anterior (provavelmente por JSON inválido). Responda só com o JSON do plano."
+            continue
         try:
             plano = PlanoConsulta.model_validate(_extrair_json(c.texto))
             validar_plano(plano, ctx.cap)

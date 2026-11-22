@@ -28,6 +28,10 @@ class LLMIndisponivel(RuntimeError):
     """O modelo de geração não pôde ser usado (sem chave, sem servidor, chave recusada, limite)."""
 
 
+class PedidoRecusado(LLMIndisponivel):
+    """O provedor devolveu HTTP 400. No modo JSON da Groq isso acontece quando o modelo não gera um JSON válido, e uma nova tentativa costuma passar."""
+
+
 class PedidoGrandeDemais(LLMIndisponivel):
     """O provedor recusou o pedido pelo tamanho (HTTP 413, por exemplo o limite de tokens por pedido do plano gratuito da Groq).
 
@@ -104,6 +108,8 @@ class ClienteLLM:
                     return Completacao(texto, tokens_de_uso(dados.get("usage")), dados.get("model") or self.modelo)
                 if r.status_code in (401, 403):
                     raise LLMIndisponivel(f"O servidor recusou a chave de API (HTTP {r.status_code}). Confira a chave do provedor {self.provider} no .env.")
+                if r.status_code == 400:
+                    raise PedidoRecusado("O servidor do modelo recusou o pedido (HTTP 400).")
                 if r.status_code == 413:
                     raise PedidoGrandeDemais("O pedido passou do limite de tamanho do provedor (HTTP 413).")
                 if r.status_code == 404 and self.provider == "ollama":
