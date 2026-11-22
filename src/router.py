@@ -290,9 +290,11 @@ def _montar_filtros(entidade: Entidade, filtros: dict[str, Any]) -> tuple[list[s
         nome, sufixo = _separar_filtro(chave)
         campo = entidade.campos[nome]
         if sufixo == "__contem":
-            clausulas.append(f"sem_acento({campo.sql}) LIKE ? ESCAPE '\\'")
-            parametros.append(f"%{_escapar_like(_sem_acento(str(valor)))}%")
-            partes.append(f"{nome} contém «{valor}»")
+            # "A|B" vale como "A ou B": o analisador escreve assim para várias alternativas (FAPERJ|CNPq), e como texto literal nada casaria
+            termos = [t.strip() for t in str(valor).split("|") if t.strip()] or [str(valor)]
+            clausulas.append("(" + " OR ".join(f"sem_acento({campo.sql}) LIKE ? ESCAPE '\\'" for _ in termos) + ")")
+            parametros.extend(f"%{_escapar_like(_sem_acento(t))}%" for t in termos)
+            partes.append(f"{nome} contém «{' ou '.join(termos)}»")
         elif sufixo:
             clausulas.append(f"{campo.sql} {SUFIXOS[sufixo]} ?")
             parametros.append(valor)

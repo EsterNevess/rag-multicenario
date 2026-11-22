@@ -42,6 +42,13 @@ TENTATIVAS_DO_ANALISADOR = 3  # o plano pode errar duas vezes em sequência (por
 INTENCAO_AGREGADA = ("proporcao", "percentual", "porcentagem", "quantas", "quantos", "media", "medio", "total", "soma", "evolu", "por mes", "cada mes",
                      "por ano", "mensal", "quanto", "qual a parte", "que parte")
 _CITACAO = re.compile(r"\[(\d+(?:\s*,\s*\d+)*)\]")
+# O modelo às vezes escreve a citação com colchetes largos, 【1】 ou 【1†L10-L12】, e a conferência não a reconheceria (resposta certa recusada).
+_CITACAO_LARGA = re.compile("[【［]\\s*(\\d+(?:\\s*,\\s*\\d+)*)\\s*(?:[†‡][^】］]*)?[】］]")
+
+
+def normalizar_citacoes(texto: str) -> str:
+    """Troca 【n】, 【n†linhas】 e ［n］ por [n], o formato que o resto do pipeline confere."""
+    return _CITACAO_LARGA.sub(lambda m: f"[{m.group(1)}]", texto)
 
 
 class PerguntaNaoEntendida(ValueError):
@@ -558,7 +565,7 @@ def gerar(pergunta: str, evidencias: list[Evidencia], avisos: list[str], ctx: Co
                 textos_da_evidencia = textos_da_evidencia[: len(evidencias)]
                 if AVISO_EVIDENCIA_CORTADA not in avisos:
                     avisos = [*avisos, AVISO_EVIDENCIA_CORTADA]
-        texto = c.texto.strip()
+        texto = normalizar_citacoes(c.texto).strip()
         citados = _citados(texto)
         ruins = sorted(set(citados) - validos)
         # Os números se conferem no texto já mascarado: o aviso nunca repete um CPF ou telefone que a resposta final esconde.
