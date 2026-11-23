@@ -1,6 +1,6 @@
 # Segurança: o que foi verificado
 
-Verificações feitas em 17/11/2026, o que cada uma achou e o que **não** cobre. Não é uma auditoria de segurança nem um teste de invasão.
+Verificações feitas em 17/11/2026 (a varredura do histórico foi repetida em 23/11/2026, abaixo), o que cada uma achou e o que **não** cobre. Não é uma auditoria de segurança nem um teste de invasão.
 
 ## Segredos e dados pessoais no repositório
 
@@ -11,6 +11,22 @@ Verificações feitas em 17/11/2026, o que cada uma achou e o que **não** cobre
 | `detect-secrets` 1.5.0 nos 131 arquivos rastreados | 656 alertas, todos falsos: 654 são SHA-256 de arquivos (nos inventários e no manifesto do RJ) e 2 são as chaves falsas de teste. |
 | `detect-secrets` no histórico inteiro (diff de todos os commits) | 569 alertas, **todos** de linhas com um SHA-256 de 64 hexadecimais. Nenhuma chave, token, senha ou chave privada. |
 | Chave da Groq | Existe só no `.env` local, que o Git ignora. Nunca foi impressa nem commitada. |
+
+### Varredura do histórico repetida em 23/11/2026
+
+Refeita sobre o histórico inteiro de então (**110 commits**, 30.032 linhas adicionadas, 145 arquivos distintos já versionados), antes de o repositório ser tornado público.
+
+| Verificação | Resultado |
+|---|---|
+| Expressões regulares sobre as linhas adicionadas de todos os commits, em lotes de 10 commits (chaves `gsk_`, `sk-`, `ghp_`, `AKIA`, chaves privadas, `xox`, `AIza`, `hf_`, JWT, `Bearer`, atribuições de senha e token, CPF, telefone) | Nenhum segredo real. 50 acertos, todos de teste: `sk-segredo-de-teste`, `gsk-teste`, `chave-de-teste`, nomes de variável como `SecretStr`, senhas plantadas de propósito nos dados sintéticos e nos testes de redação (`Trocar@2026`, `Painel#8841`), e CPFs, telefones e e-mails fictícios. |
+| **Controle:** 6 segredos falsos plantados num último lote (`gsk_`, `sk-`, `ghp_`, `AKIA`, chave privada, senha) | Os 6 foram achados. |
+| Valor exato da chave da Groq do `.env` procurado em todo o histórico (sem ser impresso) | Não aparece em nenhum commit. |
+| Arquivos já versionados com cara de segredo ou de dado local (`.env`, bancos, índices, logs, pesos de modelos) | Nenhum. |
+
+- Os 5 CPFs distintos são números de exemplo conhecidos de validadores (`123.456.789-09`, `111.444.777-35`, `987.654.321-00` e duas sequências inválidas). Três passam no dígito verificador, o que é normal para esses exemplos; não dá para provar que nenhum pertence a uma pessoa real.
+- Os e-mails de gmail, outlook e yahoo, com nomes fictícios, e os telefones estão em testes e nos arquivos de avaliação de redação (`redacao_holdout*.json`). `licitacao@saude.rj.gov.br` e `atendimento@faperj.br` aparecem só em `tests/unit/test_pii.py`.
+- **Limites desta repetição:** só expressões regulares, porque o `detect-secrets` não estava instalado no ambiente nesse dia (a de 17/11 o usou); olhou o **conteúdo** dos commits e não os metadados de autoria (veja o e-mail da residência abaixo); binários e objetos inalcançáveis não são lidos como texto (o pacote do repositório tem uns 478 KiB). Vale o cuidado descrito logo abaixo: o resultado "limpo" só tem valor porque o controle foi achado.
+- Se o histórico mudar até a publicação, a varredura precisa ser refeita.
 
 **Cuidado ao repetir a varredura do histórico.** O `detect-secrets` falhou em silêncio num arquivo único de 2 MB (0 alertas, mesmo com segredos plantados nele). A varredura só vale se o diff for dividido em pedaços pequenos (2.000 linhas) e se houver um **controle**: planta-se uma chave falsa no último pedaço e confere-se que ela é achada. Foi assim que se fez aqui.
 
