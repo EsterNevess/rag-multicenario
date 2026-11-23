@@ -342,6 +342,9 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [x] `DADOS_E_LICENCAS.md`: fontes, modelos e dependências com licença (lida nos metadados e nos registros dos modelos), a nota de uso não comercial que a Conitec traz no Relatório 551, o aviso do PyMuPDF (AGPL-3.0) e o que não foi conferido
 - [x] Licença MIT e README com o estado real, as limitações conhecidas e o que ainda não existe (então: rerank e `app/`, depois implementados)
 - [x] Itens de logística interna retirados do checklist
+- [x] Varredura do histórico repetida em 23/11 (111 commits): expressões regulares e `detect-secrets` 1.5.0 (572 alertas = 569 SHA-256 + os 3 do controle; arquivos versionados: 656 = 654 SHA-256 + 2 chaves falsas de teste), com controle plantado e o valor exato da chave da Groq procurado; nada real. Registrada no `SEGURANCA.md`
+- [ ] Repetir essa varredura, com controle, imediatamente antes de tornar o repositório público (o histórico já ganhou commits depois dela)
+- [ ] Conferir o CI verde no GitHub Actions e os diagramas Mermaid no GitHub (ação da Ester)
 - [ ] Tornar o `rag-multicenario` público (ação da Ester nas configurações do GitHub; conferir antes como o README aparece)
 - [x] Decisão (Ester): não haverá vídeo de demonstração. A demonstração é o roteiro escrito em [DEMO.md](DEMO.md), com respostas reais; todas as perguntas têm resposta capturada (23/11: as do RJ e da pesquisa vêm das rodadas de repetição, copiadas dos arquivos da rodada, e a do PE-04 é de uma execução avulsa depois da correção); o roteiro marca o que não foi conferido e o que não deve ser usado na demonstração
 - [ ] Deck opcional de posicionamento
