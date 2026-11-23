@@ -343,7 +343,7 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [x] Licença MIT e README com o estado real, as limitações conhecidas e o que ainda não existe (então: rerank e `app/`, depois implementados)
 - [x] Itens de logística interna retirados do checklist
 - [ ] Tornar o `rag-multicenario` público (ação da Ester nas configurações do GitHub; conferir antes como o README aparece)
-- [x] Decisão (Ester): não haverá vídeo de demonstração. A demonstração é o roteiro escrito em [DEMO.md](DEMO.md), com respostas reais; faltam as respostas das perguntas marcadas "a capturar" (limite da Groq)
+- [x] Decisão (Ester): não haverá vídeo de demonstração. A demonstração é o roteiro escrito em [DEMO.md](DEMO.md), com respostas reais; todas as perguntas têm resposta capturada (23/11: as do RJ e da pesquisa vêm das rodadas de repetição, copiadas dos arquivos da rodada, e a do PE-04 é de uma execução avulsa depois da correção); o roteiro marca o que não foi conferido e o que não deve ser usado na demonstração
 - [ ] Deck opcional de posicionamento
 
 ## Fase 0: desenho (concluída)
