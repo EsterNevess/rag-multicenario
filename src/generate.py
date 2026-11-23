@@ -414,14 +414,16 @@ def completar_plano(plano: PlanoConsulta, ctx: Contexto) -> PlanoConsulta:
     return plano if docs == plano.filtros_documentos else plano.model_copy(update={"filtros_documentos": docs})
 
 
-def relaxar_igualdades(plano: PlanoConsulta, ctx: Contexto) -> PlanoConsulta | None:
+def relaxar_igualdades(plano: PlanoConsulta, ctx: Contexto, agregada: bool = False) -> PlanoConsulta | None:
     """Plano com a igualdade em campo de texto trocada por busca de trecho, ou None se não há o que trocar.
 
     Serve para quando a consulta com igualdade volta vazia: o analisador escreve, por exemplo, versao_nova = "2026", mas o
     campo guarda o nome inteiro da portaria ("Portaria Conjunta SAES/SCTIE 33/2026"). Campos com lista de valores
-    conhecidos ou com código não entram, porque o valor deles é conferido antes.
+    conhecidos ou com código não entram, porque o valor deles é conferido antes. Com `agregada`, a entidade é um indicador da
+    base agregada (por exemplo, o financiador "Carlos Chagas Filho" no lugar do nome inteiro).
     """
-    entidade = ctx.cap.entidades.get(plano.entidade or "")
+    entidades = ctx.cap.entidades_agregadas() if agregada else ctx.cap.entidades
+    entidade = entidades.get(plano.entidade or "")
     if entidade is None:
         return None
     novos: dict[str, Any] = {}
@@ -450,10 +452,15 @@ def coletar(plano: PlanoConsulta, pergunta: str, ctx: Contexto) -> tuple[list[Ev
             try:
                 r = consultar(plano, ctx.banco_agregado, ctx.cap)
                 ficha = ler_ficha(ctx.banco_agregado, plano.entidade)
+                relaxado = relaxar_igualdades(plano, ctx, agregada=True) if not r.linhas else None
+                r2 = consultar(relaxado, ctx.banco_agregado, ctx.cap) if relaxado is not None else None
             except sqlite3.Error as erro:
                 raise RuntimeError(f"A base agregada não pôde ser consultada: {erro}") from erro
+            ampliado = False
+            if r2 is not None and r2.linhas:  # a consulta exata voltou vazia: usa a de busca por trecho, se ela achou linhas
+                r, ampliado = r2, True
             e.output = f"{len(r.linhas)} linhas (indicador {plano.entidade})"
-            e.extra = {"sql": r.sql, "parametros": [str(p) for p in r.parametros], "indicador": plano.entidade}
+            e.extra = {"sql": r.sql, "parametros": [str(p) for p in r.parametros], "indicador": plano.entidade, **({"filtro_ampliado": True} if ampliado else {})}
         evidencias.append(evidencia_agregada(r, ficha, len(evidencias) + 1))
     if usa_sql:
         with ctx.logger.etapa(Stage.ROTEAMENTO, plano.model_dump_json()) as e:
