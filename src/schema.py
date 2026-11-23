@@ -98,6 +98,8 @@ class PlanoConsulta(BaseModel):
     agrupar_por: list[str] = Field(default_factory=list)
     limite: int | None = Field(default=None, ge=1, le=100)
     consulta_semantica: str | None = None
+    # A pergunta se refere aos registros que a resposta anterior listou ("desses", "entre eles"). Só vale com memória de conversa.
+    do_resultado_anterior: bool = False
 
     @model_validator(mode="before")
     @classmethod
@@ -140,6 +142,18 @@ class Fonte(BaseModel):
     rotulo: str | None = None
 
 
+class ChavesDoResultado(BaseModel):
+    """Os identificadores (vindos do banco, não do texto da resposta) das linhas que uma consulta devolveu.
+
+    Servem à pergunta seguinte que diz "desses": o motor restringe a nova consulta a estes valores.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    tipo: str = Field(min_length=1)  # de que entidade são as chaves (por exemplo, "trabalho")
+    valores: tuple[str, ...] = ()
+
+
 class RAGResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -153,6 +167,7 @@ class RAGResponse(BaseModel):
     plano: PlanoConsulta | None = None  # o plano que o analisador montou (só existe depois dessa etapa); a interface o mostra
     # Números da resposta que não aparecem na evidência nem na pergunta, depois de uma tentativa de correção. A resposta é mantida: quem lê decide.
     numeros_nao_conferidos: list[str] = Field(default_factory=list)
+    chaves_do_resultado: ChavesDoResultado | None = None  # as chaves das linhas listadas, para a próxima pergunta ("desses")
 
     @model_validator(mode="after")
     def _recusa_nao_cita_fontes(self) -> RAGResponse:

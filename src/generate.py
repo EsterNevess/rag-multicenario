@@ -31,7 +31,7 @@ from src.pii import mascarar_dados_pessoais
 from src.rerank import RerankerIndisponivel, carregar_reranker
 from src.retrieve import buscar_por_bases, buscar_por_versao
 from src.router import PlanoInvalido, ResultadoSQL, _sem_acento, avaliar_pergunta, avaliar_resposta, consultar, localizar_banco, usa_base_agregada, validar_plano
-from src.schema import Fonte, Natureza, PlanoConsulta, RAGResponse, Rota
+from src.schema import ChavesDoResultado, Fonte, Natureza, PlanoConsulta, RAGResponse, Rota
 
 MAX_LINHAS_NA_EVIDENCIA = 25
 MAX_CARACTERES_DO_TRECHO = 1500
@@ -100,6 +100,7 @@ class Evidencia:
     base_id: str
     rotulo: str
     texto: str
+    chaves: ChavesDoResultado | None = None  # as chaves das linhas listadas, quando a evidência é uma listagem com chave
 
 
 # --------------------------------------------------------------------------- analisador
@@ -165,7 +166,8 @@ def montar_prompt_analise(ctx: Contexto) -> str:
     linhas += [
         "",
         f"Formato (somente JSON, sem comentários): {{\"rota\": ..., \"naturezas\": [{'|'.join(chr(34) + n.value + chr(34) for n in ctx.naturezas) or chr(34) + chr(34)}], \"entidade\": ou null,",
-        "\"filtros\": {}, " + ("\"filtros_documentos\": {}, " if ctx.cap.filtros_de_documentos else "") + "\"operacoes\": [], \"campo_agregacao\": ou null, \"agrupar_por\": [], \"limite\": ou null, \"consulta_semantica\": ou null}",
+        "\"filtros\": {}, " + ("\"filtros_documentos\": {}, " if ctx.cap.filtros_de_documentos else "") + "\"operacoes\": [], \"campo_agregacao\": ou null, \"agrupar_por\": [], \"limite\": ou null, \"consulta_semantica\": ou null, \"do_resultado_anterior\": false}",
+        "\"do_resultado_anterior\" só vale numa conversa: true quando a pergunta fala dos registros que a resposta anterior listou (\"desses\", \"entre eles\").",
         "Nunca escreva SQL. Use só os campos listados. Se a pergunta não puder ser respondida com essas rotas, use \"catalogo\".",
     ]
     return "\n".join(linhas)
@@ -191,18 +193,25 @@ class TurnoAnterior:
 
     pergunta: str
     plano: PlanoConsulta
+    # As chaves (do banco) das linhas que o turno anterior listou. Entram como identificadores, nunca como texto de resposta.
+    chaves: ChavesDoResultado | None = None
 
 
 def mensagem_do_analisador(pergunta: str, anterior: TurnoAnterior | None = None) -> str:
     """O que o analisador lê: a pergunta, ou a pergunta com o turno anterior como contexto (a LLM decide se depende dele)."""
     if anterior is None:
         return pergunta
-    plano = {k: v for k, v in anterior.plano.model_dump(mode="json").items() if v not in (None, [], {})}
+    plano = {k: v for k, v in anterior.plano.model_dump(mode="json").items() if v not in (None, [], {}, False)}
+    lista = ""
+    if anterior.chaves and anterior.chaves.valores:
+        lista = (f"A resposta anterior listou {len(anterior.chaves.valores)} registro(s) de {anterior.chaves.tipo}. Se a pergunta atual se refere a eles "
+                 "(\"desses\", \"entre eles\"), marque \"do_resultado_anterior\": true: o sistema limita a consulta a esses registros, "
+                 "então nesse caso não repita os filtros do plano anterior nem escreva identificadores.\n")
     return (
         "Conversa anterior. Use-a SÓ se a pergunta atual depender dela (por exemplo \"desses\", \"e em 2025?\", \"e nos municípios?\"): "
         "nesse caso, reaproveite os filtros do plano anterior e acrescente ou troque o que a pergunta atual pedir. "
         "Se a pergunta atual for independente, ignore esta seção.\n"
-        f"Pergunta anterior: {anterior.pergunta}\nPlano anterior: {json.dumps(plano, ensure_ascii=False)}\n\n"
+        f"Pergunta anterior: {anterior.pergunta}\nPlano anterior: {json.dumps(plano, ensure_ascii=False)}\n{lista}\n"
         f"Pergunta atual: {pergunta}"
     )
 
@@ -438,7 +447,31 @@ def relaxar_igualdades(plano: PlanoConsulta, ctx: Contexto, agregada: bool = Fal
     return plano.model_copy(update={"filtros": novos}) if mudou else None
 
 
-def coletar(plano: PlanoConsulta, pergunta: str, ctx: Contexto) -> tuple[list[Evidencia], list[str]]:
+def restricao_do_turno(plano: PlanoConsulta, ctx: Contexto, anterior: TurnoAnterior | None, avisos: list[str]) -> tuple[str, list[str]] | None:
+    """(campo, chaves) que limitam a consulta ao resultado do turno anterior, quando o plano diz "desses" e há como ligar as tabelas."""
+    if not plano.do_resultado_anterior or not plano.entidade:
+        return None
+    if anterior is None or anterior.chaves is None or not anterior.chaves.valores:
+        avisos.append("A pergunta se refere ao resultado anterior, mas não há uma listagem anterior com identificadores; a consulta NÃO foi limitada a ele.")
+        return None
+    campo = ctx.cap.campo_de_ligacao(plano.entidade, anterior.chaves.tipo)
+    if campo is None:
+        avisos.append(f"A pergunta se refere ao resultado anterior, mas a tabela {plano.entidade} não se liga a ele; a consulta NÃO foi limitada a ele.")
+        return None
+    return campo, list(anterior.chaves.valores)
+
+
+def chaves_da_listagem(r: ResultadoSQL, plano: PlanoConsulta, ctx: Contexto) -> ChavesDoResultado | None:
+    """As chaves das linhas de uma listagem (sem contar, somar ou agrupar), na ordem em que apareceram e sem repetir."""
+    ent = ctx.cap.entidades.get(plano.entidade or "")
+    tipo = ctx.cap.tipo_da_chave(plano.entidade or "")
+    if ent is None or tipo is None or ent.chave is None or plano.agrupar_por or [o for o in plano.operacoes if o != "listar"]:
+        return None
+    vistos = dict.fromkeys(str(l[ent.chave]) for l in r.linhas if l.get(ent.chave) is not None)
+    return ChavesDoResultado(tipo=tipo, valores=tuple(vistos)) if vistos else None
+
+
+def coletar(plano: PlanoConsulta, pergunta: str, ctx: Contexto, anterior: TurnoAnterior | None = None) -> tuple[list[Evidencia], list[str]]:
     """Executa as partes do plano. Devolve as evidências e avisos sobre o que não deu para consultar."""
     plano = completar_plano(plano, ctx)
     evidencias: list[Evidencia] = []
@@ -463,15 +496,16 @@ def coletar(plano: PlanoConsulta, pergunta: str, ctx: Contexto) -> tuple[list[Ev
             e.extra = {"sql": r.sql, "parametros": [str(p) for p in r.parametros], "indicador": plano.entidade, **({"filtro_ampliado": True} if ampliado else {})}
         evidencias.append(evidencia_agregada(r, ficha, len(evidencias) + 1))
     if usa_sql:
+        restricao = restricao_do_turno(plano, ctx, anterior, avisos)
         with ctx.logger.etapa(Stage.ROTEAMENTO, plano.model_dump_json()) as e:
             try:
-                r = consultar(plano, ctx.banco, ctx.cap)
+                r = consultar(plano, ctx.banco, ctx.cap, restricao=restricao)
             except sqlite3.Error as erro:
                 raise RuntimeError(f"A base estruturada não pôde ser consultada: {erro}") from erro
             relaxado = relaxar_igualdades(plano, ctx) if not r.linhas else None
             if relaxado is not None:  # a consulta exata voltou vazia: tenta de novo com busca por trecho nos campos de texto
                 try:
-                    r2 = consultar(relaxado, ctx.banco, ctx.cap)
+                    r2 = consultar(relaxado, ctx.banco, ctx.cap, restricao=restricao)
                 except sqlite3.Error as erro:
                     raise RuntimeError(f"A base estruturada não pôde ser consultada: {erro}") from erro
                 if r2.linhas:
@@ -479,7 +513,9 @@ def coletar(plano: PlanoConsulta, pergunta: str, ctx: Contexto) -> tuple[list[Ev
                     e.extra = {"filtro_ampliado": True}
             e.output = f"{len(r.linhas)} linhas"
             e.extra = {**(e.extra or {}), "sql": r.sql, "parametros": [str(p) for p in r.parametros], "truncado": r.truncado}
-        evidencias.append(evidencia_sql(r, len(evidencias) + 1))
+        evidencia = evidencia_sql(r, len(evidencias) + 1)
+        evidencia.chaves = chaves_da_listagem(r, plano, ctx)
+        evidencias.append(evidencia)
     if usa_docs:
         consulta = plano.consulta_semantica or pergunta
         filtros_docs = filtros_de_documentos(plano, ctx)
@@ -651,7 +687,7 @@ def responder(pergunta: str, ctx: Contexto, anterior: TurnoAnterior | None = Non
     if plano.rota is Rota.CATALOGO:
         return RAGResponse(answer=_resposta_catalogo(ctx), rotas=[Rota.CATALOGO], cobertura=ctx.cobertura, trace_id=ctx.logger.query_id, plano=plano)
 
-    evidencias, avisos = coletar(plano, pergunta, ctx)
+    evidencias, avisos = coletar(plano, pergunta, ctx, anterior)
     if not evidencias:
         return _recusa("sem_evidencia", "Não encontrei nas bases disponíveis informação para responder a essa pergunta.", ctx, [plano.rota], plano)
 
@@ -672,6 +708,7 @@ def responder(pergunta: str, ctx: Contexto, anterior: TurnoAnterior | None = Non
         trace_id=ctx.logger.query_id,
         plano=plano,
         numeros_nao_conferidos=nao_conferidos,
+        chaves_do_resultado=next((e.chaves for e in evidencias if e.chaves), None),
     )
 
 
@@ -793,7 +830,7 @@ def main(argv: list[str] | None = None) -> int:
         except (LLMIndisponivel, EmbeddingIndisponivel, RuntimeError) as erro:
             print(f"Erro: {erro}", file=sys.stderr)
             return 3
-        anterior = TurnoAnterior(texto, r.plano) if (com_contexto is not None and not r.is_refusal and r.plano is not None) else None
+        anterior = TurnoAnterior(texto, r.plano, r.chaves_do_resultado) if (com_contexto is not None and not r.is_refusal and r.plano is not None) else None
         print(r.model_dump_json(indent=2) if args.json else formatar(r))
         return 0
 

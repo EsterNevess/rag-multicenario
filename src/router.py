@@ -17,6 +17,7 @@ import re
 import sqlite3
 import time
 import unicodedata
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -320,8 +321,15 @@ _FUNCOES = {"somar": "SUM", "media": "AVG", "minimo": "MIN", "maximo": "MAX"}
 _ROTULOS = {"somar": "soma", "media": "media", "minimo": "minimo", "maximo": "maximo"}
 
 
-def consultar(plano: PlanoConsulta, banco: Path, cap: Capacidades | None = None) -> ResultadoSQL:
-    """Executa a parte estruturada do plano. Valida antes; só lê."""
+MAX_CHAVES_DA_RESTRICAO = 100
+
+
+def consultar(plano: PlanoConsulta, banco: Path, cap: Capacidades | None = None, restricao: tuple[str, Sequence[Any]] | None = None) -> ResultadoSQL:
+    """Executa a parte estruturada do plano. Valida antes; só lê.
+
+    `restricao` é (campo, valores): limita a consulta às linhas cujo campo está entre os valores. Quem a monta é o motor,
+    a partir do resultado do turno anterior ("desses"); a LLM não escreve valores de chave.
+    """
     cap = _capacidades(cap)
     validar_plano(plano, cap)
     if plano.entidade is None:
@@ -329,6 +337,13 @@ def consultar(plano: PlanoConsulta, banco: Path, cap: Capacidades | None = None)
     entidade = _mapa_de_entidades(plano, cap)[plano.entidade]
     limite = plano.limite or LIMITE_PADRAO
     clausulas, parametros, partes = _montar_filtros(entidade, plano.filtros)
+    if restricao is not None:
+        campo_chave, valores = restricao[0], list(restricao[1])[:MAX_CHAVES_DA_RESTRICAO]
+        if campo_chave not in entidade.campos:
+            raise PlanoInvalido([f"restrição em campo desconhecido: {campo_chave!r}"])
+        clausulas.append(f"{entidade.campos[campo_chave].sql} IN ({', '.join('?' for _ in valores) or 'NULL'})")
+        parametros.extend(valores)
+        partes.append(f"{campo_chave} entre os {len(valores)} do resultado anterior")
     onde = f" WHERE {' AND '.join(clausulas)}" if clausulas else ""
     operacoes = [o for o in plano.operacoes if o != "listar"]
     campo_agr = entidade.campos[plano.campo_agregacao] if plano.campo_agregacao else None

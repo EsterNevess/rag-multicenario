@@ -31,8 +31,10 @@ def test_com_turno_anterior_a_mensagem_traz_a_pergunta_e_o_plano_sem_campos_vazi
     assert "ignore esta seção" in m  # a LLM decide se a pergunta depende do turno anterior
 
 
-def test_o_turno_anterior_so_tem_pergunta_e_plano_nao_o_texto_da_resposta():
-    assert set(TurnoAnterior.__dataclass_fields__) == {"pergunta", "plano"}
+def test_o_turno_anterior_so_tem_pergunta_plano_e_chaves_nao_o_texto_da_resposta():
+    # as chaves são identificadores vindos do banco (tipo e valores), nunca trechos de documento nem o texto escrito pela LLM
+    assert set(TurnoAnterior.__dataclass_fields__) == {"pergunta", "plano", "chaves"}
+    assert set(TurnoAnterior.__dataclass_fields__["chaves"].type.replace(" | None", "").split()) == {"ChavesDoResultado"}
 
 
 def test_responder_manda_o_contexto_ao_analisador_e_usa_o_plano_que_ele_devolve(tmp_path, banco):

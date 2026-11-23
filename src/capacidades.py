@@ -39,6 +39,7 @@ class Campo:
     valores: dict[str, str] | None = None  # campo codificado: código -> rótulo (por exemplo, E -> Estadual)
     listar_valores: bool = False  # mostrar ao analisador os valores que existem no banco (campos de poucos valores)
     apelidos: dict[str, str] | None = None  # apelido ou sigla -> nome oficial que está no banco (FAPERJ -> Fundação Carlos Chagas Filho...)
+    refere: str | None = None  # este campo guarda a chave de outra entidade (trabalho_id refere "trabalho"): liga "desses" ao resultado anterior
 
     @property
     def sql(self) -> str:
@@ -77,6 +78,7 @@ class Entidade:
     campos: dict[str, Campo]
     exibir: tuple[str, ...]
     ordem_padrao: str
+    chave: str | None = None  # o campo que identifica cada linha (id do trabalho); quem a memória de conversa guarda
 
 
 @dataclass(frozen=True)
@@ -123,9 +125,25 @@ class Capacidades:
 
         return entidades_agregadas(self.catalogo_de_indicadores, self)
 
+    def tipo_da_chave(self, entidade: str) -> str | None:
+        """De que entidade é a chave que identifica as linhas de `entidade`: a de `trabalho_id` é "trabalho", a de `id` é a própria."""
+        ent = self.entidades.get(entidade)
+        if ent is None or ent.chave is None:
+            return None
+        return ent.campos[ent.chave].refere or entidade
+
+    def campo_de_ligacao(self, destino: str, tipo_da_chave: str) -> str | None:
+        """O campo da entidade `destino` que guarda chaves do tipo dado (por exemplo, "trabalho"); None se ela não se liga a esse tipo."""
+        alvo = self.entidades.get(destino)
+        if alvo is None:
+            return None
+        if self.tipo_da_chave(destino) == tipo_da_chave:
+            return alvo.chave
+        return next((c.nome for c in alvo.campos.values() if c.refere == tipo_da_chave), None)
+
 
 def _campo(bruto: dict[str, Any], onde: str) -> Campo:
-    desconhecidas = set(bruto) - {"nome", "tipo", "filtravel", "agregavel", "agrupavel", "expr", "valores", "listar_valores", "apelidos"}
+    desconhecidas = set(bruto) - {"nome", "tipo", "filtravel", "agregavel", "agrupavel", "expr", "valores", "listar_valores", "apelidos", "refere"}
     if desconhecidas:
         raise CapacidadesInvalidas(f"{onde}: chaves desconhecidas {sorted(desconhecidas)}")
     nome, tipo = bruto.get("nome"), bruto.get("tipo")
@@ -142,7 +160,11 @@ def _campo(bruto: dict[str, Any], onde: str) -> Campo:
     valores = bruto.get("valores")
     if valores is not None and (not isinstance(valores, dict) or not valores or tipo != "categoria"):
         raise CapacidadesInvalidas(f"{onde}/{nome}: `valores` é um dicionário código -> rótulo e só vale para campo categoria")
+    refere = bruto.get("refere")
+    if refere is not None and not (isinstance(refere, str) and _IDENTIFICADOR.match(refere)):
+        raise CapacidadesInvalidas(f"{onde}/{nome}: `refere` é o nome de uma entidade, e veio {refere!r}")
     return Campo(
+        refere=refere,
         valores={str(k): str(v) for k, v in valores.items()} if valores else None,
         listar_valores=bool(bruto.get("listar_valores", False)),
         apelidos={str(k): str(v) for k, v in apelidos.items()} if apelidos else None,
@@ -177,7 +199,10 @@ def interpretar(dados: dict[str, Any]) -> Capacidades:
         for coluna in (*exibir, ordem):
             if coluna not in reais:
                 raise CapacidadesInvalidas(f"{nome}: `exibir` e `ordem_padrao` só aceitam colunas reais, e {coluna!r} não é")
-        entidades[nome] = Entidade(tabela=tabela, campos=campos, exibir=exibir, ordem_padrao=ordem)
+        chave = bruto.get("chave")
+        if chave is not None and (chave not in campos or chave not in exibir):
+            raise CapacidadesInvalidas(f"{nome}: `chave` precisa ser um campo real que também está em `exibir`, e veio {chave!r}")
+        entidades[nome] = Entidade(tabela=tabela, campos=campos, exibir=exibir, ordem_padrao=ordem, chave=chave)
     if not entidades:
         raise CapacidadesInvalidas("o cenário não declara nenhuma entidade")
     regras = []

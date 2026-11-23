@@ -92,6 +92,7 @@ entidades:
   trabalho:
     tabela: trabalho
     exibir: [id, titulo, ano, citacoes, periodico, financiadores]
+    chave: id
     ordem_padrao: data_publicacao
     campos:
       - { nome: id, tipo: id }
@@ -117,9 +118,10 @@ entidades:
   producao_instituicao:
     tabela: producao_instituicao
     exibir: [trabalho_id, instituicao_nome, titulo, ano, citacoes]
+    chave: trabalho_id
     ordem_padrao: ano
     campos:
-      - { nome: trabalho_id, tipo: id }
+      - { nome: trabalho_id, tipo: id, refere: trabalho }
       - { nome: instituicao_id, tipo: id, agrupavel: true }
       - nome: instituicao_nome
         tipo: categoria
@@ -136,9 +138,10 @@ entidades:
   financiamento:
     tabela: financiamento
     exibir: [trabalho_id, financiador_nome, titulo, ano, citacoes]
+    chave: trabalho_id
     ordem_padrao: ano
     campos:
-      - { nome: trabalho_id, tipo: id }
+      - { nome: trabalho_id, tipo: id, refere: trabalho }
       - { nome: financiador_id, tipo: id, agrupavel: true }
       - nome: financiador_nome
         tipo: categoria

@@ -76,7 +76,7 @@ def turno_de(pergunta: str, resultado: Resultado | None) -> TurnoAnterior | None
     """O turno que a próxima pergunta pode usar como contexto: só respostas que não foram recusa e que tiveram plano."""
     if resultado is None or resultado.resposta is None or resultado.resposta.is_refusal or resultado.resposta.plano is None:
         return None
-    return TurnoAnterior(pergunta.strip(), resultado.resposta.plano)
+    return TurnoAnterior(pergunta.strip(), resultado.resposta.plano, resultado.resposta.chaves_do_resultado)
 
 
 def perguntar(ctx: Any, pergunta: str, anterior: TurnoAnterior | None = None) -> Resultado:
