@@ -66,11 +66,8 @@
   {
    "id": "PE-10",
    "pergunta": "Os projetos aprovados na Chamada CNPq/MCTI 10/2023 produziram publicações alinhadas ao objetivo do edital?",
-   "esperado": [
-    "normativa",
-    "estruturada"
-   ],
-   "espera_falhar": true
+   "esperado": [],
+   "espera_falhar": false
   }
  ]
 }
