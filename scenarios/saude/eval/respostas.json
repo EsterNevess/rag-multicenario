@@ -77,7 +77,7 @@
   {
    "id": "SA-X4",
    "pergunta": "Qual a versão do PCDT de doença de Parkinson que valia em 2015?",
-   "esperado": []
+   "esperado": ["estruturada"]
   },
   {
    "id": "SA-X2",

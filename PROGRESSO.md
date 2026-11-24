@@ -333,7 +333,7 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [x] Lista de fármacos da artrite de 2026 (por classe, sem apresentação) e do diabetes tipo 1 (sem dois-pontos): 89 linhas nas cinco versões, todas na RENAME; duas insulinas por correspondência aproximada, registradas no relatório
 - [x] OCR para PDFs escaneados: não foi preciso, os 7 PDFs têm camada de texto
 - [x] Corpus v2 (19,6 MB, 9 arquivos): Relatório Conitec 551 (Portaria Conjunta 14/2020 da artrite, sem mais intervalo entre versões) e PCDT de diabetes tipo 2 (Portaria SCTIE/MS 13/2026, decisão de atualizar; não confirmado como texto em vigor). 900 trechos, 119 medicamentos de protocolo (todos na RENAME), 88 linhas de comparação por seção
-- [ ] Repetir com o modelo a pesquisa, a saúde e o RJ depois da memória com chaves (23/11): o campo `do_resultado_anterior` entrou no prompt do analisador de todos os cenários e só os testes sem modelo foram rodados
+- [ ] Repetir com o modelo a pesquisa, a saúde e o RJ depois da memória com chaves (23/11): o campo `do_resultado_anterior` entrou no prompt do analisador de todos os cenários. **Saúde feita em 24/11** (1 repetição, 14 de 14; 12 de 14 rotas batem; SA-X3 e SA-X4 respondem em vez de recusar, sem vazar dado (gabarito do SA-X4 ajustado depois do resultado; SA-X3 segue como falha aberta); SA-10 conferido com o banco; detalhes em AVALIACAO.md). Pesquisa e RJ: em andamento
 - [ ] Repetir com o modelo as perguntas da saúde no corpus v2 (a rodada medida foi no v1; o SA-X1 agora tem resposta: a PC 14/2020)
 
 **Publicação e portfólio**

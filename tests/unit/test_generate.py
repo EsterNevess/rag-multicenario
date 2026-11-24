@@ -177,6 +177,13 @@ def test_cpf_na_resposta_e_mascarado(tmp_path, banco):
     assert r.numeros_nao_conferidos == [] and len(llm.chamadas) == 2  # o CPF já está mascarado quando os números se conferem: sem aviso e sem segunda tentativa
 
 
+def test_telefone_e_email_na_resposta_sao_mascarados(tmp_path, banco):
+    # Barreira de saída: mesmo que o modelo copie um contato da evidência (caso do SA-X3, ouvidoria), a resposta final não o traz.
+    llm = LLMRoteirizado(_plano_json(operacoes=["contar"]), "Contato do reclamante: (21) 98765-4321, maria.silva@exemplo.com [1].")
+    r = responder("Quantas?", _ctx(tmp_path, llm, banco))
+    assert "98765" not in r.answer and "maria.silva" not in r.answer
+
+
 # ----------------------------------------------------------------- rotas de documentos, híbrida e catálogo
 
 
