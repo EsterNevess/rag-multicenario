@@ -2,8 +2,10 @@
 cenario: rj
 descricao: contratações públicas do Estado do Rio de Janeiro (contratações, contratos, normas, e atas e e-mails de compras sintéticos)
 dicas_do_analisador:
+- "A base de contratações é um retrato do PNCP que vai até 31/08/2026 (última data de publicação da base atual). situacao_nome = Divulgada no PNCP é o estado de publicação: NÃO quer dizer que a contratação ainda recebe propostas (as outras situações são Anulada, Revogada e Suspensa). Para perguntas sobre contratações \"abertas\", \"em andamento\" ou \"recebendo propostas\", filtre data_encerramento_proposta__gte com a data de hoje (informada no começo desta mensagem) e situacao_nome = Divulgada no PNCP; nunca só por situacao_nome. Cerca de 43% das contratações não têm data de encerramento (não dá para dizer se estão abertas) e uma data absurda como 2099-01-01 é marcador, não prazo."
 - "Atas e e-mails de compras (documentos sintéticos, de uso interno) estão disponíveis: perguntas sobre o que um e-mail ou uma ata diz usam rota documentos com naturezas [conversacional]. Dados numéricos de contratações e contratos continuam na rota estruturada."
 regras_de_resposta:
+- Sobre contratações \"abertas\": a base vai até 31/08/2026, então diga que o resultado vale para a data de hoje só pelo que a base traz, não por consulta ao PNCP; se não houver nenhuma com prazo de propostas em aberto, diga isso e que a base pode estar desatualizada em relação a hoje. Não chame de aberta uma contratação só porque está \"Divulgada no PNCP\" ou porque tem data de publicação recente.
 - Ao responder com um indicador, diga a definição usada e o recorte (ano, amostra ou período), cite o número exato e as ressalvas que mudam a leitura. Proporções vêm como fração (0,7059 = 70,6%): escreva em porcentagem.
 - Escreva valores em reais como R$ 1.234,56 e cite o identificador PNCP quando listar contratações ou contratos.
 - Não afirme que um contrato ou compra é legal, ilegal, fraudulento ou superfaturado. Apresente os dados e o que a norma diz.
@@ -40,6 +42,7 @@ entidades:
     - valor_total_estimado
     - valor_total_homologado
     - data_publicacao
+    - data_encerramento_proposta
     ordem_padrao: data_publicacao
     campos:
     - nome: numero_controle_pncp
@@ -86,6 +89,10 @@ entidades:
       tipo: valor
       agregavel: true
     - nome: data_publicacao
+      tipo: data
+    - nome: data_abertura_proposta
+      tipo: data
+    - nome: data_encerramento_proposta
       tipo: data
     - nome: mes_publicacao
       tipo: texto

@@ -107,7 +107,7 @@ class Evidencia:
 
 
 def montar_prompt_analise(ctx: Contexto) -> str:
-    linhas = [f"Você transforma uma pergunta sobre {ctx.cap.descricao} em um plano de consulta em JSON.", ""]
+    linhas = [f"Você transforma uma pergunta sobre {ctx.cap.descricao} em um plano de consulta em JSON.", f"Data de hoje: {ctx.hoje} (AAAA-MM-DD).", ""]
     rotas = []
     if Natureza.ESTRUTURADA in ctx.naturezas:
         rotas.append("- \"estruturada\": números, contagens, somas, listas e rankings de contratações e contratos (tabelas abaixo).")
