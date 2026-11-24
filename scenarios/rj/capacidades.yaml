@@ -2,6 +2,7 @@
 cenario: rj
 descricao: contratações públicas do Estado do Rio de Janeiro (contratações, contratos, normas, e atas e e-mails de compras sintéticos)
 dicas_do_analisador:
+- "Contratos \"vigentes\" ou \"em vigor\": filtre data_vigencia_inicio__lte e data_vigencia_fim__gte com a data de hoje (informada no começo desta mensagem); para \"a vencer em N dias\", data_vigencia_fim__gte hoje e data_vigencia_fim__lte hoje + N dias. A base de contratos também vai só até 31/08/2026 (última publicação), então \"vigente hoje\" é o que o prazo declarado diz, sem notícia de aditivo, rescisão ou prorrogação depois dessa data. Cerca de 50 contratos têm fim de vigência depois de 2050 (provável erro de digitação, como 8202-05-14): contam como vigentes e distorcem \"o que vence por último\"; avise se aparecerem."
 - "A base de contratações é um retrato do PNCP que vai até 31/08/2026 (última data de publicação da base atual). situacao_nome = Divulgada no PNCP é o estado de publicação: NÃO quer dizer que a contratação ainda recebe propostas (as outras situações são Anulada, Revogada e Suspensa). Para perguntas sobre contratações \"abertas\", \"em andamento\" ou \"recebendo propostas\", filtre data_encerramento_proposta__gte com a data de hoje (informada no começo desta mensagem) e situacao_nome = Divulgada no PNCP; nunca só por situacao_nome. Cerca de 43% das contratações não têm data de encerramento (não dá para dizer se estão abertas) e uma data absurda como 2099-01-01 é marcador, não prazo."
 - "Atas e e-mails de compras (documentos sintéticos, de uso interno) estão disponíveis: perguntas sobre o que um e-mail ou uma ata diz usam rota documentos com naturezas [conversacional]. Dados numéricos de contratações e contratos continuam na rota estruturada."
 regras_de_resposta:
@@ -112,6 +113,7 @@ entidades:
     - objeto_contrato
     - valor_global
     - data_assinatura
+    - data_vigencia_fim
     ordem_padrao: data_assinatura
     campos:
     - nome: numero_controle_pncp
@@ -172,6 +174,8 @@ entidades:
       tipo: inteiro
       agregavel: true
     - nome: data_assinatura
+      tipo: data
+    - nome: data_vigencia_inicio
       tipo: data
     - nome: data_vigencia_fim
       tipo: data

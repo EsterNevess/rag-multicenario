@@ -56,3 +56,38 @@ def test_o_analisador_sabe_a_data_de_hoje_e_a_regra_das_abertas(tmp_path):
     prompt = montar_prompt_analise(ctx)
     assert "Data de hoje: 2026-11-24" in prompt
     assert "data_encerramento_proposta__gte" in prompt and "NÃO quer dizer que a contratação ainda recebe propostas" in prompt
+
+
+def _banco_contratos(tmp_path):
+    caminho = tmp_path / "contratos.sqlite"
+    con = sqlite3.connect(caminho)
+    colunas = [c.nome for c in RJ.entidades["contrato"].campos.values() if c.expr is None]
+    con.execute(f"CREATE TABLE contrato ({', '.join(c + ' TEXT' for c in colunas)})")
+    linhas = [
+        ("V1", "2026-01-10", "2026-12-31"),  # vigente em 24/11
+        ("V2", "2026-12-01", "2027-06-30"),  # ainda não começou
+        ("V3", "2024-01-10", "2025-12-31"),  # já terminou
+        ("V4", "2025-01-10", "8202-05-14"),  # fim com erro de digitação: o filtro não o distingue
+    ]
+    for numero, inicio, fim in linhas:
+        con.execute("INSERT INTO contrato (numero_controle_pncp, data_vigencia_inicio, data_vigencia_fim) VALUES (?, ?, ?)", (numero, inicio, fim))
+    con.commit()
+    con.close()
+    return caminho
+
+
+def test_contrato_vigente_exige_inicio_e_fim_em_torno_de_hoje(tmp_path):
+    contrato = RJ.entidades["contrato"]
+    assert contrato.campos["data_vigencia_inicio"].tipo == "data" and "data_vigencia_fim" in contrato.exibir
+    plano = PlanoConsulta(
+        rota=Rota.ESTRUTURADA, naturezas=["estruturada"], entidade="contrato", operacoes=["listar"],
+        filtros={"data_vigencia_inicio__lte": "2026-11-24", "data_vigencia_fim__gte": "2026-11-24"},
+    )
+    r = consultar(plano, _banco_contratos(tmp_path), RJ)
+    assert sorted(l["numero_controle_pncp"] for l in r.linhas) == ["V1", "V4"]  # V4 é o fim de 8202: por isso a dica manda avisar
+
+
+def test_a_dica_dos_contratos_vigentes_chega_ao_analisador(tmp_path):
+    ctx = Contexto(llm=None, logger=PipelineLogger(tmp_path), cap=RJ, banco=tmp_path / "x", hoje="2026-11-24")
+    prompt = montar_prompt_analise(ctx)
+    assert "data_vigencia_inicio__lte e data_vigencia_fim__gte" in prompt and "8202-05-14" in prompt
