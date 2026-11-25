@@ -40,6 +40,7 @@ class Campo:
     listar_valores: bool = False  # mostrar ao analisador os valores que existem no banco (campos de poucos valores)
     apelidos: dict[str, str] | None = None  # apelido ou sigla -> nome oficial que está no banco (FAPERJ -> Fundação Carlos Chagas Filho...)
     refere: str | None = None  # este campo guarda a chave de outra entidade (trabalho_id refere "trabalho"): liga "desses" ao resultado anterior
+    base_ate: str | None = None  # campo de data (AAAA-MM-DD): a base não traz notícia depois dessa data; filtro com data posterior ganha aviso na evidência
 
     @property
     def sql(self) -> str:
@@ -143,7 +144,7 @@ class Capacidades:
 
 
 def _campo(bruto: dict[str, Any], onde: str) -> Campo:
-    desconhecidas = set(bruto) - {"nome", "tipo", "filtravel", "agregavel", "agrupavel", "expr", "valores", "listar_valores", "apelidos", "refere"}
+    desconhecidas = set(bruto) - {"nome", "tipo", "filtravel", "agregavel", "agrupavel", "expr", "valores", "listar_valores", "apelidos", "refere", "base_ate"}
     if desconhecidas:
         raise CapacidadesInvalidas(f"{onde}: chaves desconhecidas {sorted(desconhecidas)}")
     nome, tipo = bruto.get("nome"), bruto.get("tipo")
@@ -163,8 +164,12 @@ def _campo(bruto: dict[str, Any], onde: str) -> Campo:
     refere = bruto.get("refere")
     if refere is not None and not (isinstance(refere, str) and _IDENTIFICADOR.match(refere)):
         raise CapacidadesInvalidas(f"{onde}/{nome}: `refere` é o nome de uma entidade, e veio {refere!r}")
+    base_ate = bruto.get("base_ate")
+    if base_ate is not None and not (tipo == "data" and re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(base_ate))):
+        raise CapacidadesInvalidas(f"{onde}/{nome}: `base_ate` é uma data AAAA-MM-DD e só vale para campo de tipo data")
     return Campo(
         refere=refere,
+        base_ate=str(base_ate) if base_ate else None,
         valores={str(k): str(v) for k, v in valores.items()} if valores else None,
         listar_valores=bool(bruto.get("listar_valores", False)),
         apelidos={str(k): str(v) for k, v in apelidos.items()} if apelidos else None,

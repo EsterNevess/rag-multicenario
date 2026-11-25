@@ -91,3 +91,39 @@ def test_a_dica_dos_contratos_vigentes_chega_ao_analisador(tmp_path):
     ctx = Contexto(llm=None, logger=PipelineLogger(tmp_path), cap=RJ, banco=tmp_path / "x", hoje="2026-11-24")
     prompt = montar_prompt_analise(ctx)
     assert "data_vigencia_inicio__lte e data_vigencia_fim__gte" in prompt and "8202-05-14" in prompt
+
+def test_filtro_de_data_depois_do_fim_da_base_avisa_na_evidencia(tmp_path):
+    plano = PlanoConsulta(
+        rota=Rota.ESTRUTURADA, naturezas=["estruturada"], entidade="contrato", operacoes=["listar"],
+        filtros={"data_vigencia_inicio__lte": "2026-11-24", "data_vigencia_fim__gte": "2026-11-24"},
+    )
+    r = consultar(plano, _banco_contratos(tmp_path), RJ)
+    avisos = [a for a in r.avisos if "só traz informação até 2026-08-31" in a]
+    assert len(avisos) == 1 and "2026-11-24" in avisos[0]  # um aviso só, mesmo com dois filtros de data
+
+
+def test_filtro_de_data_dentro_da_base_nao_avisa(tmp_path):
+    plano = PlanoConsulta(
+        rota=Rota.ESTRUTURADA, naturezas=["estruturada"], entidade="contrato", operacoes=["listar"],
+        filtros={"data_vigencia_inicio__lte": "2026-06-30", "data_vigencia_fim__gte": "2026-06-30"},
+    )
+    assert not any("só traz informação até" in a for a in consultar(plano, _banco_contratos(tmp_path), RJ).avisos)
+
+
+def test_contratacoes_abertas_depois_do_fim_da_base_tambem_avisam(tmp_path):
+    plano = PlanoConsulta(
+        rota=Rota.ESTRUTURADA, naturezas=["estruturada"], entidade="contratacao", operacoes=["listar"],
+        filtros={"data_encerramento_proposta__gte": "2026-11-24", "situacao_nome": "Divulgada no PNCP"},
+    )
+    assert any("só traz informação até 2026-08-31" in a for a in consultar(plano, _banco(tmp_path), RJ).avisos)
+
+
+def test_base_ate_so_vale_para_campo_de_data():
+    import pytest
+
+    from src.capacidades import CapacidadesInvalidas, _campo
+
+    assert _campo({"nome": "d", "tipo": "data", "base_ate": "2026-08-31"}, "t").base_ate == "2026-08-31"
+    for ruim in ({"nome": "d", "tipo": "texto", "base_ate": "2026-08-31"}, {"nome": "d", "tipo": "data", "base_ate": "31/08/2026"}):
+        with pytest.raises(CapacidadesInvalidas, match="base_ate"):
+            _campo(ruim, "t")

@@ -93,8 +93,10 @@ entidades:
       tipo: data
     - nome: data_abertura_proposta
       tipo: data
+      base_ate: '2026-08-31'
     - nome: data_encerramento_proposta
       tipo: data
+      base_ate: '2026-08-31'
     - nome: mes_publicacao
       tipo: texto
       filtravel: false
@@ -177,8 +179,10 @@ entidades:
       tipo: data
     - nome: data_vigencia_inicio
       tipo: data
+      base_ate: '2026-08-31'
     - nome: data_vigencia_fim
       tipo: data
+      base_ate: '2026-08-31'
     - nome: mes_assinatura
       tipo: texto
       filtravel: false

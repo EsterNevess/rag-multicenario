@@ -138,6 +138,18 @@ def _separar_filtro(chave: str) -> tuple[str, str]:
     return chave, ""
 
 
+def _avisos_de_fim_da_base(entidade: Entidade, filtros: dict[str, Any]) -> list[str]:
+    """Filtro de data (prazo, vigência) com data posterior ao fim da base: o resultado vale só pelo que a base traz, sem notícia depois dela."""
+    avisos: dict[str, str] = {}
+    for chave, valor in filtros.items():
+        nome, _ = _separar_filtro(chave)
+        campo = entidade.campos.get(nome)
+        if campo is not None and campo.base_ate and isinstance(valor, str) and _DATA.match(valor) and valor > campo.base_ate:
+            avisos[campo.base_ate] = (f"A base só traz informação até {campo.base_ate}, e o filtro usa a data {valor}: o resultado vale para essa data só pelo que a base "
+                                      "declara, sem notícia de aditivo, rescisão, prorrogação ou encerramento depois do fim da base.")
+    return list(avisos.values())
+
+
 def usa_base_agregada(plano: PlanoConsulta, cap: Capacidades) -> bool:
     """A parte de dados do plano é um indicador da base agregada (e não uma tabela de dados)?"""
     return plano.rota is Rota.AGREGADA or (plano.rota is Rota.HIBRIDA and plano.entidade in cap.entidades_agregadas())
@@ -406,6 +418,7 @@ def consultar(plano: PlanoConsulta, banco: Path, cap: Capacidades | None = None,
         if igualdades:
             avisos.append(f"Nenhum registro casou com os filtros. Filtros de igualdade em campos de nome ({', '.join(igualdades)}) exigem o nome exato; "
                           "uma sigla ou um nome incompleto pode não casar. Isso NÃO prova que não existem registros.")
+    avisos += _avisos_de_fim_da_base(entidade, plano.filtros)
     if truncado:
         avisos.append(f"Mostrando só os {limite} primeiros resultados; há mais.")
     return ResultadoSQL(
