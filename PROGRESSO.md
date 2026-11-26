@@ -349,7 +349,7 @@ Legenda: [x] pronto e testado | [~] parcial | [ ] não começou.
 - [x] Varredura do histórico repetida em 23/11 (111 commits): expressões regulares e `detect-secrets` 1.5.0 (572 alertas = 569 SHA-256 + os 3 do controle; arquivos versionados: 656 = 654 SHA-256 + 2 chaves falsas de teste), com controle plantado e o valor exato da chave da Groq procurado; nada real. Registrada no `SEGURANCA.md`
 - [x] Varredura do histórico repetida em 25/11 (121 commits até `7d54e06`, 16 pedaços, controle em todos): 699 alertas = 633 SHA-256 + 2 chaves falsas de teste + 64 do controle; expressões regulares 0; valor da chave do `.env` ausente. Refazer se entrar commit novo antes de tornar o repositório público
 - [x] Aviso de fim da base nos filtros de data (25/11): campo `base_ate` no `capacidades.yaml` (RJ, 4 campos de prazo e vigência) e aviso na evidência; 4 testes sem modelo, 901 passando
-- [ ] Repetir com o modelo a pergunta de contratos vigentes (3 repetições) para ver se o texto traz o aviso de fim da base (31/08/2026)
+- [x] Repetir com o modelo a pergunta de contratos vigentes (3 repetições) para ver se o texto traz o aviso de fim da base (31/08/2026): 3 de 3 trazem (antes 0 de 3); SA-10 e SA-02 repetidos no mesmo dia (3 de 3 cada; SA-02 ainda lista seções reorganizadas como "só na versão anterior"), detalhes em AVALIACAO.md
 - [ ] Repetir essa varredura, com controle, imediatamente antes de tornar o repositório público (o histórico já ganhou commits depois dela)
 - [ ] Conferir o CI verde no GitHub Actions e os diagramas Mermaid no GitHub (ação da Ester)
 - [ ] Tornar o `rag-multicenario` público (ação da Ester nas configurações do GitHub; conferir antes como o README aparece)
