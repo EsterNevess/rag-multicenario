@@ -143,3 +143,28 @@ def test_titulos_que_protocolos_de_epocas_diferentes_dao_a_mesma_parte_casam(nov
 def test_titulos_de_partes_diferentes_nao_casam_so_por_causa_dos_sinonimos():
     pares = casar_secoes([Secao("7. FLUXOGRAMA DE TRATAMENTO", chave_do_titulo("7. FLUXOGRAMA DE TRATAMENTO"))], [Secao("8 TRATAMENTO", chave_do_titulo("8 TRATAMENTO"))])
     assert pares[0][1] is None and pares[1] == (None, pares[1][1])
+
+
+def test_numeracao_que_recomeca_marca_outro_documento_do_mesmo_pdf():
+    secoes, _ = secoes_da_versao([
+        _chunk("Preâmbulo", "capa"), _chunk("1.   INTRODUÇÃO", "intro"), _chunk("2.   TRATAMENTO", "trat"), _chunk("10.   REGULAÇÃO", "reg"),
+        _chunk("3.   DIAGNÓSTICO", "diag da AIJ"), _chunk("7.   CASOS ESPECIAIS", "casos"),
+        _chunk("1.   APRESENTAÇÃO", "apêndice"),
+    ])
+    assert {s.chave: s.parte_do_pdf for s in secoes} == {
+        "preambulo": 1, "introducao": 1, "tratamento": 1, "regulacao": 1, "diagnostico": 2, "casos especiais": 2, "apresentacao": 3}
+
+
+def test_pdf_de_um_documento_so_fica_todo_na_parte_principal():
+    secoes, _ = secoes_da_versao([_chunk(f"{n}.   SEÇÃO {chr(64 + n)}", "texto") for n in range(1, 8)])
+    assert {s.parte_do_pdf for s in secoes} == {1}
+
+
+def test_tabela_distingue_o_protocolo_de_outro_documento_do_mesmo_pdf():
+    anterior = [_chunk("5.   DIAGNÓSTICO E CLASSIFICAÇÃO", FRASE_A), _chunk("6.   TRATAMENTO", FRASE_B), _chunk("3.   DIAGNÓSTICO", FRASE_C)]  # a 3 volta a numeração: outro documento
+    nova = [_chunk("5.   DIAGNÓSTICO E CLASSIFICAÇÃO", FRASE_A), _chunk("6.   TRATAMENTO", FRASE_B)]
+    linhas, _ = comparar_versoes(nova, anterior)
+    por_secao = {l["secao"]: l for l in linhas}
+    assert por_secao["3.   DIAGNÓSTICO"]["presenca"] == "só na versão anterior"
+    assert por_secao["3.   DIAGNÓSTICO"]["parte_do_pdf"] == "outro documento do mesmo PDF"
+    assert por_secao["6.   TRATAMENTO"]["parte_do_pdf"] == "protocolo"

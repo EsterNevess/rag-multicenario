@@ -11,7 +11,7 @@ from src.generate import Contexto, coletar, completar_plano, relaxar_igualdades
 from src.obs import PipelineLogger
 from src.schema import Natureza, PlanoConsulta, Rota
 
-COLUNAS = ["id", "doenca", "versao_nova", "data_nova", "versao_anterior", "data_anterior", "secao", "presenca", "caracteres_nova",
+COLUNAS = ["id", "doenca", "versao_nova", "data_nova", "versao_anterior", "data_anterior", "secao", "presenca", "parte_do_pdf", "caracteres_nova",
            "caracteres_anterior", "frases_novas", "frases_removidas", "frases_mantidas_pct", "exemplos_de_frases_novas"]
 
 
@@ -23,7 +23,7 @@ def banco(tmp_path):
     linha = dict.fromkeys(COLUNAS)
     linha.update(id=1, doenca="Artrite reumatoide", versao_nova="Portaria Conjunta SAES/SCTIE 33/2026", data_nova="2026-01-19",
                  versao_anterior="Portaria Conjunta SAES/SCTIE 16/2021", data_anterior="2021-09-10", secao="6. Tratamento",
-                 presenca="nas duas versões", frases_novas=135, frases_removidas=5, frases_mantidas_pct=43.5)
+                 presenca="nas duas versões", parte_do_pdf="protocolo", frases_novas=135, frases_removidas=5, frases_mantidas_pct=43.5)
     c.execute(f"INSERT INTO pcdt_secao VALUES ({','.join('?' * len(COLUNAS))})", [linha[k] for k in COLUNAS])
     c.commit()
     c.close()

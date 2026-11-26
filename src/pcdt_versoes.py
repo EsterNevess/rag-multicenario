@@ -22,13 +22,16 @@ from difflib import SequenceMatcher
 from typing import Any
 
 COLUNAS_SECAO = [
-    "id", "doenca", "versao_nova", "data_nova", "versao_anterior", "data_anterior", "secao", "presenca",
+    "id", "doenca", "versao_nova", "data_nova", "versao_anterior", "data_anterior", "secao", "presenca", "parte_do_pdf",
     "caracteres_nova", "caracteres_anterior", "frases_novas", "frases_removidas", "frases_mantidas_pct", "exemplos_de_frases_novas",
 ]
 LIMITE_DE_SIMILARIDADE_DA_FRASE = 0.7  # Jaccard das palavras
 MIN_CARACTERES_DA_FRASE = 40
 _FIM_DE_FRASE = re.compile(r"(?<=[.;:!?])\s+")
 _NUMERACAO = re.compile(r"^\s*\d+(?:\.\d+)*\.?\s+")
+_NUMERO_DO_TITULO = re.compile(r"^\s*(\d+)")
+PARTE_PRINCIPAL = "protocolo"
+PARTE_DE_OUTRO_DOCUMENTO = "outro documento do mesmo PDF"
 _PARTE = re.compile(r"\s*\(parte \d+/\d+\)$")
 _FRAGMENTO_DE_TABELA = re.compile(r"^\d+\s*-\s|\d,\d")  # "46 - A média do DM 0,19 menor": linha de tabela que o PDF deixou parecer título
 # Títulos que protocolos de épocas diferentes dão à mesma parte. Só entram trocas que conferi à mão nas versões do corpus.
@@ -50,6 +53,7 @@ class Secao:
     titulo: str
     chave: str
     partes: list[str] = field(default_factory=list)
+    parte_do_pdf: int = 1  # 1 = o protocolo; 2 em diante = outro documento que o PDF traz depois (outro protocolo, apêndice)
 
     @property
     def canonica(self) -> str:
@@ -92,6 +96,7 @@ def secoes_da_versao(chunks: list[dict[str, Any]]) -> tuple[list[Secao], int]:
     vistos: dict[str, Secao] = {}
     atual: Secao | None = None
     ignoradas = 0
+    parte, ultimo_numero = 1, None
     for c in chunks:
         rotulo = _PARTE.sub("", (c.get("metadata", {}).get("rotulo") or "").strip())
         corpo = _USO_PRIVADO.sub(" ", _corpo(c))
@@ -113,7 +118,13 @@ def secoes_da_versao(chunks: list[dict[str, Any]]) -> tuple[list[Secao], int]:
             elif chave not in {s.chave for s in secoes[-1:]}:
                 ignoradas += 1
             continue
-        atual = Secao(rotulo, chave, [corpo])
+        numero = _NUMERO_DO_TITULO.match(rotulo)
+        if numero:  # a numeração volta ao começo (…10 e depois 3): o PDF passou a outro documento
+            n = int(numero.group(1))
+            if ultimo_numero is not None and n <= ultimo_numero:
+                parte += 1
+            ultimo_numero = n
+        atual = Secao(rotulo, chave, [corpo], parte_do_pdf=parte)
         vistos[chave] = atual
         secoes.append(atual)
     return secoes, ignoradas
@@ -193,22 +204,24 @@ def comparar_versoes(nova: list[dict[str, Any]], anterior: list[dict[str, Any]])
     s_ant, ign_ant = secoes_da_versao(anterior)
     linhas: list[dict[str, Any]] = []
     for sn, sa in casar_secoes(s_nova, s_ant):
+        origem = (sn or sa).parte_do_pdf
+        parte_do_pdf = PARTE_PRINCIPAL if origem == 1 else PARTE_DE_OUTRO_DOCUMENTO
         if sn is not None and sa is not None:
             f_nova, f_ant = frases(sn.texto), frases(sa.texto)
             novas_f = _sem_correspondente(f_nova, f_ant)
             sumidas = _sem_correspondente(f_ant, f_nova)
             mantidas = 100.0 * (len(f_nova) - len(novas_f)) / len(f_nova) if f_nova else None
             linhas.append({
-                "secao": sn.titulo, "presenca": "nas duas versões", "caracteres_nova": len(sn.texto), "caracteres_anterior": len(sa.texto),
+                "secao": sn.titulo, "presenca": "nas duas versões", "parte_do_pdf": parte_do_pdf, "caracteres_nova": len(sn.texto), "caracteres_anterior": len(sa.texto),
                 "frases_novas": len(novas_f), "frases_removidas": len(sumidas),
                 "frases_mantidas_pct": None if mantidas is None else round(mantidas, 1),
                 "exemplos_de_frases_novas": " | ".join(f[:160] for f in novas_f[:3]) or None,
             })
         elif sn is not None:
-            linhas.append({"secao": sn.titulo, "presenca": "só na versão nova", "caracteres_nova": len(sn.texto), "caracteres_anterior": None,
+            linhas.append({"secao": sn.titulo, "presenca": "só na versão nova", "parte_do_pdf": parte_do_pdf, "caracteres_nova": len(sn.texto), "caracteres_anterior": None,
                            "frases_novas": None, "frases_removidas": None, "frases_mantidas_pct": None, "exemplos_de_frases_novas": None})
         else:
-            linhas.append({"secao": sa.titulo, "presenca": "só na versão anterior", "caracteres_nova": None, "caracteres_anterior": len(sa.texto),
+            linhas.append({"secao": sa.titulo, "presenca": "só na versão anterior", "parte_do_pdf": parte_do_pdf, "caracteres_nova": None, "caracteres_anterior": len(sa.texto),
                            "frases_novas": None, "frases_removidas": None, "frases_mantidas_pct": None, "exemplos_de_frases_novas": None})
     return linhas, {"titulos_repetidos_ignorados_nova": ign_nova, "titulos_repetidos_ignorados_anterior": ign_ant}
 
